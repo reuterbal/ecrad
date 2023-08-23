@@ -1,3 +1,6 @@
+version 1.6.1
+	- Added dependence to Makefile ensuring libradiation built after
+	  libifsrrtm, ensuring that multi-threaded make works
 	- Increased security value in single-precision SW
 	  reflectance-transmittance calculation from 1e-12 to 1e-6
 
