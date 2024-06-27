@@ -4,6 +4,10 @@ SOURCES = ice_effective_radius.F90 liquid_effective_radius.F90 \
 	cloud_overlap_decorr_len.F90 yoerad.F90
 
 OBJECTS := $(SOURCES:.F90=.o)
+
+MAKE_DEPS = ../bin/make_deps.sh
+DEPS_FILE = Makefile_deps
+
 LIBIFS = ../lib/libifs.a
 
 all: $(LIBIFS)
@@ -16,6 +20,9 @@ $(LIBIFS): $(OBJECTS)
 %.o: %.F90 ../lib/libifsaux.a ../lib/libradiation.a
 	$(FC) $(FCFLAGS) -c $<
 
+$(DEPS_FILE): $(SOURCES)
+	$(MAKE_DEPS) $(SOURCES) > $(DEPS_FILE)
+
 includes:
 	fcm make --config-file=../bin/fcm-make-interfaces.cfg interfaces.ns-incl=ifs interfaces.source=$(shell dirname $(realpath $(firstword $(MAKEFILE_LIST))))/..
 
@@ -24,9 +31,4 @@ clean:
 
 .PHONY: deps includes clean-deps
 
-liquid_effective_radius.o: yoerdu.o
-radiation_scheme.o: radiation_setup.o
-radiation_setup.o: yoephy.o
-cloud_overlap_decorr_len.o: yoecld.o
-cos_sza.o ice_effective_radius.o liquid_effective_radius.o radiation_scheme.o radiation_setup.o: yoerad.o
-yoerad.o: yoe_spectral_planck.o
+include Makefile_deps

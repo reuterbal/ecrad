@@ -11,6 +11,9 @@ EXECUTABLE = ../bin/ecrad
 IFS_EXECUTABLE = ../bin/ecrad_ifs
 IFS_BLOCKED_EXECUTABLE = ../bin/ecrad_ifs_blocked
 
+MAKE_DEPS = ../bin/make_deps.sh
+DEPS_FILE = Makefile_deps
+
 all: driver ifs_driver test_programs
 
 driver: $(EXECUTABLE)
@@ -39,13 +42,13 @@ test_%: test_%.F90 ../lib/*.a
 %.o: %.F90 ../lib/*.a
 	$(FC) $(FCFLAGS) -c $<
 
+$(DEPS_FILE): $(SOURCES) ecrad_driver.F90 ecrad_ifs_driver.F90 ifs_blocking.F90 ecrad_ifs_driver_blocked.F90
+	$(MAKE_DEPS) $(SOURCES) ecrad_driver.F90 ecrad_ifs_driver.F90 ifs_blocking.F90 ecrad_ifs_driver_blocked.F90 > $(DEPS_FILE)
+
 clean:
 	rm -f *.o $(EXECUTABLE) $(IFS_EXECUTABLE) $(IFS_BLOCKED_EXECUTABLE) \
 		$(TEST_PROGRAMS)
 
-ecrad_driver.o: ecrad_driver_config.o ecrad_driver_read_input.o
-ecrad_ifs_driver.o: ecrad_driver_config.o ecrad_driver_read_input.o
-ecrad_ifs_driver_blocked.o: ecrad_driver_config.o ecrad_driver_read_input.o ifs_blocking.o
-ecrad_driver_read_input.o ifs_blocking.o: ecrad_driver_config.o
+include Makefile_deps
 
 .PHONY: driver ifs_driver test_programs all
