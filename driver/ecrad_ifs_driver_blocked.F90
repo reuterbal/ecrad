@@ -65,6 +65,9 @@ program ecrad_ifs_driver
   use ecrad_driver_read_input,  only : read_input
   use easy_netcdf
   use ifs_blocking
+#ifdef HAVE_FIAT
+  use mpl_module,               only : mpl_init, mpl_end
+#endif
 
   implicit none
 
@@ -138,6 +141,10 @@ program ecrad_ifs_driver
 !  integer    :: iband(20), nweights
 !  real(jprb) :: weight(20)
 
+  ! Initialise MPI if not done yet
+#ifdef HAVE_FIAT
+  call mpl_init
+#endif
 
   ! --------------------------------------------------------
   ! Section 2: Configure
@@ -497,5 +504,10 @@ program ecrad_ifs_driver
   if (driver_config%iverbose >= 2) then
     write(nulout,'(a)') '------------------------------------------------------------------------------------'
   end if
+
+  ! Finalise MPI if not done yet
+#ifdef HAVE_FIAT
+  call mpl_end(ldmeminfo=.false.)
+#endif
 
 end program ecrad_ifs_driver
