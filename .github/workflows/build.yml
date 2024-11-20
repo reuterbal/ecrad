@@ -32,6 +32,7 @@ jobs:
         build_type: [Release,Bit,Debug]
         name:
           - linux gnu-12
+          - linux gnu-12 loki
           - linux nvhpc-24.3
           - linux intel-classic
           - linux intel-llvm
@@ -45,6 +46,16 @@ jobs:
             compiler_cxx: g++-12
             compiler_fc: gfortran-12
             caching: true
+            loki: false
+
+          - name: linux gnu-12 loki
+            os: ubuntu-22.04
+            compiler: gnu-12
+            compiler_cc: gcc-12
+            compiler_cxx: g++-12
+            compiler_fc: gfortran-12
+            caching: true
+            loki: true
 
           - name: linux nvhpc-24.3
             os: ubuntu-22.04
@@ -53,7 +64,7 @@ jobs:
             compiler_cxx: nvc++
             compiler_fc: nvfortran
             caching: true
-            # caching: false
+            loki: false
 
           - name : linux intel-classic
             os: ubuntu-22.04
@@ -75,6 +86,12 @@ jobs:
     steps:
     - name: Checkout Repository
       uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      if: matrix.loki
+      with:
+        python-version: 3.11
 
     - name: Environment
       run:  |
@@ -175,6 +192,7 @@ jobs:
     - name: Build & Test
       id: build-test
       uses: ecmwf-actions/build-package@v2
+      if: ${{ matrix.loki == false }}
       with:
         self_coverage: false
         force_build: true
@@ -188,6 +206,28 @@ jobs:
         dependency_cmake_options: |
           ecmwf-ifs/fiat: "-G Ninja -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} -DENABLE_TESTS=OFF"
           ecmwf-ifs/field_api: "-G Ninja -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} -DENABLE_TESTS=OFF"
+        cmake_options:    "-G Ninja -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} ${{ matrix.cmake_options }} -DENABLE_SINGLE_PRECISION=ON -DENABLE_BITIDENTITY_TESTING=ON"
+        ctest_options: "${{ matrix.ctest_options }}"
+
+    - name: Build & Test with Loki
+      id: build-test-loki
+      uses: ecmwf-actions/build-package@v2
+      if: matrix.loki
+      with:
+        self_coverage: false
+        force_build: true
+        cache_suffix: "${{ matrix.build_type }}-${{ env.CACHE_SUFFIX }}"
+        recreate_cache: ${{ matrix.caching == false }}
+        dependencies: |
+          ecmwf/ecbuild
+          ecmwf-ifs/fiat
+          ecmwf-ifs/field_api@refs/heads/main
+          ecmwf-ifs/loki@refs/heads/main
+        dependency_branch: develop
+        dependency_cmake_options: |
+          ecmwf-ifs/fiat: "-G Ninja -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} -DENABLE_TESTS=OFF"
+          ecmwf-ifs/field_api: "-G Ninja -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} -DENABLE_TESTS=OFF"
+          ecmwf-ifs/loki: "-G Ninja -DENABLE_TESTS=OFF"
         cmake_options:    "-G Ninja -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} ${{ matrix.cmake_options }} -DENABLE_SINGLE_PRECISION=ON -DENABLE_BITIDENTITY_TESTING=ON"
         ctest_options: "${{ matrix.ctest_options }}"
 
