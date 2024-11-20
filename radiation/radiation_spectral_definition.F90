@@ -33,7 +33,7 @@ module radiation_spectral_definition
   ! spectrum. This is used primarily to map the cloud and aerosol
   ! optical properties on to the gas g points.
   type spectral_definition_type
-    
+
     ! Spectral mapping of g points
 
     ! Number of wavenumber intervals
@@ -54,7 +54,7 @@ module radiation_spectral_definition
     ! file.
     real(jprb) :: reference_temperature = -1.0_jprb
     real(jprb), allocatable :: solar_spectral_irradiance(:)
-    
+
     ! Band information
 
     ! Number of bands
@@ -75,7 +75,8 @@ module radiation_spectral_definition
     procedure :: calc_mapping_from_bands
     procedure :: calc_mapping_from_wavenumber_bands
     procedure :: print_mapping_from_bands
-    procedure :: min_wavenumber, max_wavenumber
+    procedure :: min_wavenumber
+    procedure :: max_wavenumber
     procedure :: weighted_mapping
 
   end type spectral_definition_type
@@ -124,7 +125,7 @@ contains
       ! Longwave reference temperature
       this%reference_temperature = TerrestrialReferenceTemperature
     end if
-    
+
     ! Band number is 0-based: add 1
     this%i_band_number = this%i_band_number + 1
 
@@ -160,7 +161,7 @@ contains
     this%wavenumber1_band = wavenumber1
     this%wavenumber2_band = wavenumber2
     this%reference_temperature = reference_temperature
-    
+
     if (lhook) call dr_hook('radiation_spectral_definition:allocate_bands_only',1,hook_handle)
 
   end subroutine allocate_bands_only
@@ -171,7 +172,7 @@ contains
   subroutine deallocate(this)
 
     class(spectral_definition_type), intent(inout) :: this
-    
+
     this%nwav  = 0
     this%ng    = 0
     this%nband = 0
@@ -214,7 +215,7 @@ contains
   ! expression y=matmul(mapping,x) where x is a variable containing
   ! optical properties at each input "wavenumber", and y is this
   ! variable mapped on to the spectral intervals in the spectral
-  ! definition "this". 
+  ! definition "this".
   subroutine calc_mapping(this, wavenumber, mapping, weighting_temperature, use_bands)
 
     use yomhook,      only : lhook, dr_hook, jphook
@@ -240,7 +241,7 @@ contains
 
     ! Wavenumber index
     integer    :: iwav
-    
+
     ! Loop indices
     integer    :: jg, jwav, jband
 
@@ -261,7 +262,7 @@ contains
     if (allocated(mapping)) then
       deallocate(mapping)
     end if
-    
+
     ! Define the mapping matrix
     if (use_bands_local) then
       ! Cloud properties per band
@@ -579,14 +580,14 @@ contains
       use_fluxes_local = .false.
     end if
 
-    ! Count the number of input intervals 
+    ! Count the number of input intervals
     ninterval = size(i_intervals)
     ninput    = maxval(i_intervals)
-    
+
     if (allocated(mapping)) then
       deallocate(mapping)
     end if
-    
+
     ! Check wavelength is monotonically increasing
     if (ninterval > 2) then
       do jint = 2,ninterval-1
@@ -690,7 +691,7 @@ contains
       ! By default set all wavenumbers to use first input
       ! albedo/emissivity
       i_input = 1
-      
+
       ! All bounded intervals
       do jint = 2,ninterval-1
         wavenumber1_bound = 0.01_jprb / wavelength_bound(jint)
@@ -764,7 +765,7 @@ contains
       end if
 
 #endif
-      
+
     end if
 
     if (.not. use_fluxes_local) then
@@ -825,7 +826,7 @@ contains
 
     wavelength1 = 0.01_jprb / wavenumber2
     ninterval = size(wavelength1)
-    
+
     is_band_unassigned = .true.
 
     do jint = 1,ninterval
@@ -843,7 +844,7 @@ contains
 
   end subroutine calc_mapping_from_wavenumber_bands
 
-  
+
   !---------------------------------------------------------------------
   ! Used for computing UV index / UV biologically effective dose:
   ! provides the weights that should be applied to each g-point for a
@@ -853,23 +854,23 @@ contains
   function weighted_mapping(this, wavelength, weights_in, do_logarithmic)
 
     use radiation_io, only : nulerr, radiation_abort
-    
+
     class(spectral_definition_type), intent(in) :: this
     real(jprb), intent(in) :: wavelength(:) ! m
     real(jprb), intent(in) :: weights_in(:)
     logical,    intent(in), optional :: do_logarithmic
-    
+
     real(jprb) :: weighted_mapping(this%ng)
 
-    ! Weights in wavenumber space 
+    ! Weights in wavenumber space
     real(jprb) :: weights_wn(this%nwav)
 
-    ! Wavelength (m) corresponding to a wavenumber 
-    real(jprb) :: wavelength_wn 
+    ! Wavelength (m) corresponding to a wavenumber
+    real(jprb) :: wavelength_wn
 
     ! Weight (might be natural logarithms)
     real(jprb) :: weight1, weight2
-    
+
     ! Number of input wavelengths
     integer :: nwl
 
@@ -886,11 +887,11 @@ contains
     else
       do_logarithmic_local = .false.
     end if
-    
+
     nwl = size(wavelength)
 
     if (allocated(this%gpoint_fraction)) then
-      
+
       weights_wn(:) = 0.0_jprb
       iwn = this%nwav
       ! Find first wavenumber in range
@@ -927,12 +928,12 @@ contains
       weighted_mapping = matmul(weights_wn, this%gpoint_fraction)
 
     else
-      
+
       write(nulerr,'(a)') '*** Error: requested weighted mapping per g-point but only available per band'
-      call radiation_abort('Radiation configuration error')  
-      
+      call radiation_abort('Radiation configuration error')
+
     end if
-      
+
   end function weighted_mapping
 
   !---------------------------------------------------------------------
