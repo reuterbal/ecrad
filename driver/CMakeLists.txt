@@ -57,6 +57,32 @@ ecbuild_add_executable(
     LINKER_LANGUAGE Fortran
 )
 
+if( TARGET ecrad_loki.${PREC} )
+    # Use a different module directory here to avoid conflicts because
+    # ifs_blocking.F90 is built twice but its .mod file is written to
+    # the same module directory
+    set( _CMAKE_Fortran_MODULE_DIRECTORY "${CMAKE_Fortran_MODULE_DIRECTORY}" )
+    get_target_property( CMAKE_Fortran_MODULE_DIRECTORY ecrad_loki.${PREC} Fortran_MODULE_DIRECTORY )
+
+    ecbuild_add_executable(
+        TARGET ecrad_loki_${PREC}
+        SOURCES
+            ecrad_ifs_driver_blocked.F90
+            ecrad_driver_read_input.F90
+            ecrad_driver_config.F90
+        DEFINITIONS
+            $<$<NOT:${HAVE_OMP}>:NO_OPENMP>
+        LIBS
+            ecrad_loki.${PREC}
+            ecrad_base.${PREC}
+            $<${HAVE_FIELD_API}:field_api_${PREC}>
+            $<${HAVE_OMP}:OpenMP::OpenMP_Fortran>
+    )
+
+    # Reset the module directory
+    set( CMAKE_Fortran_MODULE_DIRECTORY "${_CMAKE_Fortran_MODULE_DIRECTORY}" )
+endif()
+
 # For ecrad_ifs_driver_blocked we have to disable bounds checking
 # (which is enabled in Debug builds) because sequence association
 # and values initialized to -9999 for unused arguments is used in

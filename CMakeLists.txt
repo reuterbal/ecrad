@@ -80,6 +80,16 @@ ecbuild_add_option(
     REQUIRED_PACKAGES "OpenMP COMPONENTS Fortran"
 )
 
+ecbuild_add_option(
+    FEATURE LOKI
+    DEFAULT ON
+    DESCRIPTION "Use Loki source-to-source processing"
+    REQUIRED_PACKAGES "loki"
+)
+
+# Set default Loki transformation mode
+set( LOKI_MODE "idem" CACHE STRING "Transformation mode for Loki source transformations" )
+
 set( _PRECISIONS "" )
 ecbuild_add_option(
     FEATURE DOUBLE_PRECISION
@@ -155,6 +165,9 @@ foreach( PREC IN LISTS _PRECISIONS )
     add_subdirectory(ifsrrtm ifsrrtm.${PREC})
     add_subdirectory(radiation radiation.${PREC})
     add_subdirectory(ifs ifs.${PREC})
+    if( HAVE_LOKI )
+        add_subdirectory(loki loki.${PREC})
+    endif()
     add_subdirectory(driver driver.${PREC})
 endforeach()
 

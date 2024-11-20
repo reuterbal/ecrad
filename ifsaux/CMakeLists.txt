@@ -29,3 +29,7 @@ ecbuild_add_library(
     PRIVATE_LIBS ecrad_base.${PREC}
 )
 install( TARGETS ecrad_ifsaux.${PREC} EXPORT ecrad-targets )
+
+# Export the list of sources for Loki processing
+list( TRANSFORM ifsaux_SOURCES PREPEND "${CMAKE_CURRENT_SOURCE_DIR}/" )
+set( ifsaux_SOURCES ${ifsaux_SOURCES} PARENT_SCOPE )

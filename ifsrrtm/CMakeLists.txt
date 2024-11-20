@@ -250,3 +250,7 @@ install(
     DESTINATION ${ecrad_${PREC}_INSTALL_INCLUDEDIR}
 )
 install( TARGETS ifsrrtm.${PREC} EXPORT ecrad-targets )
+
+# Export the list of sources for Loki processing
+list( TRANSFORM ifsrrtm_SOURCES PREPEND "${CMAKE_CURRENT_SOURCE_DIR}/" )
+set( ifsrrtm_SOURCES ${ifsrrtm_SOURCES} PARENT_SCOPE )

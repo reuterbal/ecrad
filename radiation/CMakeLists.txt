@@ -109,3 +109,7 @@ if( CMAKE_Fortran_COMPILER_ID MATCHES "Intel" )
     set_source_files_properties( radiation_mcica_sw.F90 PROPERTIES COMPILE_OPTIONS "-vecabi=cmdtarget")
     set_source_files_properties( radiation_cloud_generator.F90 PROPERTIES COMPILE_OPTIONS "-vecabi=cmdtarget")
 endif()
+
+# Export the list of sources for Loki processing
+list( TRANSFORM radiation_SOURCES PREPEND "${CMAKE_CURRENT_SOURCE_DIR}/" )
+set( radiation_SOURCES ${radiation_SOURCES} PARENT_SCOPE )
