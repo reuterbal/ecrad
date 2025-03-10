@@ -292,27 +292,35 @@ subroutine ifs_copy_fluxes_from_blocked(&
       ib=(jrl-1)/nproma+1
 
       do jlev=1,nlev+1
-        flux%sw_up(ibeg:iend,jlev) = zrgp(1:il,ifs_config%ifrso+jlev-1,ib)
-        flux%lw_up(ibeg:iend,jlev) = zrgp(1:il,ifs_config%ifrth+jlev-1,ib)
-        flux%sw_up_clear(ibeg:iend,jlev) = zrgp(1:il,ifs_config%iswfc+jlev-1,ib)
-        flux%lw_up_clear(ibeg:iend,jlev) = zrgp(1:il,ifs_config%ilwfc+jlev-1,ib)
+        if (yradiation%rad_config%do_sw) then
+          flux%sw_up(ibeg:iend,jlev) = zrgp(1:il,ifs_config%ifrso+jlev-1,ib)
+          flux%sw_up_clear(ibeg:iend,jlev) = zrgp(1:il,ifs_config%iswfc+jlev-1,ib)
+        end if
+        if (yradiation%rad_config%do_lw) then
+          flux%lw_up(ibeg:iend,jlev) = zrgp(1:il,ifs_config%ifrth+jlev-1,ib)
+          flux%lw_up_clear(ibeg:iend,jlev) = zrgp(1:il,ifs_config%ilwfc+jlev-1,ib)
+        end if
         if (yradiation%yrerad%lapproxlwupdate) then
           flux%lw_derivatives(ibeg:iend,jlev) = zrgp(1:il,ifs_config%ilwderivative+jlev-1,ib)
         else
           flux%lw_derivatives(ibeg:iend,jlev) = 0.0_jprb
         endif
       end do
-      flux%sw_dn(ibeg:iend,nlev+1) = zrgp(1:il,ifs_config%ifrsod,ib)
-      flux%lw_dn(ibeg:iend,nlev+1) = zrgp(1:il,ifs_config%ifrted,ib)
-      flux%sw_dn_clear(ibeg:iend,nlev+1) = zrgp(1:il,ifs_config%ifrsodc,ib)
-      flux%lw_dn_clear(ibeg:iend,nlev+1) = zrgp(1:il,ifs_config%ifrtedc,ib)
-      flux%sw_dn_direct(ibeg:iend,nlev+1) = zrgp(1:il,ifs_config%ifdir,ib)
-      flux%sw_dn_direct_clear(ibeg:iend,nlev+1) = zrgp(1:il,ifs_config%icdir,ib)
-      flux_sw_direct_normal(ibeg:iend) = zrgp(1:il,ifs_config%isudu,ib)
+      if (yradiation%rad_config%do_sw) then
+        flux%sw_dn(ibeg:iend,nlev+1) = zrgp(1:il,ifs_config%ifrsod,ib)
+        flux%sw_dn_clear(ibeg:iend,nlev+1) = zrgp(1:il,ifs_config%ifrsodc,ib)
+        flux%sw_dn_direct(ibeg:iend,nlev+1) = zrgp(1:il,ifs_config%ifdir,ib)
+        flux%sw_dn_direct_clear(ibeg:iend,nlev+1) = zrgp(1:il,ifs_config%icdir,ib)
+        flux_sw_direct_normal(ibeg:iend) = zrgp(1:il,ifs_config%isudu,ib)
+        flux%sw_dn(ibeg:iend,1) = zrgp(1:il,ifs_config%itincf,ib)
+      end if
+      if (yradiation%rad_config%do_lw) then
+        flux%lw_dn(ibeg:iend,nlev+1) = zrgp(1:il,ifs_config%ifrted,ib)
+        flux%lw_dn_clear(ibeg:iend,nlev+1) = zrgp(1:il,ifs_config%ifrtedc,ib)
+      end if
       flux_uv(ibeg:iend) = zrgp(1:il,ifs_config%iuvdf,ib)
       flux_par(ibeg:iend) = zrgp(1:il,ifs_config%iparf,ib)
       flux_par_clear(ibeg:iend) = zrgp(1:il,ifs_config%iparcf,ib)
-      flux%sw_dn(ibeg:iend,1) = zrgp(1:il,ifs_config%itincf,ib)
       emissivity_out(ibeg:iend) = zrgp(1:il,ifs_config%iemit,ib)
       if (yradiation%yrerad%lapproxswupdate) then
         do jg=1,yradiation%yrerad%nsw
