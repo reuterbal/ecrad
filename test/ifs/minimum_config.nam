@@ -23,7 +23,7 @@ cloud_inhom_separation_factor = 0.75,
 !do_save_aerosol_optics = false,
 !sw_diag_wavelength_bound = .4e-6,.5e-6,.6e-6,.7e-6, ! Example for red-green-blue diagnostics
 !sw_diag_file_name = 'sw_diag.nc',
-do_save_net_fluxes = false,
+do_save_net_fluxes = true,            ! Always stored in ifs drivers, needs to be true for comparing output with the regular ecrad_driver
 do_write_double_precision = false,
 /
 !
@@ -57,7 +57,7 @@ sw_entrapment_name      = "Explicit",     ! Zero, Edge-only, Explicit, Non-fract
 iverbose    	   	= 1, 
 iverbosesetup  	   	= 2, 
 use_aerosols		= false,           ! Include aerosols in radiation calculations?
-do_save_spectral_flux   = false,           ! Save spectral fluxes in output file?
+do_save_spectral_flux   = true,           ! Save spectral fluxes in output file?
 do_save_gpoint_flux     = false,           ! Save fluxes per g-point in output file?
 do_lw_derivatives       = true,            ! Hogan-Bozzo style derivatives for approx updates
 gas_model_name          = "ECCKD",     ! Gas model
