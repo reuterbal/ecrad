@@ -461,12 +461,12 @@ program ecrad_ifs_driver
     flux%sw_up_clear(:,nlev+1) = flux%sw_up_clear(:,nlev+1)+flux%sw_dn_clear(:,nlev+1)
   end if
   if (yradiation%rad_config%do_lw) then
-  flux%lw_up = -flux%lw_up
-  flux%lw_up(:,1) = flux%lw_up(:,1)+flux%lw_dn(:,1)
-  flux%lw_up(:,nlev+1) = flux%lw_up(:,nlev+1)+flux%lw_dn(:,nlev+1)
-  flux%lw_up_clear = -flux%lw_up_clear
-  flux%lw_up_clear(:,1) = flux%lw_up_clear(:,1)+flux%lw_dn_clear(:,1)
-  flux%lw_up_clear(:,nlev+1) = flux%lw_up_clear(:,nlev+1)+flux%lw_dn_clear(:,nlev+1)
+    flux%lw_up = -flux%lw_up
+    flux%lw_up(:,1) = flux%lw_up(:,1)+flux%lw_dn(:,1)
+    flux%lw_up(:,nlev+1) = flux%lw_up(:,nlev+1)+flux%lw_dn(:,nlev+1)
+    flux%lw_up_clear = -flux%lw_up_clear
+    flux%lw_up_clear(:,1) = flux%lw_up_clear(:,1)+flux%lw_dn_clear(:,1)
+    flux%lw_up_clear(:,nlev+1) = flux%lw_up_clear(:,nlev+1)+flux%lw_dn_clear(:,nlev+1)
   end if
 
 

@@ -326,7 +326,6 @@ program ecrad_ifs_driver
 
   ! set relevant fluxes to zero
   if (yradiation%rad_config%do_sw) then
-    print *,  "DO SW ifs_driver_blocked"
     flux%sw_up(:,:) = 0._jprb
     flux%sw_dn(:,:) = 0._jprb
     flux%sw_dn_direct(:,:) = 0._jprb
