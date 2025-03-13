@@ -299,3 +299,26 @@ add_ecrad_ifs_test(
     ENABLED ON
     XFAIL_VALIDATION
 )
+
+# Some reduced tests that only run a subset of the ecrad functionality
+add_ecrad_ifs_test(
+    NAME ecckd_minimum_sw
+    CONFIG_FILE "${TEST_ECCKD_CONFIG}"
+    NAMELIST_OPTIONS
+        "do_lw=false"
+        "use_aerosols=false"
+    SW_THRESHOLD 1e-10
+    LW_THRESHOLD 1e-10
+    ENABLED ON
+)
+
+add_ecrad_ifs_test(
+    NAME ecckd_minimum_lw
+    CONFIG_FILE "${TEST_ECCKD_CONFIG}"
+    NAMELIST_OPTIONS
+        "do_sw=false"
+        "use_aerosols=false"
+    SW_THRESHOLD 1e-10
+    LW_THRESHOLD 1e-10
+    ENABLED ON
+)
