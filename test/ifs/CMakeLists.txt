@@ -123,7 +123,7 @@ function( add_ecrad_ifs_test )
                         output_${binary}_${_PAR_NAME}_net.nc
                     DEPENDS config_${_PAR_NAME}_${PREC}_net
                 )
-                endif()
+            endif()
 
         endforeach()
 
@@ -144,7 +144,7 @@ function( add_ecrad_ifs_test )
                 set( NCCMP_OPTIONS )
             endif()
 
-            foreach( binary ecrad_ifs_${PREC} ecrad_ifs_blocked_${PREC} ecrad_ifs_field_api_${PREC} )
+            foreach( binary ecrad_ifs_${PREC} ecrad_ifs_blocked_${PREC} ecrad_ifs_field_api_${PREC} ecrad_loki_${PREC})
 
                 if( TARGET ${binary} )
                     add_ecrad_nccmp_test(
