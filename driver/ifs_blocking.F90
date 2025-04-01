@@ -17,23 +17,91 @@ module ifs_blocking
 
   use parkind1,                 only : jprb, jpim ! Working precision, integer type
 
+#ifdef HAVE_FIELD_API
+  use field_module
+  use field_stack_module
+#endif
+
   implicit none
 
   public
 
-  type :: ifs_config_type
-    ! Offsets in ZRGP
-    integer :: igi, imu0, iamu0, iemiss, its, islm, iccnl,    &
-        &     ibas, itop, igelam, igemu, iclon, islon, iald, ialp, iti, ipr, iqs, iwv, iclc, ilwa,    &
-        &     iiwa, iswa, irwa, irra, idp, ioz, iecpo3, ihpr, iaprs, ihti, iaero, ifrsod, icdir,      &
-        &     ifrted, ifrsodc, ifrtedc, iemit, isudu, iuvdf, iparf, iparcf, itincf, ifdir, ifdif,     &
-        &     ilwderivative, iswdirectband, iswdiffuseband, ifrso, iswfc, ifrth, ilwfc, iaer,         &
-        &     iich4, iin2o, ino2, ic11, ic12, igix, iico2, iccno, ic22, icl4
-#ifdef BITIDENTITY_TESTING
-    integer :: ire_liq, ire_ice, ioverlap
+! Variable offsets in ZRGP
+  type ifs_config_type
+  integer :: ifldstot
+  integer :: igi
+  integer :: iamu0
+  integer :: iemiss
+  integer :: its
+  integer :: islm
+  integer :: iccnl
+  integer :: ibas
+  integer :: itop
+  integer :: igelam
+  integer :: igemu
+  integer :: iclon
+  integer :: islon
+  integer :: iald
+  integer :: ialp
+  integer :: iti
+  integer :: ipr
+  integer :: iqs
+  integer :: iwv
+  integer :: iclc
+  integer :: ilwa
+  integer :: iiwa
+  integer :: iswa
+  integer :: irwa
+  integer :: irra
+  integer :: idp
+  integer :: ioz
+  integer :: ihpr
+  integer :: iaprs
+  integer :: ihti
+  integer :: iaero
+  integer :: ifrsod
+  integer :: ifrted
+  integer :: ifrsodc
+  integer :: ifrtedc
+  integer :: iemit
+  integer :: isudu
+  integer :: iuvdf
+  integer :: iparf
+  integer :: iparcf
+  integer :: itincf
+  integer :: ifdir
+  integer :: ifdif
+  integer :: icdir
+  integer :: ilwderivative
+  integer :: iswdirectband
+  integer :: iswdiffuseband
+  integer :: ifrso
+  integer :: iswfc
+  integer :: ifrth
+  integer :: ilwfc
+  integer :: iaer
+  integer :: iico2
+  integer :: iich4
+  integer :: iin2o
+  integer :: ino2
+  integer :: ic11
+  integer :: ic12
+  integer :: ic22
+  integer :: icl4
+  integer :: igix
+  integer :: iccno
+  integer :: ire_liq
+  integer :: ire_ice
+  integer :: ioverlap
+end type ifs_config_type
+
+#ifdef HAVE_FIELD_API
+! Field stack wrapper for ZRGP
+  TYPE RADINTG_ZRGP_TYPE
+  CLASS(FIELD_3RB), POINTER :: FIELD_WRAPPER
+  TYPE(FIELD_3RB_STACK_MEMBER_PTR), ALLOCATABLE :: MEMBERS(:)
+  END TYPE RADINTG_ZRGP_TYPE
 #endif
-    integer :: ifldstot, iinbeg, ioutbeg, iinend, ioutend
-  end type ifs_config_type
 
 contains
 
@@ -67,214 +135,711 @@ subroutine ifs_setup_indices (driver_config, ifs_config, yradiation, nlev)
 
   integer, intent(inout) :: nlev
 
-  integer :: ifldsin, ifldsout, inext, iinbeg, iinend, ioutbeg, ioutend
-  logical :: llactaero
-  logical :: lldebug
-
-  ! Extract some config values
-  lldebug=(driver_config%iverbose>4)     ! debug
-  llactaero = .false.
-  if(yradiation%rad_config%n_aerosol_types > 0 .and.&
-    & yradiation%rad_config%n_aerosol_types <= 21 .and. yradiation%yrerad%naermacc == 0) then
-    llactaero = .true.
-  endif
-
-  !
-  ! RADINTG
-  !
+  integer :: inext
 
   !  INITIALISE INDICES FOR VARIABLE
 
   ! INDRAD is a CONTAIN'd function (now a module function)
 
-  inext  =1
-  iinbeg =1                        ! start of input variables
-  ifs_config%igi    =indrad(inext,1,lldebug)
-  ifs_config%imu0   =indrad(inext,1,.true.)
-  ifs_config%iamu0  =indrad(inext,1,.true.)
-  ifs_config%iemiss =indrad(inext,yradiation%yrerad%nlwemiss,.true.)
-  ifs_config%its    =indrad(inext,1,.true.)
-  ifs_config%islm   =indrad(inext,1,.true.)
-  ifs_config%iccnl  =indrad(inext,1,.true.)
-  ifs_config%iccno  =indrad(inext,1,.true.)
-  ifs_config%ibas   =indrad(inext,1,.true.)
-  ifs_config%itop   =indrad(inext,1,.true.)
-  ifs_config%igelam =indrad(inext,1,.true.)
-  ifs_config%igemu  =indrad(inext,1,.true.)
-  ifs_config%iclon  =indrad(inext,1,.true.)
-  ifs_config%islon  =indrad(inext,1,.true.)
-  ifs_config%iald   =indrad(inext,yradiation%yrerad%nsw,.true.)
-  ifs_config%ialp   =indrad(inext,yradiation%yrerad%nsw,.true.)
-  ifs_config%iti    =indrad(inext,nlev,.true.)
-  ifs_config%ipr    =indrad(inext,nlev,.true.)
-  ifs_config%iqs    =indrad(inext,nlev,.true.)
-  ifs_config%iwv    =indrad(inext,nlev,.true.)
-  ifs_config%iclc   =indrad(inext,nlev,.true.)
-  ifs_config%ilwa   =indrad(inext,nlev,.true.)
-  ifs_config%iiwa   =indrad(inext,nlev,.true.)
-  ifs_config%iswa   =indrad(inext,nlev,.true.)
-  ifs_config%irwa   =indrad(inext,nlev,.true.)
-  ifs_config%irra   =indrad(inext,nlev,.true.)
-  ifs_config%idp    =indrad(inext,nlev,.true.)
-  ifs_config%ioz    =indrad(inext,nlev,.false.)
-  ifs_config%iecpo3 =indrad(inext,nlev ,.false.)
-  ifs_config%ihpr   =indrad(inext,nlev+1,.true.) ! not used in ecrad
-  ifs_config%iaprs  =indrad(inext,nlev+1,.true.)
-  ifs_config%ihti   =indrad(inext,nlev+1,.true.)
-  ifs_config%iaero  =indrad(inext,yradiation%rad_config%n_aerosol_types*nlev,&
-                          & llactaero .and. yradiation%yrerad%naermacc==0)
+  inext = 1
+  ifs_config%igi = indrad( &
+      & inext, 1, &
+      & .false.)
+  ifs_config%iamu0 = indrad( &
+      & inext, 1, &
+      & .true.)
+  ifs_config%iemiss = indrad( &
+      & inext, yradiation%yrerad%nlwemiss, &
+      & .true.)
+  ifs_config%its = indrad( &
+      & inext, 1, &
+      & .true.)
+  ifs_config%islm = indrad( &
+      & inext, 1, &
+      & .true.)
+  ifs_config%iccnl = indrad( &
+      & inext, 1, &
+      & .true.)
+  ifs_config%ibas = indrad( &
+      & inext, 1, &
+      & .true.)
+  ifs_config%itop = indrad( &
+      & inext, 1, &
+      & .true.)
+  ifs_config%igelam = indrad( &
+      & inext, 1, &
+      & .true.)
+  ifs_config%igemu = indrad( &
+      & inext, 1, &
+      & .true.)
+  ifs_config%iclon = indrad( &
+      & inext, 1, &
+      & .true.)
+  ifs_config%islon = indrad( &
+      & inext, 1, &
+      & .true.)
+  ifs_config%iald = indrad( &
+      & inext, yradiation%yrerad%nsw, &
+      & .true.)
+  ifs_config%ialp = indrad( &
+      & inext, yradiation%yrerad%nsw, &
+      & .true.)
+  ifs_config%iti = indrad( &
+      & inext, nlev, &
+      & .true.)
+  ifs_config%ipr = indrad( &
+      & inext, nlev, &
+      & .true.)
+  ifs_config%iqs = indrad( &
+      & inext, nlev, &
+      & .true.)
+  ifs_config%iwv = indrad( &
+      & inext, nlev, &
+      & .true.)
+  ifs_config%iclc = indrad( &
+      & inext, nlev, &
+      & .true.)
+  ifs_config%ilwa = indrad( &
+      & inext, nlev, &
+      & .true.)
+  ifs_config%iiwa = indrad( &
+      & inext, nlev, &
+      & .true.)
+  ifs_config%iswa = indrad( &
+      & inext, nlev, &
+      & .true.)
+  ifs_config%irwa = indrad( &
+      & inext, nlev, &
+      & .true.)
+  ifs_config%irra = indrad( &
+      & inext, nlev, &
+      & .true.)
+  ifs_config%idp = indrad( &
+      & inext, nlev, &
+      & .true.)
+  ifs_config%ioz = indrad( &
+      & inext, nlev, &
+      & .true.)
+  ifs_config%ihpr = indrad( &
+      & inext, nlev+1, &
+      & .true.)
+  ifs_config%iaprs = indrad( &
+      & inext, nlev+1, &
+      & .true.)
+  ifs_config%ihti = indrad( &
+      & inext, nlev+1, &
+      & .true.)
+  ifs_config%iaero = indrad( &
+      & inext, yradiation%rad_config%n_aerosol_types*nlev, &
+      & .true.)
+  ifs_config%ifrsod = indrad( &
+      & inext, 1, &
+      & .true.)
+  ifs_config%ifrted = indrad( &
+      & inext, 1, &
+      & .true.)
+  ifs_config%ifrsodc = indrad( &
+      & inext, 1, &
+      & .true.)
+  ifs_config%ifrtedc = indrad( &
+      & inext, 1, &
+      & .true.)
+  ifs_config%iemit = indrad( &
+      & inext, 1, &
+      & .true.)
+  ifs_config%isudu = indrad( &
+      & inext, 1, &
+      & .true.)
+  ifs_config%iuvdf = indrad( &
+      & inext, 1, &
+      & .true.)
+  ifs_config%iparf = indrad( &
+      & inext, 1, &
+      & .true.)
+  ifs_config%iparcf = indrad( &
+      & inext, 1, &
+      & .true.)
+  ifs_config%itincf = indrad( &
+      & inext, 1, &
+      & .true.)
+  ifs_config%ifdir = indrad( &
+      & inext, 1, &
+      & .true.)
+  ifs_config%ifdif = indrad( &
+      & inext, 1, &
+      & .true.)
+  ifs_config%icdir = indrad( &
+      & inext, 1, &
+      & .true.)
+  ifs_config%ilwderivative = indrad( &
+      & inext, nlev+1, &
+      & yradiation%yrerad%lapproxlwupdate)
+  ifs_config%iswdirectband = indrad( &
+      & inext, yradiation%yrerad%nsw, &
+      & yradiation%yrerad%lapproxswupdate)
+  ifs_config%iswdiffuseband = indrad( &
+      & inext, yradiation%yrerad%nsw, &
+      & yradiation%yrerad%lapproxswupdate)
+  ifs_config%ifrso = indrad( &
+      & inext, nlev+1, &
+      & .true.)
+  ifs_config%iswfc = indrad( &
+      & inext, nlev+1, &
+      & .true.)
+  ifs_config%ifrth = indrad( &
+      & inext, nlev+1, &
+      & .true.)
+  ifs_config%ilwfc = indrad( &
+      & inext, nlev+1, &
+      & .true.)
+  ifs_config%iaer = indrad( &
+      & inext, 6*nlev, &
+      & .true.)
+  ifs_config%iico2 = indrad( &
+      & inext, nlev, &
+      & .true.)
+  ifs_config%iich4 = indrad( &
+      & inext, nlev, &
+      & .true.)
+  ifs_config%iin2o = indrad( &
+      & inext, nlev, &
+      & .true.)
+  ifs_config%ino2 = indrad( &
+      & inext, nlev, &
+      & .true.)
+  ifs_config%ic11 = indrad( &
+      & inext, nlev, &
+      & .true.)
+  ifs_config%ic12 = indrad( &
+      & inext, nlev, &
+      & .true.)
+  ifs_config%ic22 = indrad( &
+      & inext, nlev, &
+      & .true.)
+  ifs_config%icl4 = indrad( &
+      & inext, nlev, &
+      & .true.)
+  ifs_config%igix = indrad( &
+      & inext, 1, &
+      & .false.)
+  ifs_config%iccno = indrad( &
+      & inext, 1, &
+      & .true.)
+  ifs_config%ire_liq = indrad( &
+      & inext, nlev, &
+      & .true.)
+  ifs_config%ire_ice = indrad( &
+      & inext, nlev, &
+      & .true.)
+  ifs_config%ioverlap = indrad( &
+      & inext, nlev-1, &
+      & .true.)
+  ifs_config%ifldstot = inext  - 1
 
-  iinend =inext-1                  ! end of input variables
-
-  ioutbeg=inext                    ! start of output variables
-  if (yradiation%yrerad%naermacc == 1) then
-    ifs_config%iaero = indrad(inext,yradiation%rad_config%n_aerosol_types*nlev,&
-                            & yradiation%yrerad%ldiagforcing)
-  endif
-  ifs_config%ifrsod =indrad(inext,1,.true.)
-  ifs_config%ifrted =indrad(inext,yradiation%yrerad%nlwout,.true.)
-  ifs_config%ifrsodc=indrad(inext,1,.true.)
-  ifs_config%ifrtedc=indrad(inext,1,.true.)
-  ifs_config%iemit  =indrad(inext,1,.true.)
-  ifs_config%isudu  =indrad(inext,1,.true.)
-  ifs_config%iuvdf  =indrad(inext,1,.true.)
-  ifs_config%iparf  =indrad(inext,1,.true.)
-  ifs_config%iparcf =indrad(inext,1,.true.)
-  ifs_config%itincf =indrad(inext,1,.true.)
-  ifs_config%ifdir  =indrad(inext,1,.true.)
-  ifs_config%ifdif  =indrad(inext,1,.true.)
-  ifs_config%icdir  =indrad(inext,1,.true.)
-  ifs_config%ilwderivative =indrad(inext,nlev+1, yradiation%yrerad%lapproxlwupdate)
-  ifs_config%iswdirectband =indrad(inext,yradiation%yrerad%nsw,yradiation%yrerad%lapproxswupdate)
-  ifs_config%iswdiffuseband=indrad(inext,yradiation%yrerad%nsw,yradiation%yrerad%lapproxswupdate)
-  ifs_config%ifrso  =indrad(inext,nlev+1,.true.)
-  ifs_config%iswfc  =indrad(inext,nlev+1,.true.)
-  ifs_config%ifrth  =indrad(inext,nlev+1,.true.)
-  ifs_config%ilwfc  =indrad(inext,nlev+1,.true.)
-  ifs_config%iaer   =indrad(inext,6*nlev,yradiation%yrerad%ldiagforcing)
-  ifs_config%ioz    =indrad(inext,nlev,yradiation%yrerad%ldiagforcing)
-  ifs_config%iico2  =indrad(inext,nlev,yradiation%yrerad%ldiagforcing)
-  ifs_config%iich4  =indrad(inext,nlev,yradiation%yrerad%ldiagforcing)
-  ifs_config%iin2o  =indrad(inext,nlev,yradiation%yrerad%ldiagforcing)
-  ifs_config%ino2   =indrad(inext,nlev,yradiation%yrerad%ldiagforcing)
-  ifs_config%ic11   =indrad(inext,nlev,yradiation%yrerad%ldiagforcing)
-  ifs_config%ic12   =indrad(inext,nlev,yradiation%yrerad%ldiagforcing)
-  ifs_config%ic22   =indrad(inext,nlev,yradiation%yrerad%ldiagforcing)
-  ifs_config%icl4   =indrad(inext,nlev,yradiation%yrerad%ldiagforcing)
-  ifs_config%igix   =indrad(inext,1,lldebug)
-
-  ioutend=inext-1                  ! end of output variables
-
-                                ! start of local variables
-  if(.not.yradiation%yrerad%ldiagforcing) then
-    if (yradiation%rad_config%n_aerosol_types == 0 .or. yradiation%yrerad%naermacc == 1) then
-      ifs_config%iaero = indrad(inext,yradiation%rad_config%n_aerosol_types*nlev,.true.)
-    endif
-    ifs_config%iaer   =indrad(inext,nlev*6,.true.)
-    ifs_config%ioz    =indrad(inext,nlev,.true.)
-    ifs_config%iico2  =indrad(inext,nlev,.true.)
-    ifs_config%iich4  =indrad(inext,nlev,.true.)
-    ifs_config%iin2o  =indrad(inext,nlev,.true.)
-    ifs_config%ino2   =indrad(inext,nlev,.true.)
-    ifs_config%ic11   =indrad(inext,nlev,.true.)
-    ifs_config%ic12   =indrad(inext,nlev,.true.)
-    ifs_config%ic22   =indrad(inext,nlev,.true.)
-    ifs_config%icl4   =indrad(inext,nlev,.true.)
-  endif
-                                ! end of local variables
-
-                                  ! start of standalone inputs workaround variables
-#ifdef BITIDENTITY_TESTING
-  ! To validate results against standalone ecrad, we overwrite effective
-  ! radii, cloud overlap and seed with input values
-  ifs_config%ire_liq =indrad(inext,nlev,.true.)
-  ifs_config%ire_ice =indrad(inext,nlev,.true.)
-  ifs_config%ioverlap =indrad(inext,nlev-1,.true.)
-#endif
-                                  ! end of standalone inputs workaround variables
-
-  ifldsin = iinend - iinbeg +1
-  ifldsout= ioutend-ioutbeg +1
-  ifs_config%ifldstot= inext  - 1
-  ifs_config%iinbeg = iinbeg
-  ifs_config%iinend = iinend
-  ifs_config%ioutbeg = ioutbeg
-  ifs_config%ioutend = ioutend
-
-  if( lldebug )then
-    write(nulout,'("imu0   =",i0)')ifs_config%imu0
-    write(nulout,'("iamu0  =",i0)')ifs_config%iamu0
-    write(nulout,'("iemiss =",i0)')ifs_config%iemiss
-    write(nulout,'("its    =",i0)')ifs_config%its
-    write(nulout,'("islm   =",i0)')ifs_config%islm
-    write(nulout,'("iccnl  =",i0)')ifs_config%iccnl
-    write(nulout,'("iccno  =",i0)')ifs_config%iccno
-    write(nulout,'("ibas   =",i0)')ifs_config%ibas
-    write(nulout,'("itop   =",i0)')ifs_config%itop
-    write(nulout,'("igelam =",i0)')ifs_config%igelam
-    write(nulout,'("igemu  =",i0)')ifs_config%igemu
-    write(nulout,'("iclon  =",i0)')ifs_config%iclon
-    write(nulout,'("islon  =",i0)')ifs_config%islon
-    write(nulout,'("iald   =",i0)')ifs_config%iald
-    write(nulout,'("ialp   =",i0)')ifs_config%ialp
-    write(nulout,'("iti    =",i0)')ifs_config%iti
-    write(nulout,'("ipr    =",i0)')ifs_config%ipr
-    write(nulout,'("iqs    =",i0)')ifs_config%iqs
-    write(nulout,'("iwv    =",i0)')ifs_config%iwv
-    write(nulout,'("iclc   =",i0)')ifs_config%iclc
-    write(nulout,'("ilwa   =",i0)')ifs_config%ilwa
-    write(nulout,'("iiwa   =",i0)')ifs_config%iiwa
-    write(nulout,'("iswa   =",i0)')ifs_config%iswa
-    write(nulout,'("irwa   =",i0)')ifs_config%irwa
-    write(nulout,'("irra   =",i0)')ifs_config%irra
-    write(nulout,'("idp    =",i0)')ifs_config%idp
-    write(nulout,'("ioz    =",i0)')ifs_config%ioz
-    write(nulout,'("iecpo3 =",i0)')ifs_config%iecpo3
-    write(nulout,'("ihpr   =",i0)')ifs_config%ihpr
-    write(nulout,'("iaprs  =",i0)')ifs_config%iaprs
-    write(nulout,'("ihti   =",i0)')ifs_config%ihti
-    write(nulout,'("ifrsod =",i0)')ifs_config%ifrsod
-    write(nulout,'("ifrted =",i0)')ifs_config%ifrted
-    write(nulout,'("ifrsodc=",i0)')ifs_config%ifrsodc
-    write(nulout,'("ifrtedc=",i0)')ifs_config%ifrtedc
-    write(nulout,'("iemit  =",i0)')ifs_config%iemit
-    write(nulout,'("isudu  =",i0)')ifs_config%isudu
-    write(nulout,'("iuvdf  =",i0)')ifs_config%iuvdf
-    write(nulout,'("iparf  =",i0)')ifs_config%iparf
-    write(nulout,'("iparcf =",i0)')ifs_config%iparcf
-    write(nulout,'("itincf =",i0)')ifs_config%itincf
-    write(nulout,'("ifdir  =",i0)')ifs_config%ifdir
-    write(nulout,'("ifdif  =",i0)')ifs_config%ifdif
-    write(nulout,'("icdir  =",i0)')ifs_config%icdir
-    write(nulout,'("ilwderivative  =",i0)')ifs_config%ilwderivative
-    write(nulout,'("iswdirectband  =",i0)')ifs_config%iswdirectband
-    write(nulout,'("iswdiffuseband =",i0)')ifs_config%iswdiffuseband
-    write(nulout,'("ifrso  =",i0)')ifs_config%ifrso
-    write(nulout,'("iswfc  =",i0)')ifs_config%iswfc
-    write(nulout,'("ifrth  =",i0)')ifs_config%ifrth
-    write(nulout,'("ilwfc  =",i0)')ifs_config%ilwfc
-    write(nulout,'("igi    =",i0)')ifs_config%igi
-    write(nulout,'("iaer   =",i0)')ifs_config%iaer
-    write(nulout,'("iaero  =",i0)')ifs_config%iaero
-    write(nulout,'("iico2  =",i0)')ifs_config%iico2
-    write(nulout,'("iich4  =",i0)')ifs_config%iich4
-    write(nulout,'("iin2o  =",i0)')ifs_config%iin2o
-    write(nulout,'("ino2   =",i0)')ifs_config%ino2
-    write(nulout,'("ic11   =",i0)')ifs_config%ic11
-    write(nulout,'("ic12   =",i0)')ifs_config%ic12
-    write(nulout,'("ic22   =",i0)')ifs_config%ic22
-    write(nulout,'("icl4   =",i0)')ifs_config%icl4
-#ifdef BITIDENTITY_TESTING
-    write(nulout,'("ire_liq=",i0)')ifs_config%ire_liq
-    write(nulout,'("ire_ice=",i0)')ifs_config%ire_ice
-    write(nulout,'("ioverlap=",i0)')ifs_config%ioverlap
-#endif
-    write(nulout,'("ifldsin =",i0)')ifldsin
-    write(nulout,'("ifldsout=",i0)')ifldsout
+  if( driver_config%iverbose > 4 )then
+    write(nulout,'(a," = ",i0,", dim = ",i0,", condition = ",a)') &
+        & 'ifs_config%igi', &
+        & ifs_config%igi, &
+        & 1, &
+        & '.false.'
+    write(nulout,'(a," = ",i0,", dim = ",i0,", condition = ",a)') &
+        & 'ifs_config%iamu0', &
+        & ifs_config%iamu0, &
+        & 1, &
+        & '.true.'
+    write(nulout,'(a," = ",i0,", dim = ",i0,", condition = ",a)') &
+        & 'ifs_config%iemiss', &
+        & ifs_config%iemiss, &
+        & yradiation%yrerad%nlwemiss, &
+        & '.true.'
+    write(nulout,'(a," = ",i0,", dim = ",i0,", condition = ",a)') &
+        & 'ifs_config%its', &
+        & ifs_config%its, &
+        & 1, &
+        & '.true.'
+    write(nulout,'(a," = ",i0,", dim = ",i0,", condition = ",a)') &
+        & 'ifs_config%islm', &
+        & ifs_config%islm, &
+        & 1, &
+        & '.true.'
+    write(nulout,'(a," = ",i0,", dim = ",i0,", condition = ",a)') &
+        & 'ifs_config%iccnl', &
+        & ifs_config%iccnl, &
+        & 1, &
+        & '.true.'
+    write(nulout,'(a," = ",i0,", dim = ",i0,", condition = ",a)') &
+        & 'ifs_config%ibas', &
+        & ifs_config%ibas, &
+        & 1, &
+        & '.true.'
+    write(nulout,'(a," = ",i0,", dim = ",i0,", condition = ",a)') &
+        & 'ifs_config%itop', &
+        & ifs_config%itop, &
+        & 1, &
+        & '.true.'
+    write(nulout,'(a," = ",i0,", dim = ",i0,", condition = ",a)') &
+        & 'ifs_config%igelam', &
+        & ifs_config%igelam, &
+        & 1, &
+        & '.true.'
+    write(nulout,'(a," = ",i0,", dim = ",i0,", condition = ",a)') &
+        & 'ifs_config%igemu', &
+        & ifs_config%igemu, &
+        & 1, &
+        & '.true.'
+    write(nulout,'(a," = ",i0,", dim = ",i0,", condition = ",a)') &
+        & 'ifs_config%iclon', &
+        & ifs_config%iclon, &
+        & 1, &
+        & '.true.'
+    write(nulout,'(a," = ",i0,", dim = ",i0,", condition = ",a)') &
+        & 'ifs_config%islon', &
+        & ifs_config%islon, &
+        & 1, &
+        & '.true.'
+    write(nulout,'(a," = ",i0,", dim = ",i0,", condition = ",a)') &
+        & 'ifs_config%iald', &
+        & ifs_config%iald, &
+        & yradiation%yrerad%nsw, &
+        & '.true.'
+    write(nulout,'(a," = ",i0,", dim = ",i0,", condition = ",a)') &
+        & 'ifs_config%ialp', &
+        & ifs_config%ialp, &
+        & yradiation%yrerad%nsw, &
+        & '.true.'
+    write(nulout,'(a," = ",i0,", dim = ",i0,", condition = ",a)') &
+        & 'ifs_config%iti', &
+        & ifs_config%iti, &
+        & nlev, &
+        & '.true.'
+    write(nulout,'(a," = ",i0,", dim = ",i0,", condition = ",a)') &
+        & 'ifs_config%ipr', &
+        & ifs_config%ipr, &
+        & nlev, &
+        & '.true.'
+    write(nulout,'(a," = ",i0,", dim = ",i0,", condition = ",a)') &
+        & 'ifs_config%iqs', &
+        & ifs_config%iqs, &
+        & nlev, &
+        & '.true.'
+    write(nulout,'(a," = ",i0,", dim = ",i0,", condition = ",a)') &
+        & 'ifs_config%iwv', &
+        & ifs_config%iwv, &
+        & nlev, &
+        & '.true.'
+    write(nulout,'(a," = ",i0,", dim = ",i0,", condition = ",a)') &
+        & 'ifs_config%iclc', &
+        & ifs_config%iclc, &
+        & nlev, &
+        & '.true.'
+    write(nulout,'(a," = ",i0,", dim = ",i0,", condition = ",a)') &
+        & 'ifs_config%ilwa', &
+        & ifs_config%ilwa, &
+        & nlev, &
+        & '.true.'
+    write(nulout,'(a," = ",i0,", dim = ",i0,", condition = ",a)') &
+        & 'ifs_config%iiwa', &
+        & ifs_config%iiwa, &
+        & nlev, &
+        & '.true.'
+    write(nulout,'(a," = ",i0,", dim = ",i0,", condition = ",a)') &
+        & 'ifs_config%iswa', &
+        & ifs_config%iswa, &
+        & nlev, &
+        & '.true.'
+    write(nulout,'(a," = ",i0,", dim = ",i0,", condition = ",a)') &
+        & 'ifs_config%irwa', &
+        & ifs_config%irwa, &
+        & nlev, &
+        & '.true.'
+    write(nulout,'(a," = ",i0,", dim = ",i0,", condition = ",a)') &
+        & 'ifs_config%irra', &
+        & ifs_config%irra, &
+        & nlev, &
+        & '.true.'
+    write(nulout,'(a," = ",i0,", dim = ",i0,", condition = ",a)') &
+        & 'ifs_config%idp', &
+        & ifs_config%idp, &
+        & nlev, &
+        & '.true.'
+    write(nulout,'(a," = ",i0,", dim = ",i0,", condition = ",a)') &
+        & 'ifs_config%ioz', &
+        & ifs_config%ioz, &
+        & nlev, &
+        & '.true.'
+    write(nulout,'(a," = ",i0,", dim = ",i0,", condition = ",a)') &
+        & 'ifs_config%ihpr', &
+        & ifs_config%ihpr, &
+        & nlev+1, &
+        & '.true.'
+    write(nulout,'(a," = ",i0,", dim = ",i0,", condition = ",a)') &
+        & 'ifs_config%iaprs', &
+        & ifs_config%iaprs, &
+        & nlev+1, &
+        & '.true.'
+    write(nulout,'(a," = ",i0,", dim = ",i0,", condition = ",a)') &
+        & 'ifs_config%ihti', &
+        & ifs_config%ihti, &
+        & nlev+1, &
+        & '.true.'
+    write(nulout,'(a," = ",i0,", dim = ",i0,", condition = ",a)') &
+        & 'ifs_config%iaero', &
+        & ifs_config%iaero, &
+        & yradiation%rad_config%n_aerosol_types*nlev, &
+        & '.true.'
+    write(nulout,'(a," = ",i0,", dim = ",i0,", condition = ",a)') &
+        & 'ifs_config%ifrsod', &
+        & ifs_config%ifrsod, &
+        & 1, &
+        & '.true.'
+    write(nulout,'(a," = ",i0,", dim = ",i0,", condition = ",a)') &
+        & 'ifs_config%ifrted', &
+        & ifs_config%ifrted, &
+        & 1, &
+        & '.true.'
+    write(nulout,'(a," = ",i0,", dim = ",i0,", condition = ",a)') &
+        & 'ifs_config%ifrsodc', &
+        & ifs_config%ifrsodc, &
+        & 1, &
+        & '.true.'
+    write(nulout,'(a," = ",i0,", dim = ",i0,", condition = ",a)') &
+        & 'ifs_config%ifrtedc', &
+        & ifs_config%ifrtedc, &
+        & 1, &
+        & '.true.'
+    write(nulout,'(a," = ",i0,", dim = ",i0,", condition = ",a)') &
+        & 'ifs_config%iemit', &
+        & ifs_config%iemit, &
+        & 1, &
+        & '.true.'
+    write(nulout,'(a," = ",i0,", dim = ",i0,", condition = ",a)') &
+        & 'ifs_config%isudu', &
+        & ifs_config%isudu, &
+        & 1, &
+        & '.true.'
+    write(nulout,'(a," = ",i0,", dim = ",i0,", condition = ",a)') &
+        & 'ifs_config%iuvdf', &
+        & ifs_config%iuvdf, &
+        & 1, &
+        & '.true.'
+    write(nulout,'(a," = ",i0,", dim = ",i0,", condition = ",a)') &
+        & 'ifs_config%iparf', &
+        & ifs_config%iparf, &
+        & 1, &
+        & '.true.'
+    write(nulout,'(a," = ",i0,", dim = ",i0,", condition = ",a)') &
+        & 'ifs_config%iparcf', &
+        & ifs_config%iparcf, &
+        & 1, &
+        & '.true.'
+    write(nulout,'(a," = ",i0,", dim = ",i0,", condition = ",a)') &
+        & 'ifs_config%itincf', &
+        & ifs_config%itincf, &
+        & 1, &
+        & '.true.'
+    write(nulout,'(a," = ",i0,", dim = ",i0,", condition = ",a)') &
+        & 'ifs_config%ifdir', &
+        & ifs_config%ifdir, &
+        & 1, &
+        & '.true.'
+    write(nulout,'(a," = ",i0,", dim = ",i0,", condition = ",a)') &
+        & 'ifs_config%ifdif', &
+        & ifs_config%ifdif, &
+        & 1, &
+        & '.true.'
+    write(nulout,'(a," = ",i0,", dim = ",i0,", condition = ",a)') &
+        & 'ifs_config%icdir', &
+        & ifs_config%icdir, &
+        & 1, &
+        & '.true.'
+    write(nulout,'(a," = ",i0,", dim = ",i0,", condition = ",a)') &
+        & 'ifs_config%ilwderivative', &
+        & ifs_config%ilwderivative, &
+        & nlev+1, &
+        & 'yradiation%yrerad%lapproxlwupdate'
+    write(nulout,'(a," = ",i0,", dim = ",i0,", condition = ",a)') &
+        & 'ifs_config%iswdirectband', &
+        & ifs_config%iswdirectband, &
+        & yradiation%yrerad%nsw, &
+        & 'yradiation%yrerad%lapproxswupdate'
+    write(nulout,'(a," = ",i0,", dim = ",i0,", condition = ",a)') &
+        & 'ifs_config%iswdiffuseband', &
+        & ifs_config%iswdiffuseband, &
+        & yradiation%yrerad%nsw, &
+        & 'yradiation%yrerad%lapproxswupdate'
+    write(nulout,'(a," = ",i0,", dim = ",i0,", condition = ",a)') &
+        & 'ifs_config%ifrso', &
+        & ifs_config%ifrso, &
+        & nlev+1, &
+        & '.true.'
+    write(nulout,'(a," = ",i0,", dim = ",i0,", condition = ",a)') &
+        & 'ifs_config%iswfc', &
+        & ifs_config%iswfc, &
+        & nlev+1, &
+        & '.true.'
+    write(nulout,'(a," = ",i0,", dim = ",i0,", condition = ",a)') &
+        & 'ifs_config%ifrth', &
+        & ifs_config%ifrth, &
+        & nlev+1, &
+        & '.true.'
+    write(nulout,'(a," = ",i0,", dim = ",i0,", condition = ",a)') &
+        & 'ifs_config%ilwfc', &
+        & ifs_config%ilwfc, &
+        & nlev+1, &
+        & '.true.'
+    write(nulout,'(a," = ",i0,", dim = ",i0,", condition = ",a)') &
+        & 'ifs_config%iaer', &
+        & ifs_config%iaer, &
+        & 6*nlev, &
+        & '.true.'
+    write(nulout,'(a," = ",i0,", dim = ",i0,", condition = ",a)') &
+        & 'ifs_config%iico2', &
+        & ifs_config%iico2, &
+        & nlev, &
+        & '.true.'
+    write(nulout,'(a," = ",i0,", dim = ",i0,", condition = ",a)') &
+        & 'ifs_config%iich4', &
+        & ifs_config%iich4, &
+        & nlev, &
+        & '.true.'
+    write(nulout,'(a," = ",i0,", dim = ",i0,", condition = ",a)') &
+        & 'ifs_config%iin2o', &
+        & ifs_config%iin2o, &
+        & nlev, &
+        & '.true.'
+    write(nulout,'(a," = ",i0,", dim = ",i0,", condition = ",a)') &
+        & 'ifs_config%ino2', &
+        & ifs_config%ino2, &
+        & nlev, &
+        & '.true.'
+    write(nulout,'(a," = ",i0,", dim = ",i0,", condition = ",a)') &
+        & 'ifs_config%ic11', &
+        & ifs_config%ic11, &
+        & nlev, &
+        & '.true.'
+    write(nulout,'(a," = ",i0,", dim = ",i0,", condition = ",a)') &
+        & 'ifs_config%ic12', &
+        & ifs_config%ic12, &
+        & nlev, &
+        & '.true.'
+    write(nulout,'(a," = ",i0,", dim = ",i0,", condition = ",a)') &
+        & 'ifs_config%ic22', &
+        & ifs_config%ic22, &
+        & nlev, &
+        & '.true.'
+    write(nulout,'(a," = ",i0,", dim = ",i0,", condition = ",a)') &
+        & 'ifs_config%icl4', &
+        & ifs_config%icl4, &
+        & nlev, &
+        & '.true.'
+    write(nulout,'(a," = ",i0,", dim = ",i0,", condition = ",a)') &
+        & 'ifs_config%igix', &
+        & ifs_config%igix, &
+        & 1, &
+        & '.false.'
+    write(nulout,'(a," = ",i0,", dim = ",i0,", condition = ",a)') &
+        & 'ifs_config%iccno', &
+        & ifs_config%iccno, &
+        & 1, &
+        & '.true.'
+    write(nulout,'(a," = ",i0,", dim = ",i0,", condition = ",a)') &
+        & 'ifs_config%ire_liq', &
+        & ifs_config%ire_liq, &
+        & nlev, &
+        & '.true.'
+    write(nulout,'(a," = ",i0,", dim = ",i0,", condition = ",a)') &
+        & 'ifs_config%ire_ice', &
+        & ifs_config%ire_ice, &
+        & nlev, &
+        & '.true.'
+    write(nulout,'(a," = ",i0,", dim = ",i0,", condition = ",a)') &
+        & 'ifs_config%ioverlap', &
+        & ifs_config%ioverlap, &
+        & nlev-1, &
+        & '.true.'
     write(nulout,'("ifldstot=",i0)')ifs_config%ifldstot
   endif
 
 end subroutine ifs_setup_indices
+
+#ifdef HAVE_FIELD_API
+
+SUBROUTINE FIELD_INDRAD(MEMBER_MAP, KIDX, KNEXT, KFLDS, LDUSE)
+  INTEGER(KIND=JPIM), INTENT(INOUT) :: MEMBER_MAP(:)
+  INTEGER(KIND=JPIM), INTENT(IN) :: KIDX
+  INTEGER(KIND=JPIM), INTENT(INOUT) :: KNEXT
+  INTEGER(KIND=JPIM), INTENT(IN) :: KFLDS
+  LOGICAL, INTENT(IN) :: LDUSE
+  INTEGER(KIND=JPIM) :: ISTART, IEND
+
+  ISTART = KNEXT
+  IF( LDUSE ) THEN
+      IEND = ISTART + KFLDS - 1
+      KNEXT = IEND + 1
+  ELSE
+      IEND = ISTART
+  ENDIF
+  MEMBER_MAP(2*KIDX-1) = ISTART
+  MEMBER_MAP(2*KIDX) = IEND
+END SUBROUTINE FIELD_INDRAD
+
+SUBROUTINE IFS_SETUP_FAPI(ZRGP_FIELDS, ZRGP, DRIVER_CONFIG, YRADIATION, NLEV)
+
+  USE FIELD_FACTORY_MODULE
+  USE ECRAD_DRIVER_CONFIG,      ONLY : DRIVER_CONFIG_TYPE
+  USE RADIATION_SETUP,          ONLY : TRADIATION
+  USE RADIATION_IO,             ONLY : NULERR
+
+  IMPLICIT NONE
+
+  TYPE(RADINTG_ZRGP_TYPE), INTENT(INOUT) :: ZRGP_FIELDS
+  REAL(KIND=JPRB), INTENT(INOUT), TARGET :: ZRGP(:,:,:)
+  TYPE(DRIVER_CONFIG_TYPE), INTENT(IN)   :: DRIVER_CONFIG
+  TYPE(TRADIATION), INTENT(IN)           :: YRADIATION
+  INTEGER, INTENT(IN)                     :: NLEV
+
+  INTEGER(KIND=JPIM), ALLOCATABLE     :: MEMBER_MAP(:)
+  INTEGER(KIND=JPIM)                  :: INEXT
+
+#include "abor1.intfb.h"
+
+  ALLOCATE(MEMBER_MAP(128))
+
+  INEXT = 1
+  ! igi
+  CALL FIELD_INDRAD( MEMBER_MAP, 1, INEXT, 1, .false.)
+  ! iamu0
+  CALL FIELD_INDRAD( MEMBER_MAP, 2, INEXT, 1, .true.)
+  ! iemiss
+  CALL FIELD_INDRAD( MEMBER_MAP, 3, INEXT, yradiation%yrerad%nlwemiss, .true.)
+  ! its
+  CALL FIELD_INDRAD( MEMBER_MAP, 4, INEXT, 1, .true.)
+  ! islm
+  CALL FIELD_INDRAD( MEMBER_MAP, 5, INEXT, 1, .true.)
+  ! iccnl
+  CALL FIELD_INDRAD( MEMBER_MAP, 6, INEXT, 1, .true.)
+  ! ibas
+  CALL FIELD_INDRAD( MEMBER_MAP, 7, INEXT, 1, .true.)
+  ! itop
+  CALL FIELD_INDRAD( MEMBER_MAP, 8, INEXT, 1, .true.)
+  ! igelam
+  CALL FIELD_INDRAD( MEMBER_MAP, 9, INEXT, 1, .true.)
+  ! igemu
+  CALL FIELD_INDRAD( MEMBER_MAP, 10, INEXT, 1, .true.)
+  ! iclon
+  CALL FIELD_INDRAD( MEMBER_MAP, 11, INEXT, 1, .true.)
+  ! islon
+  CALL FIELD_INDRAD( MEMBER_MAP, 12, INEXT, 1, .true.)
+  ! iald
+  CALL FIELD_INDRAD( MEMBER_MAP, 13, INEXT, yradiation%yrerad%nsw, .true.)
+  ! ialp
+  CALL FIELD_INDRAD( MEMBER_MAP, 14, INEXT, yradiation%yrerad%nsw, .true.)
+  ! iti
+  CALL FIELD_INDRAD( MEMBER_MAP, 15, INEXT, nlev, .true.)
+  ! ipr
+  CALL FIELD_INDRAD( MEMBER_MAP, 16, INEXT, nlev, .true.)
+  ! iqs
+  CALL FIELD_INDRAD( MEMBER_MAP, 17, INEXT, nlev, .true.)
+  ! iwv
+  CALL FIELD_INDRAD( MEMBER_MAP, 18, INEXT, nlev, .true.)
+  ! iclc
+  CALL FIELD_INDRAD( MEMBER_MAP, 19, INEXT, nlev, .true.)
+  ! ilwa
+  CALL FIELD_INDRAD( MEMBER_MAP, 20, INEXT, nlev, .true.)
+  ! iiwa
+  CALL FIELD_INDRAD( MEMBER_MAP, 21, INEXT, nlev, .true.)
+  ! iswa
+  CALL FIELD_INDRAD( MEMBER_MAP, 22, INEXT, nlev, .true.)
+  ! irwa
+  CALL FIELD_INDRAD( MEMBER_MAP, 23, INEXT, nlev, .true.)
+  ! irra
+  CALL FIELD_INDRAD( MEMBER_MAP, 24, INEXT, nlev, .true.)
+  ! idp
+  CALL FIELD_INDRAD( MEMBER_MAP, 25, INEXT, nlev, .true.)
+  ! ioz
+  CALL FIELD_INDRAD( MEMBER_MAP, 26, INEXT, nlev, .true.)
+  ! ihpr
+  CALL FIELD_INDRAD( MEMBER_MAP, 27, INEXT, nlev+1, .true.)
+  ! iaprs
+  CALL FIELD_INDRAD( MEMBER_MAP, 28, INEXT, nlev+1, .true.)
+  ! ihti
+  CALL FIELD_INDRAD( MEMBER_MAP, 29, INEXT, nlev+1, .true.)
+  ! iaero
+  CALL FIELD_INDRAD( MEMBER_MAP, 30, INEXT, yradiation%rad_config%n_aerosol_types*nlev, .true.)
+  ! ifrsod
+  CALL FIELD_INDRAD( MEMBER_MAP, 31, INEXT, 1, .true.)
+  ! ifrted
+  CALL FIELD_INDRAD( MEMBER_MAP, 32, INEXT, 1, .true.)
+  ! ifrsodc
+  CALL FIELD_INDRAD( MEMBER_MAP, 33, INEXT, 1, .true.)
+  ! ifrtedc
+  CALL FIELD_INDRAD( MEMBER_MAP, 34, INEXT, 1, .true.)
+  ! iemit
+  CALL FIELD_INDRAD( MEMBER_MAP, 35, INEXT, 1, .true.)
+  ! isudu
+  CALL FIELD_INDRAD( MEMBER_MAP, 36, INEXT, 1, .true.)
+  ! iuvdf
+  CALL FIELD_INDRAD( MEMBER_MAP, 37, INEXT, 1, .true.)
+  ! iparf
+  CALL FIELD_INDRAD( MEMBER_MAP, 38, INEXT, 1, .true.)
+  ! iparcf
+  CALL FIELD_INDRAD( MEMBER_MAP, 39, INEXT, 1, .true.)
+  ! itincf
+  CALL FIELD_INDRAD( MEMBER_MAP, 40, INEXT, 1, .true.)
+  ! ifdir
+  CALL FIELD_INDRAD( MEMBER_MAP, 41, INEXT, 1, .true.)
+  ! ifdif
+  CALL FIELD_INDRAD( MEMBER_MAP, 42, INEXT, 1, .true.)
+  ! icdir
+  CALL FIELD_INDRAD( MEMBER_MAP, 43, INEXT, 1, .true.)
+  ! ilwderivative
+  CALL FIELD_INDRAD( MEMBER_MAP, 44, INEXT, nlev+1, yradiation%yrerad%lapproxlwupdate)
+  ! iswdirectband
+  CALL FIELD_INDRAD( MEMBER_MAP, 45, INEXT, yradiation%yrerad%nsw, yradiation%yrerad%lapproxswupdate)
+  ! iswdiffuseband
+  CALL FIELD_INDRAD( MEMBER_MAP, 46, INEXT, yradiation%yrerad%nsw, yradiation%yrerad%lapproxswupdate)
+  ! ifrso
+  CALL FIELD_INDRAD( MEMBER_MAP, 47, INEXT, nlev+1, .true.)
+  ! iswfc
+  CALL FIELD_INDRAD( MEMBER_MAP, 48, INEXT, nlev+1, .true.)
+  ! ifrth
+  CALL FIELD_INDRAD( MEMBER_MAP, 49, INEXT, nlev+1, .true.)
+  ! ilwfc
+  CALL FIELD_INDRAD( MEMBER_MAP, 50, INEXT, nlev+1, .true.)
+  ! iaer
+  CALL FIELD_INDRAD( MEMBER_MAP, 51, INEXT, 6*nlev, .true.)
+  ! iico2
+  CALL FIELD_INDRAD( MEMBER_MAP, 52, INEXT, nlev, .true.)
+  ! iich4
+  CALL FIELD_INDRAD( MEMBER_MAP, 53, INEXT, nlev, .true.)
+  ! iin2o
+  CALL FIELD_INDRAD( MEMBER_MAP, 54, INEXT, nlev, .true.)
+  ! ino2
+  CALL FIELD_INDRAD( MEMBER_MAP, 55, INEXT, nlev, .true.)
+  ! ic11
+  CALL FIELD_INDRAD( MEMBER_MAP, 56, INEXT, nlev, .true.)
+  ! ic12
+  CALL FIELD_INDRAD( MEMBER_MAP, 57, INEXT, nlev, .true.)
+  ! ic22
+  CALL FIELD_INDRAD( MEMBER_MAP, 58, INEXT, nlev, .true.)
+  ! icl4
+  CALL FIELD_INDRAD( MEMBER_MAP, 59, INEXT, nlev, .true.)
+  ! igix
+  CALL FIELD_INDRAD( MEMBER_MAP, 60, INEXT, 1, .false.)
+  ! iccno
+  CALL FIELD_INDRAD( MEMBER_MAP, 61, INEXT, 1, .true.)
+  ! ire_liq
+  CALL FIELD_INDRAD( MEMBER_MAP, 62, INEXT, nlev, .true.)
+  ! ire_ice
+  CALL FIELD_INDRAD( MEMBER_MAP, 63, INEXT, nlev, .true.)
+  ! ioverlap
+  CALL FIELD_INDRAD( MEMBER_MAP, 64, INEXT, nlev-1, .true.)
+
+  CALL FIELD_NEW(ZRGP_FIELDS%FIELD_WRAPPER, ZRGP_FIELDS%MEMBERS, DATA=ZRGP, MEMBER_MAP=MEMBER_MAP)
+
+END SUBROUTINE IFS_SETUP_FAPI
+
+#endif
 
 subroutine ifs_copy_inputs_to_blocked ( &
   & driver_config, ifs_config, yradiation, ncol, nlev, &

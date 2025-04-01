@@ -181,9 +181,7 @@ program ecrad_driver
 
   ! Setup the radiation scheme: load the coefficients for gas and
   ! cloud optics, currently from RRTMG
-  ! call setup_radiation(config)
-  ! !!MOVED!! to after read_input because RRTMGP needs to know what gases are used
-  ! already when the coefficients are loaded
+  call setup_radiation(config)
 
   ! Demonstration of how to get weights for UV and PAR fluxes
   !if (config%do_sw) then
@@ -258,10 +256,6 @@ program ecrad_driver
 
   ! Close input file
   call file%close()
-
-  ! Setup the radiation scheme: load the coefficients for gas and
-  ! cloud optics, currently from RRTMG
-  call setup_radiation(config)
 
   ! Compute seed from skin temperature residual
   !  single_level%iseed = int(1.0e9*(single_level%skin_temperature &

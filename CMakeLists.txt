@@ -59,6 +59,21 @@ if( HAVE_FIAT AND fiat_HAVE_MPI )
 endif()
 
 ecbuild_add_option(
+    FEATURE FIELD_API
+    DEFAULT ON
+    DESCRIPTION "Enable FIELD_API-based driver variant"
+    REQUIRED_PACKAGES "field_api"
+)
+
+find_program(FYPP fypp)
+ecbuild_add_option(
+    FEATURE FYPP
+    DEFAULT OFF
+    DESCRIPTION "Use FYPP to re-generate Fortran code for FIELD_API-based driver variant"
+    CONDITION NOT FYPP-NOTFOUND
+)
+
+ecbuild_add_option(
     FEATURE OMP
     DEFAULT ON
     DESCRIPTION "Use OpenMP for shared memory parallelisation in the driver programs"
@@ -139,7 +154,7 @@ endif()
 ecbuild_add_option(
     FEATURE BITIDENTITY_TESTING
     DEFAULT OFF
-    DESCRIPTION "Prescribe effective radii, seed and cloud_fraction in blocked drivers for bit-identical results"
+    DESCRIPTION "Prescribe eff. radii, seed and cloud_fraction in blocked drivers for bit-identical results and validate with a Python script"
 )
 if( HAVE_BITIDENTITY_TESTING )
     list( APPEND ECRAD_COMPILE_DEFINITIONS BITIDENTITY_TESTING )

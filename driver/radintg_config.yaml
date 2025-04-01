@@ -1,0 +1,264 @@
+- type: group
+  name: ZRGP
+  short: ZRGP
+  dimension: 3
+  comment: Fields collated into ZRGP in RADINTG
+  variables:
+  - name: igi
+    dimension:
+    - 1
+    condition: .false. #(driver_config%iverbose>4)
+  - name: iamu0
+    dimension:
+    - 1
+    condition: .true.
+  - name: iemiss
+    dimension:
+    - yradiation%yrerad%nlwemiss
+    condition: .true.
+  - name: its
+    dimension:
+    - 1
+    condition: .true.
+  - name: islm
+    dimension:
+    - 1
+    condition: .true.
+  - name: iccnl
+    dimension:
+    - 1
+    condition: .true.
+  - name: ibas
+    dimension:
+    - 1
+    condition: .true.
+  - name: itop
+    dimension:
+    - 1
+    condition: .true.
+  - name: igelam
+    dimension:
+    - 1
+    condition: .true.
+  - name: igemu
+    dimension:
+    - 1
+    condition: .true.
+  - name: iclon
+    dimension:
+    - 1
+    condition: .true.
+  - name: islon
+    dimension:
+    - 1
+    condition: .true.
+  - name: iald
+    dimension:
+    - yradiation%yrerad%nsw
+    condition: .true.
+  - name: ialp
+    dimension:
+    - yradiation%yrerad%nsw
+    condition: .true.
+  - name: iti
+    dimension:
+    - nlev
+    condition: .true.
+  - name: ipr
+    dimension:
+    - nlev
+    condition: .true.
+  - name: iqs
+    dimension:
+    - nlev
+    condition: .true.
+  - name: iwv
+    dimension:
+    - nlev
+    condition: .true.
+  - name: iclc
+    dimension:
+    - nlev
+    condition: .true.
+  - name: ilwa
+    dimension:
+    - nlev
+    condition: .true.
+  - name: iiwa
+    dimension:
+    - nlev
+    condition: .true.
+  - name: iswa
+    dimension:
+    - nlev
+    condition: .true.
+  - name: irwa
+    dimension:
+    - nlev
+    condition: .true.
+  - name: irra
+    dimension:
+    - nlev
+    condition: .true.
+  - name: idp
+    dimension:
+    - nlev
+    condition: .true.
+  - name: ioz
+    dimension:
+    - nlev
+    condition: .true.
+  - name: ihpr
+    dimension:
+    - nlev+1
+    condition: .true.
+  - name: iaprs
+    dimension:
+    - nlev+1
+    condition: .true.
+  - name: ihti
+    dimension:
+    - nlev+1
+    condition: .true.
+  - name: iaero
+    dimension:
+    - yradiation%rad_config%n_aerosol_types
+    - nlev
+    condition: .true.
+  - name: ifrsod
+    dimension:
+    - 1
+    condition: .true.
+  - name: ifrted
+    dimension:
+    - 1 #yradiation%yrerad%nlwout
+    condition: .true.
+  - name: ifrsodc
+    dimension:
+    - 1
+    condition: .true.
+  - name: ifrtedc
+    dimension:
+    - 1
+    condition: .true.
+  - name: iemit
+    dimension:
+    - 1
+    condition: .true.
+  - name: isudu
+    dimension:
+    - 1
+    condition: .true.
+  - name: iuvdf
+    dimension:
+    - 1
+    condition: .true.
+  - name: iparf
+    dimension:
+    - 1
+    condition: .true.
+  - name: iparcf
+    dimension:
+    - 1
+    condition: .true.
+  - name: itincf
+    dimension:
+    - 1
+    condition: .true.
+  - name: ifdir
+    dimension:
+    - 1
+    condition: .true.
+  - name: ifdif
+    dimension:
+    - 1
+    condition: .true.
+  - name: icdir
+    dimension:
+    - 1
+    condition: .true.
+  - name: ilwderivative
+    dimension:
+    - nlev+1
+    condition: yradiation%yrerad%lapproxlwupdate
+  - name: iswdirectband
+    dimension:
+    - yradiation%yrerad%nsw
+    condition: yradiation%yrerad%lapproxswupdate
+  - name: iswdiffuseband
+    dimension:
+    - yradiation%yrerad%nsw
+    condition: yradiation%yrerad%lapproxswupdate
+  - name: ifrso
+    dimension:
+    - nlev+1
+    condition: .true.
+  - name: iswfc
+    dimension:
+    - nlev+1
+    condition: .true.
+  - name: ifrth
+    dimension:
+    - nlev+1
+    condition: .true.
+  - name: ilwfc
+    dimension:
+    - nlev+1
+    condition: .true.
+  - name: iaer
+    dimension:
+    - 6
+    - nlev
+    condition: .true.
+  - name: iico2
+    dimension:
+    - nlev
+    condition: .true.
+  - name: iich4
+    dimension:
+    - nlev
+    condition: .true.
+  - name: iin2o
+    dimension:
+    - nlev
+    condition: .true.
+  - name: ino2
+    dimension:
+    - nlev
+    condition: .true.
+  - name: ic11
+    dimension:
+    - nlev
+    condition: .true.
+  - name: ic12
+    dimension:
+    - nlev
+    condition: .true.
+  - name: ic22
+    dimension:
+    - nlev
+    condition: .true.
+  - name: icl4
+    dimension:
+    - nlev
+    condition: .true.
+  - name: igix
+    dimension:
+    - 1
+    condition: .false. #(driver_config%iverbose>4)
+  - name: iccno
+    dimension:
+    - 1
+    condition: .true.
+  - name: ire_liq
+    dimension:
+    - nlev
+    condition: .true.
+  - name: ire_ice
+    dimension:
+    - nlev
+    condition: .true.
+  - name: ioverlap
+    dimension:
+    - nlev-1
+    condition: .true.

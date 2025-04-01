@@ -1,4 +1,4 @@
-! ecrad_ifs_driver_blocked.F90 - Driver for offline ECRAD radiation scheme
+! ecrad_ifs_driver_field_api.F90 - Driver for offline ECRAD radiation scheme
 !
 ! (C) Copyright 2014- ECMWF.
 !
@@ -69,13 +69,9 @@ program ecrad_ifs_driver
   use ecrad_driver_read_input,  only : read_input
   use easy_netcdf
   use ifs_blocking
-#ifdef HAVE_NVTX
-  use nvtx
-#endif
+  use radiation_scheme_layer_mod
 
   implicit none
-
-#include "radiation_scheme.intfb.h"
 
   ! The NetCDF file containing the input profiles
   type(netcdf_file)         :: file
@@ -143,6 +139,9 @@ program ecrad_ifs_driver
 
   ! Are any variables out of bounds?
   logical :: is_out_of_bounds
+
+  ! Pointers for field api objects
+  type(radintg_zrgp_type) :: zrgp_fields
 
 !  integer    :: iband(20), nweights
 !  real(jprb) :: weight(20)
@@ -282,7 +281,7 @@ program ecrad_ifs_driver
   call file%close()
 
   ! Convert gas units to mass-mixing ratio
-  call gas%set_units(IMassMixingRatio, lacc=.false.)
+  call gas%set_units(IMassMixingRatio)
 
   ! Compute seed from skin temperature residual
   !  single_level%iseed = int(1.0e9*(single_level%skin_temperature &
@@ -307,7 +306,7 @@ program ecrad_ifs_driver
 
   ! Compute saturation with respect to liquid (needed for aerosol
   ! hydration) call
-  call thermodynamics%calc_saturation_wrt_liquid(driver_config%istartcol,driver_config%iendcol)
+  !  call thermodynamics%calc_saturation_wrt_liquid(driver_config%istartcol,driver_config%iendcol)
 
   ! Check inputs are within physical bounds, printing message if not
   is_out_of_bounds =     gas%out_of_physical_bounds(driver_config%istartcol, driver_config%iendcol, &
@@ -376,6 +375,8 @@ program ecrad_ifs_driver
 #endif
         & )
 
+  call ifs_setup_fapi(zrgp_fields, zrgp, driver_config, yradiation, nlev)
+
   ! --------------------------------------------------------
   ! Section 4b: Call radiation_scheme with blocked memory data
   ! --------------------------------------------------------
@@ -390,98 +391,17 @@ program ecrad_ifs_driver
   tstart = omp_get_wtime()
 #endif
   do jrepeat = 1,driver_config%nrepeat
-#ifdef HAVE_NVTX
-     call nvtxStartRange("ecrad_it")
-#endif
 
-      ! Run radiation scheme over blocks of columns in parallel
-
-#ifndef _OPENACC
-      !$OMP PARALLEL DO SCHEDULE(DYNAMIC,1)&
-      !$OMP&PRIVATE(JRL,IBEG,IEND,IL,IB)
-#endif
-      do jrl=1,ncol,nproma
-        ibeg=jrl
-        iend=min(ibeg+nproma-1,ncol)
-        il=iend-ibeg+1
-        ib=(jrl-1)/nproma+1
-
-        if (driver_config%iverbose >= 3) then
-#ifndef NO_OPENMP
-          write(nulout,'(a,i0,a,i0,a,i0)')  'Thread ', omp_get_thread_num(), &
-               &  ' processing columns ', ibeg, '-', iend
-#else
-          write(nulout,'(a,i0,a,i0)')  'Processing columns ', ibeg, '-', iend
-#endif
-        end if
-
-        !$acc data create(zrgp(:,:,ib)) &
+    call RADIATION_SCHEME_LAYER( &
+      & yradiation, zrgp_fields, &
+      & ncol, nproma, nlev, size(aerosol%mixing_ratio, 3), &
+      & single_level%solar_irradiance &
 #ifdef BITIDENTITY_TESTING
-        !$acc&     copyin(iseed(:,ib)) &
+      & , iseed=iseed &
 #endif
-        !$acc&     async(1)
-
-        !$acc update device(zrgp(1:il,1:ifs_config%ifldstot,ib)) async(1)
-
-        ! Call the ECRAD radiation scheme
-        call radiation_scheme &
-             & (yradiation, &
-             &  1, il, nproma, &                       ! startcol, endcol, ncol
-             &  nlev, size(aerosol%mixing_ratio,3), &    ! nlev, naerosols
-             &  single_level%solar_irradiance, &                               ! solar_irrad
-             ! array inputs
-             &  zrgp(:,ifs_config%iamu0,ib), zrgp(:,ifs_config%its,ib), &    ! mu0, skintemp
-             &  zrgp(:,ifs_config%iald,ib) , zrgp(:,ifs_config%ialp,ib), &    ! albedo_dif, albedo_dir
-             &  zrgp(:,ifs_config%iemiss,ib), &                   ! spectral emissivity
-             &  zrgp(:,ifs_config%iccnl,ib), zrgp(:,ifs_config%iccno,ib) ,&  ! CCN concentration, land and sea
-             &  zrgp(:,ifs_config%igelam,ib),zrgp(:,ifs_config%igemu,ib), &  ! longitude, sine of latitude
-             &  zrgp(:,ifs_config%islm,ib), &                     ! land sea mask
-             &  zrgp(:,ifs_config%ipr,ib),   zrgp(:,ifs_config%iti,ib),  &   ! full level pressure and temperature
-             &  zrgp(:,ifs_config%iaprs,ib), zrgp(:,ifs_config%ihti,ib), &   ! half-level pressure and temperature
-             &  zrgp(:,ifs_config%iwv,ib),   zrgp(:,ifs_config%iico2,ib), &
-             &  zrgp(:,ifs_config%iich4,ib), zrgp(:,ifs_config%iin2o,ib), &
-             &  zrgp(:,ifs_config%ino2,ib),  zrgp(:,ifs_config%ic11,ib), &
-             &  zrgp(:,ifs_config%ic12,ib),  zrgp(:,ifs_config%ic22,ib), &
-             &  zrgp(:,ifs_config%icl4,ib),  zrgp(:,ifs_config%ioz,ib), &
-             &  zrgp(:,ifs_config%iclc,ib),  zrgp(:,ifs_config%ilwa,ib), &
-             &  zrgp(:,ifs_config%iiwa,ib),  zrgp(:,ifs_config%irwa,ib), &
-             &  zrgp(:,ifs_config%iswa,ib), &
-             &  zrgp(:,ifs_config%iaer,ib),  zrgp(:,ifs_config%iaero,ib), &
-             ! flux outputs
-             &  zrgp(:,ifs_config%ifrso,ib), zrgp(:,ifs_config%ifrth,ib), &
-             &  zrgp(:,ifs_config%iswfc,ib), zrgp(:,ifs_config%ilwfc,ib),&
-             &  zrgp(:,ifs_config%ifrsod,ib),zrgp(:,ifs_config%ifrted,ib), &
-             &  zrgp(:,ifs_config%ifrsodc,ib),zrgp(:,ifs_config%ifrtedc,ib),&
-             &  zrgp(:,ifs_config%ifdir,ib), zrgp(:,ifs_config%icdir,ib), &
-             &  zrgp(:,ifs_config%isudu,ib), &
-             &  zrgp(:,ifs_config%iuvdf,ib), zrgp(:,ifs_config%iparf,ib), &
-             &  zrgp(:,ifs_config%iparcf,ib),zrgp(:,ifs_config%itincf,ib), &
-             &  zrgp(:,ifs_config%iemit,ib) ,zrgp(:,ifs_config%ilwderivative,ib), &
-             &  zrgp(:,ifs_config%iswdiffuseband,ib), zrgp(:,ifs_config%iswdirectband,ib)&
-#ifdef BITIDENTITY_TESTING
-            ! To validate results against standalone ecrad, we overwrite effective
-            ! radii, cloud overlap and seed with input values
-             &  ,pre_liq=zrgp(:,ifs_config%ire_liq,ib), &
-             &  pre_ice=zrgp(:,ifs_config%ire_ice,ib), &
-             &  pcloud_overlap=zrgp(:,ifs_config%ioverlap,ib), &
-             &  iseed=iseed(:,ib) &
-#endif
-             & )
-          !$acc update host(zrgp(1:il,1:ifs_config%ifldstot,ib)) async(1)
-          !$acc end data
-      end do
-#ifndef _OPENACC
-      !$OMP END PARALLEL DO
-#endif
-
-!    end if
-#ifdef HAVE_NVTX
-     call nvtxEndRange
-#endif
+      & )
 
   end do
-
-!$acc wait
 
 #ifndef NO_OPENMP
   tstop = omp_get_wtime()

@@ -1,0 +1,154 @@
+! (C) Copyright 2015- ECMWF.
+!
+! This software is licensed under the terms of the Apache Licence Version 2.0
+! which can be obtained at http://www.apache.org/licenses/LICENSE-2.0.
+!
+! In applying this licence, ECMWF does not waive the privileges and immunities
+! granted to it by virtue of its status as an intergovernmental organisation
+! nor does it submit to any jurisdiction.
+
+#:mute
+#:set config_file = os.path.dirname(os.path.abspath(_THIS_FILE_)) + '/radintg_config.yaml'
+#:set config = field_config.VariableConfiguration(config_file)
+#:set zrgp = config.groups['ZRGP']
+#:set variables = zrgp.variables
+#:endmute
+
+#:set var_dims = { &
+&     2: [idx for idx, v in enumerate(variables) if v.dimension[0] == 1], &
+&     3: [idx for idx, v in enumerate(variables) if v.dimension[0] != 1] &
+& }
+
+
+#:set arg_list = [ &
+&     'iamu0', 'its', 'iald', 'ialp', 'iemiss', 'iccnl', 'iccno', &
+&     'igelam', 'igemu', 'islm', 'ipr', 'iti', 'iaprs', 'ihti', &
+&     'iwv', 'iico2', 'iich4', 'iin2o', 'ino2', 'ic11', 'ic12', &
+&     'ic22', 'icl4', 'ioz', 'iclc', 'ilwa', 'iiwa', 'irwa', &
+&     'iswa', 'iaer', 'iaero', 'ifrso', 'ifrth', 'iswfc', 'ilwfc', &
+&     'ifrsod', 'ifrted', 'ifrsodc', 'ifrtedc', 'ifdir', 'icdir', &
+&     'isudu', 'iuvdf', 'iparf', 'iparcf', 'itincf', 'iemit', &
+&     'ilwderivative', 'iswdiffuseband', 'iswdirectband', &
+& ]
+#:set opt_arg_list = [ 'ire_liq', 'ire_ice', 'ioverlap' ]
+#:set arg_idx = { &
+&     v.name: idx for idx, v in enumerate(variables) &
+&     if v.name in arg_list + opt_arg_list&
+& }
+
+MODULE RADIATION_SCHEME_LAYER_MOD
+
+IMPLICIT NONE
+
+CONTAINS
+
+SUBROUTINE RADIATION_SCHEME_LAYER &
+     & (YRADIATION, ZRGP_FIELDS, NGPTOT, NPROMA, NFLEVG, KAEROSOL, &
+     &  PSOLAR_IRRADIANCE, &
+     ! OPTIONAL ARGUMENT for bit-identical results in tests
+     &  ISEED)
+
+USE FIELD_MODULE
+
+! Modules from ifs or ifsaux libraries
+USE PARKIND1       , ONLY : JPIM, JPRB, JPRD
+USE YOMHOOK        , ONLY : LHOOK, DR_HOOK, JPHOOK
+USE RADIATION_SETUP, ONLY : TRADIATION
+USE RADIATION_IO   , ONLY : NULERR
+USE IFS_BLOCKING   , ONLY : RADINTG_ZRGP_TYPE
+
+IMPLICIT NONE
+
+! INPUT ARGUMENTS
+
+TYPE(TRADIATION), INTENT(IN)    :: YRADIATION
+TYPE(RADINTG_ZRGP_TYPE), INTENT(INOUT) :: ZRGP_FIELDS
+
+! *** Array dimensions and ranges
+INTEGER(KIND=JPIM),INTENT(IN)   :: NGPTOT   ! Number of columns
+INTEGER(KIND=JPIM),INTENT(IN)   :: NPROMA   ! Number of columns
+INTEGER(KIND=JPIM),INTENT(IN)   :: NFLEVG   ! Number of levels
+INTEGER(KIND=JPIM),INTENT(IN)   :: KAEROSOL ! Number of aerosol types
+
+! *** Single-level fields
+REAL(KIND=JPRB),   INTENT(IN)   :: PSOLAR_IRRADIANCE ! (W m-2)
+
+! Optional input argument (Added for validating against ecrad standalone!)
+INTEGER,           INTENT(IN), OPTIONAL :: ISEED(:,:)
+
+INTEGER(KIND=JPIM) :: KIDIA, KFDIA, IBL, JKGLO
+
+! Field object pointers
+CLASS(FIELD_2RB), POINTER :: FIELD_2D => NULL()
+CLASS(FIELD_3RB), POINTER :: FIELD_3D => NULL()
+
+! Field pointers for each field in ZRGP
+#:for d in var_dims
+#:for d_idx, idx in enumerate(var_dims[d])
+#:set v = variables[idx]
+REAL(KIND=JPRB), POINTER :: PFIELD_${v.name}$(${','.join([':'] * d)}$) => NULL()
+REAL(KIND=JPRB), POINTER, CONTIGUOUS :: P_${v.name}$(${','.join([':'] * (d-1))}$) => NULL()
+#:endfor
+#:endfor
+
+#include "radiation_scheme.intfb.h"
+
+#:for idx, v in enumerate(variables)
+IF(${v.condition}$) THEN ! ${v.name}$
+  ASSOCIATE( FLD => ZRGP_FIELDS%MEMBERS(${idx + 1}$)%PTR )
+    SELECT TYPE( FLD )
+      #:if idx in var_dims[2]
+      CLASS IS( FIELD_2RB )
+        FIELD_2D => FLD
+        CALL FIELD_2D%GET_HOST_DATA_RDWR(PFIELD_${v.name}$)
+      #:elif idx in var_dims[3]
+      CLASS IS( FIELD_3RB )
+        FIELD_3D => FLD
+        CALL FIELD_3D%GET_HOST_DATA_RDWR(PFIELD_${v.name}$)
+      #:endif
+      CLASS DEFAULT
+        WRITE(NULERR, '(A)') 'UNEXPECTED CLASS FOR ${v.name}$'
+        CALL ABOR1('ERROR in RADIATION_SCHEME_LAYER')
+    END SELECT
+  END ASSOCIATE
+END IF
+#:endfor
+
+!$OMP PARALLEL DO SCHEDULE(DYNAMIC,1)&
+!$OMP&PRIVATE(JKGLO,KIDIA,KFDIA,IBL) FIRSTPRIVATE(ZRGP_FIELDS)
+DO JKGLO=1,NGPTOT,NPROMA
+    KIDIA=1
+    KFDIA=MIN(NPROMA,NGPTOT-JKGLO+1)
+    IBL=(JKGLO-1)/NPROMA+1
+
+    ! Create contiguous view pointers for each field in the current block
+    #:for d in var_dims
+    #:for d_idx, idx in enumerate(var_dims[d])
+    #:set v = variables[idx]
+    IF ( ${v.condition}$ ) P_${v.name}$ => PFIELD_${v.name}$(${','.join([':'] * (d-1))}$, IBL)
+    #:endfor
+    #:endfor
+
+    ! Call the ECRAD radiation scheme
+    CALL RADIATION_SCHEME &
+        & (YRADIATION, &
+        &  KIDIA, KFDIA, NPROMA, &                       ! startcol, endcol, ncol
+        &  NFLEVG, KAEROSOL, &
+        &  PSOLAR_IRRADIANCE &                               ! solar_irrad
+    #:for arg in arg_list
+        &, P_${arg}$ &
+    #:endfor
+#ifdef BITIDENTITY_TESTING
+        ! To validate results against standalone ecrad, we overwrite effective
+        ! radii, cloud overlap and seed with input values
+        &, pre_liq=p_ire_liq, pre_ice=p_ire_ice &
+        &, pcloud_overlap=p_ioverlap, iseed=iseed(:,ibl) &
+#endif
+        & )
+
+end do
+!$OMP END PARALLEL DO
+
+END SUBROUTINE RADIATION_SCHEME_LAYER
+
+END MODULE RADIATION_SCHEME_LAYER_MOD

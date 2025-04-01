@@ -1,0 +1,1103 @@
+! (C) Copyright 2015- ECMWF.
+!
+! This software is licensed under the terms of the Apache Licence Version 2.0
+! which can be obtained at http://www.apache.org/licenses/LICENSE-2.0.
+!
+! In applying this licence, ECMWF does not waive the privileges and immunities
+! granted to it by virtue of its status as an intergovernmental organisation
+! nor does it submit to any jurisdiction.
+
+
+
+
+
+MODULE RADIATION_SCHEME_LAYER_MOD
+
+IMPLICIT NONE
+
+CONTAINS
+
+SUBROUTINE RADIATION_SCHEME_LAYER &
+     & (YRADIATION, ZRGP_FIELDS, NGPTOT, NPROMA, NFLEVG, KAEROSOL, &
+     &  PSOLAR_IRRADIANCE, &
+     ! OPTIONAL ARGUMENT for bit-identical results in tests
+     &  ISEED)
+
+USE FIELD_MODULE
+
+! Modules from ifs or ifsaux libraries
+USE PARKIND1       , ONLY : JPIM, JPRB, JPRD
+USE YOMHOOK        , ONLY : LHOOK, DR_HOOK, JPHOOK
+USE RADIATION_SETUP, ONLY : TRADIATION
+USE RADIATION_IO   , ONLY : NULERR
+USE IFS_BLOCKING   , ONLY : RADINTG_ZRGP_TYPE
+
+IMPLICIT NONE
+
+! INPUT ARGUMENTS
+
+TYPE(TRADIATION), INTENT(IN)    :: YRADIATION
+TYPE(RADINTG_ZRGP_TYPE), INTENT(INOUT) :: ZRGP_FIELDS
+
+! *** Array dimensions and ranges
+INTEGER(KIND=JPIM),INTENT(IN)   :: NGPTOT   ! Number of columns
+INTEGER(KIND=JPIM),INTENT(IN)   :: NPROMA   ! Number of columns
+INTEGER(KIND=JPIM),INTENT(IN)   :: NFLEVG   ! Number of levels
+INTEGER(KIND=JPIM),INTENT(IN)   :: KAEROSOL ! Number of aerosol types
+
+! *** Single-level fields
+REAL(KIND=JPRB),   INTENT(IN)   :: PSOLAR_IRRADIANCE ! (W m-2)
+
+! Optional input argument (Added for validating against ecrad standalone!)
+INTEGER,           INTENT(IN), OPTIONAL :: ISEED(:,:)
+
+INTEGER(KIND=JPIM) :: KIDIA, KFDIA, IBL, JKGLO
+
+! Field object pointers
+CLASS(FIELD_2RB), POINTER :: FIELD_2D => NULL()
+CLASS(FIELD_3RB), POINTER :: FIELD_3D => NULL()
+
+! Field pointers for each field in ZRGP
+REAL(KIND=JPRB), POINTER :: PFIELD_igi(:,:) => NULL()
+REAL(KIND=JPRB), POINTER, CONTIGUOUS :: P_igi(:) => NULL()
+REAL(KIND=JPRB), POINTER :: PFIELD_iamu0(:,:) => NULL()
+REAL(KIND=JPRB), POINTER, CONTIGUOUS :: P_iamu0(:) => NULL()
+REAL(KIND=JPRB), POINTER :: PFIELD_its(:,:) => NULL()
+REAL(KIND=JPRB), POINTER, CONTIGUOUS :: P_its(:) => NULL()
+REAL(KIND=JPRB), POINTER :: PFIELD_islm(:,:) => NULL()
+REAL(KIND=JPRB), POINTER, CONTIGUOUS :: P_islm(:) => NULL()
+REAL(KIND=JPRB), POINTER :: PFIELD_iccnl(:,:) => NULL()
+REAL(KIND=JPRB), POINTER, CONTIGUOUS :: P_iccnl(:) => NULL()
+REAL(KIND=JPRB), POINTER :: PFIELD_ibas(:,:) => NULL()
+REAL(KIND=JPRB), POINTER, CONTIGUOUS :: P_ibas(:) => NULL()
+REAL(KIND=JPRB), POINTER :: PFIELD_itop(:,:) => NULL()
+REAL(KIND=JPRB), POINTER, CONTIGUOUS :: P_itop(:) => NULL()
+REAL(KIND=JPRB), POINTER :: PFIELD_igelam(:,:) => NULL()
+REAL(KIND=JPRB), POINTER, CONTIGUOUS :: P_igelam(:) => NULL()
+REAL(KIND=JPRB), POINTER :: PFIELD_igemu(:,:) => NULL()
+REAL(KIND=JPRB), POINTER, CONTIGUOUS :: P_igemu(:) => NULL()
+REAL(KIND=JPRB), POINTER :: PFIELD_iclon(:,:) => NULL()
+REAL(KIND=JPRB), POINTER, CONTIGUOUS :: P_iclon(:) => NULL()
+REAL(KIND=JPRB), POINTER :: PFIELD_islon(:,:) => NULL()
+REAL(KIND=JPRB), POINTER, CONTIGUOUS :: P_islon(:) => NULL()
+REAL(KIND=JPRB), POINTER :: PFIELD_ifrsod(:,:) => NULL()
+REAL(KIND=JPRB), POINTER, CONTIGUOUS :: P_ifrsod(:) => NULL()
+REAL(KIND=JPRB), POINTER :: PFIELD_ifrted(:,:) => NULL()
+REAL(KIND=JPRB), POINTER, CONTIGUOUS :: P_ifrted(:) => NULL()
+REAL(KIND=JPRB), POINTER :: PFIELD_ifrsodc(:,:) => NULL()
+REAL(KIND=JPRB), POINTER, CONTIGUOUS :: P_ifrsodc(:) => NULL()
+REAL(KIND=JPRB), POINTER :: PFIELD_ifrtedc(:,:) => NULL()
+REAL(KIND=JPRB), POINTER, CONTIGUOUS :: P_ifrtedc(:) => NULL()
+REAL(KIND=JPRB), POINTER :: PFIELD_iemit(:,:) => NULL()
+REAL(KIND=JPRB), POINTER, CONTIGUOUS :: P_iemit(:) => NULL()
+REAL(KIND=JPRB), POINTER :: PFIELD_isudu(:,:) => NULL()
+REAL(KIND=JPRB), POINTER, CONTIGUOUS :: P_isudu(:) => NULL()
+REAL(KIND=JPRB), POINTER :: PFIELD_iuvdf(:,:) => NULL()
+REAL(KIND=JPRB), POINTER, CONTIGUOUS :: P_iuvdf(:) => NULL()
+REAL(KIND=JPRB), POINTER :: PFIELD_iparf(:,:) => NULL()
+REAL(KIND=JPRB), POINTER, CONTIGUOUS :: P_iparf(:) => NULL()
+REAL(KIND=JPRB), POINTER :: PFIELD_iparcf(:,:) => NULL()
+REAL(KIND=JPRB), POINTER, CONTIGUOUS :: P_iparcf(:) => NULL()
+REAL(KIND=JPRB), POINTER :: PFIELD_itincf(:,:) => NULL()
+REAL(KIND=JPRB), POINTER, CONTIGUOUS :: P_itincf(:) => NULL()
+REAL(KIND=JPRB), POINTER :: PFIELD_ifdir(:,:) => NULL()
+REAL(KIND=JPRB), POINTER, CONTIGUOUS :: P_ifdir(:) => NULL()
+REAL(KIND=JPRB), POINTER :: PFIELD_ifdif(:,:) => NULL()
+REAL(KIND=JPRB), POINTER, CONTIGUOUS :: P_ifdif(:) => NULL()
+REAL(KIND=JPRB), POINTER :: PFIELD_icdir(:,:) => NULL()
+REAL(KIND=JPRB), POINTER, CONTIGUOUS :: P_icdir(:) => NULL()
+REAL(KIND=JPRB), POINTER :: PFIELD_igix(:,:) => NULL()
+REAL(KIND=JPRB), POINTER, CONTIGUOUS :: P_igix(:) => NULL()
+REAL(KIND=JPRB), POINTER :: PFIELD_iccno(:,:) => NULL()
+REAL(KIND=JPRB), POINTER, CONTIGUOUS :: P_iccno(:) => NULL()
+REAL(KIND=JPRB), POINTER :: PFIELD_iemiss(:,:,:) => NULL()
+REAL(KIND=JPRB), POINTER, CONTIGUOUS :: P_iemiss(:,:) => NULL()
+REAL(KIND=JPRB), POINTER :: PFIELD_iald(:,:,:) => NULL()
+REAL(KIND=JPRB), POINTER, CONTIGUOUS :: P_iald(:,:) => NULL()
+REAL(KIND=JPRB), POINTER :: PFIELD_ialp(:,:,:) => NULL()
+REAL(KIND=JPRB), POINTER, CONTIGUOUS :: P_ialp(:,:) => NULL()
+REAL(KIND=JPRB), POINTER :: PFIELD_iti(:,:,:) => NULL()
+REAL(KIND=JPRB), POINTER, CONTIGUOUS :: P_iti(:,:) => NULL()
+REAL(KIND=JPRB), POINTER :: PFIELD_ipr(:,:,:) => NULL()
+REAL(KIND=JPRB), POINTER, CONTIGUOUS :: P_ipr(:,:) => NULL()
+REAL(KIND=JPRB), POINTER :: PFIELD_iqs(:,:,:) => NULL()
+REAL(KIND=JPRB), POINTER, CONTIGUOUS :: P_iqs(:,:) => NULL()
+REAL(KIND=JPRB), POINTER :: PFIELD_iwv(:,:,:) => NULL()
+REAL(KIND=JPRB), POINTER, CONTIGUOUS :: P_iwv(:,:) => NULL()
+REAL(KIND=JPRB), POINTER :: PFIELD_iclc(:,:,:) => NULL()
+REAL(KIND=JPRB), POINTER, CONTIGUOUS :: P_iclc(:,:) => NULL()
+REAL(KIND=JPRB), POINTER :: PFIELD_ilwa(:,:,:) => NULL()
+REAL(KIND=JPRB), POINTER, CONTIGUOUS :: P_ilwa(:,:) => NULL()
+REAL(KIND=JPRB), POINTER :: PFIELD_iiwa(:,:,:) => NULL()
+REAL(KIND=JPRB), POINTER, CONTIGUOUS :: P_iiwa(:,:) => NULL()
+REAL(KIND=JPRB), POINTER :: PFIELD_iswa(:,:,:) => NULL()
+REAL(KIND=JPRB), POINTER, CONTIGUOUS :: P_iswa(:,:) => NULL()
+REAL(KIND=JPRB), POINTER :: PFIELD_irwa(:,:,:) => NULL()
+REAL(KIND=JPRB), POINTER, CONTIGUOUS :: P_irwa(:,:) => NULL()
+REAL(KIND=JPRB), POINTER :: PFIELD_irra(:,:,:) => NULL()
+REAL(KIND=JPRB), POINTER, CONTIGUOUS :: P_irra(:,:) => NULL()
+REAL(KIND=JPRB), POINTER :: PFIELD_idp(:,:,:) => NULL()
+REAL(KIND=JPRB), POINTER, CONTIGUOUS :: P_idp(:,:) => NULL()
+REAL(KIND=JPRB), POINTER :: PFIELD_ioz(:,:,:) => NULL()
+REAL(KIND=JPRB), POINTER, CONTIGUOUS :: P_ioz(:,:) => NULL()
+REAL(KIND=JPRB), POINTER :: PFIELD_ihpr(:,:,:) => NULL()
+REAL(KIND=JPRB), POINTER, CONTIGUOUS :: P_ihpr(:,:) => NULL()
+REAL(KIND=JPRB), POINTER :: PFIELD_iaprs(:,:,:) => NULL()
+REAL(KIND=JPRB), POINTER, CONTIGUOUS :: P_iaprs(:,:) => NULL()
+REAL(KIND=JPRB), POINTER :: PFIELD_ihti(:,:,:) => NULL()
+REAL(KIND=JPRB), POINTER, CONTIGUOUS :: P_ihti(:,:) => NULL()
+REAL(KIND=JPRB), POINTER :: PFIELD_iaero(:,:,:) => NULL()
+REAL(KIND=JPRB), POINTER, CONTIGUOUS :: P_iaero(:,:) => NULL()
+REAL(KIND=JPRB), POINTER :: PFIELD_ilwderivative(:,:,:) => NULL()
+REAL(KIND=JPRB), POINTER, CONTIGUOUS :: P_ilwderivative(:,:) => NULL()
+REAL(KIND=JPRB), POINTER :: PFIELD_iswdirectband(:,:,:) => NULL()
+REAL(KIND=JPRB), POINTER, CONTIGUOUS :: P_iswdirectband(:,:) => NULL()
+REAL(KIND=JPRB), POINTER :: PFIELD_iswdiffuseband(:,:,:) => NULL()
+REAL(KIND=JPRB), POINTER, CONTIGUOUS :: P_iswdiffuseband(:,:) => NULL()
+REAL(KIND=JPRB), POINTER :: PFIELD_ifrso(:,:,:) => NULL()
+REAL(KIND=JPRB), POINTER, CONTIGUOUS :: P_ifrso(:,:) => NULL()
+REAL(KIND=JPRB), POINTER :: PFIELD_iswfc(:,:,:) => NULL()
+REAL(KIND=JPRB), POINTER, CONTIGUOUS :: P_iswfc(:,:) => NULL()
+REAL(KIND=JPRB), POINTER :: PFIELD_ifrth(:,:,:) => NULL()
+REAL(KIND=JPRB), POINTER, CONTIGUOUS :: P_ifrth(:,:) => NULL()
+REAL(KIND=JPRB), POINTER :: PFIELD_ilwfc(:,:,:) => NULL()
+REAL(KIND=JPRB), POINTER, CONTIGUOUS :: P_ilwfc(:,:) => NULL()
+REAL(KIND=JPRB), POINTER :: PFIELD_iaer(:,:,:) => NULL()
+REAL(KIND=JPRB), POINTER, CONTIGUOUS :: P_iaer(:,:) => NULL()
+REAL(KIND=JPRB), POINTER :: PFIELD_iico2(:,:,:) => NULL()
+REAL(KIND=JPRB), POINTER, CONTIGUOUS :: P_iico2(:,:) => NULL()
+REAL(KIND=JPRB), POINTER :: PFIELD_iich4(:,:,:) => NULL()
+REAL(KIND=JPRB), POINTER, CONTIGUOUS :: P_iich4(:,:) => NULL()
+REAL(KIND=JPRB), POINTER :: PFIELD_iin2o(:,:,:) => NULL()
+REAL(KIND=JPRB), POINTER, CONTIGUOUS :: P_iin2o(:,:) => NULL()
+REAL(KIND=JPRB), POINTER :: PFIELD_ino2(:,:,:) => NULL()
+REAL(KIND=JPRB), POINTER, CONTIGUOUS :: P_ino2(:,:) => NULL()
+REAL(KIND=JPRB), POINTER :: PFIELD_ic11(:,:,:) => NULL()
+REAL(KIND=JPRB), POINTER, CONTIGUOUS :: P_ic11(:,:) => NULL()
+REAL(KIND=JPRB), POINTER :: PFIELD_ic12(:,:,:) => NULL()
+REAL(KIND=JPRB), POINTER, CONTIGUOUS :: P_ic12(:,:) => NULL()
+REAL(KIND=JPRB), POINTER :: PFIELD_ic22(:,:,:) => NULL()
+REAL(KIND=JPRB), POINTER, CONTIGUOUS :: P_ic22(:,:) => NULL()
+REAL(KIND=JPRB), POINTER :: PFIELD_icl4(:,:,:) => NULL()
+REAL(KIND=JPRB), POINTER, CONTIGUOUS :: P_icl4(:,:) => NULL()
+REAL(KIND=JPRB), POINTER :: PFIELD_ire_liq(:,:,:) => NULL()
+REAL(KIND=JPRB), POINTER, CONTIGUOUS :: P_ire_liq(:,:) => NULL()
+REAL(KIND=JPRB), POINTER :: PFIELD_ire_ice(:,:,:) => NULL()
+REAL(KIND=JPRB), POINTER, CONTIGUOUS :: P_ire_ice(:,:) => NULL()
+REAL(KIND=JPRB), POINTER :: PFIELD_ioverlap(:,:,:) => NULL()
+REAL(KIND=JPRB), POINTER, CONTIGUOUS :: P_ioverlap(:,:) => NULL()
+
+#include "radiation_scheme.intfb.h"
+
+IF(.false.) THEN ! igi
+  ASSOCIATE( FLD => ZRGP_FIELDS%MEMBERS(1)%PTR )
+    SELECT TYPE( FLD )
+      CLASS IS( FIELD_2RB )
+        FIELD_2D => FLD
+        CALL FIELD_2D%GET_HOST_DATA_RDWR(PFIELD_igi)
+      CLASS DEFAULT
+        WRITE(NULERR, '(A)') 'UNEXPECTED CLASS FOR igi'
+        CALL ABOR1('ERROR in RADIATION_SCHEME_LAYER')
+    END SELECT
+  END ASSOCIATE
+END IF
+IF(.true.) THEN ! iamu0
+  ASSOCIATE( FLD => ZRGP_FIELDS%MEMBERS(2)%PTR )
+    SELECT TYPE( FLD )
+      CLASS IS( FIELD_2RB )
+        FIELD_2D => FLD
+        CALL FIELD_2D%GET_HOST_DATA_RDWR(PFIELD_iamu0)
+      CLASS DEFAULT
+        WRITE(NULERR, '(A)') 'UNEXPECTED CLASS FOR iamu0'
+        CALL ABOR1('ERROR in RADIATION_SCHEME_LAYER')
+    END SELECT
+  END ASSOCIATE
+END IF
+IF(.true.) THEN ! iemiss
+  ASSOCIATE( FLD => ZRGP_FIELDS%MEMBERS(3)%PTR )
+    SELECT TYPE( FLD )
+      CLASS IS( FIELD_3RB )
+        FIELD_3D => FLD
+        CALL FIELD_3D%GET_HOST_DATA_RDWR(PFIELD_iemiss)
+      CLASS DEFAULT
+        WRITE(NULERR, '(A)') 'UNEXPECTED CLASS FOR iemiss'
+        CALL ABOR1('ERROR in RADIATION_SCHEME_LAYER')
+    END SELECT
+  END ASSOCIATE
+END IF
+IF(.true.) THEN ! its
+  ASSOCIATE( FLD => ZRGP_FIELDS%MEMBERS(4)%PTR )
+    SELECT TYPE( FLD )
+      CLASS IS( FIELD_2RB )
+        FIELD_2D => FLD
+        CALL FIELD_2D%GET_HOST_DATA_RDWR(PFIELD_its)
+      CLASS DEFAULT
+        WRITE(NULERR, '(A)') 'UNEXPECTED CLASS FOR its'
+        CALL ABOR1('ERROR in RADIATION_SCHEME_LAYER')
+    END SELECT
+  END ASSOCIATE
+END IF
+IF(.true.) THEN ! islm
+  ASSOCIATE( FLD => ZRGP_FIELDS%MEMBERS(5)%PTR )
+    SELECT TYPE( FLD )
+      CLASS IS( FIELD_2RB )
+        FIELD_2D => FLD
+        CALL FIELD_2D%GET_HOST_DATA_RDWR(PFIELD_islm)
+      CLASS DEFAULT
+        WRITE(NULERR, '(A)') 'UNEXPECTED CLASS FOR islm'
+        CALL ABOR1('ERROR in RADIATION_SCHEME_LAYER')
+    END SELECT
+  END ASSOCIATE
+END IF
+IF(.true.) THEN ! iccnl
+  ASSOCIATE( FLD => ZRGP_FIELDS%MEMBERS(6)%PTR )
+    SELECT TYPE( FLD )
+      CLASS IS( FIELD_2RB )
+        FIELD_2D => FLD
+        CALL FIELD_2D%GET_HOST_DATA_RDWR(PFIELD_iccnl)
+      CLASS DEFAULT
+        WRITE(NULERR, '(A)') 'UNEXPECTED CLASS FOR iccnl'
+        CALL ABOR1('ERROR in RADIATION_SCHEME_LAYER')
+    END SELECT
+  END ASSOCIATE
+END IF
+IF(.true.) THEN ! ibas
+  ASSOCIATE( FLD => ZRGP_FIELDS%MEMBERS(7)%PTR )
+    SELECT TYPE( FLD )
+      CLASS IS( FIELD_2RB )
+        FIELD_2D => FLD
+        CALL FIELD_2D%GET_HOST_DATA_RDWR(PFIELD_ibas)
+      CLASS DEFAULT
+        WRITE(NULERR, '(A)') 'UNEXPECTED CLASS FOR ibas'
+        CALL ABOR1('ERROR in RADIATION_SCHEME_LAYER')
+    END SELECT
+  END ASSOCIATE
+END IF
+IF(.true.) THEN ! itop
+  ASSOCIATE( FLD => ZRGP_FIELDS%MEMBERS(8)%PTR )
+    SELECT TYPE( FLD )
+      CLASS IS( FIELD_2RB )
+        FIELD_2D => FLD
+        CALL FIELD_2D%GET_HOST_DATA_RDWR(PFIELD_itop)
+      CLASS DEFAULT
+        WRITE(NULERR, '(A)') 'UNEXPECTED CLASS FOR itop'
+        CALL ABOR1('ERROR in RADIATION_SCHEME_LAYER')
+    END SELECT
+  END ASSOCIATE
+END IF
+IF(.true.) THEN ! igelam
+  ASSOCIATE( FLD => ZRGP_FIELDS%MEMBERS(9)%PTR )
+    SELECT TYPE( FLD )
+      CLASS IS( FIELD_2RB )
+        FIELD_2D => FLD
+        CALL FIELD_2D%GET_HOST_DATA_RDWR(PFIELD_igelam)
+      CLASS DEFAULT
+        WRITE(NULERR, '(A)') 'UNEXPECTED CLASS FOR igelam'
+        CALL ABOR1('ERROR in RADIATION_SCHEME_LAYER')
+    END SELECT
+  END ASSOCIATE
+END IF
+IF(.true.) THEN ! igemu
+  ASSOCIATE( FLD => ZRGP_FIELDS%MEMBERS(10)%PTR )
+    SELECT TYPE( FLD )
+      CLASS IS( FIELD_2RB )
+        FIELD_2D => FLD
+        CALL FIELD_2D%GET_HOST_DATA_RDWR(PFIELD_igemu)
+      CLASS DEFAULT
+        WRITE(NULERR, '(A)') 'UNEXPECTED CLASS FOR igemu'
+        CALL ABOR1('ERROR in RADIATION_SCHEME_LAYER')
+    END SELECT
+  END ASSOCIATE
+END IF
+IF(.true.) THEN ! iclon
+  ASSOCIATE( FLD => ZRGP_FIELDS%MEMBERS(11)%PTR )
+    SELECT TYPE( FLD )
+      CLASS IS( FIELD_2RB )
+        FIELD_2D => FLD
+        CALL FIELD_2D%GET_HOST_DATA_RDWR(PFIELD_iclon)
+      CLASS DEFAULT
+        WRITE(NULERR, '(A)') 'UNEXPECTED CLASS FOR iclon'
+        CALL ABOR1('ERROR in RADIATION_SCHEME_LAYER')
+    END SELECT
+  END ASSOCIATE
+END IF
+IF(.true.) THEN ! islon
+  ASSOCIATE( FLD => ZRGP_FIELDS%MEMBERS(12)%PTR )
+    SELECT TYPE( FLD )
+      CLASS IS( FIELD_2RB )
+        FIELD_2D => FLD
+        CALL FIELD_2D%GET_HOST_DATA_RDWR(PFIELD_islon)
+      CLASS DEFAULT
+        WRITE(NULERR, '(A)') 'UNEXPECTED CLASS FOR islon'
+        CALL ABOR1('ERROR in RADIATION_SCHEME_LAYER')
+    END SELECT
+  END ASSOCIATE
+END IF
+IF(.true.) THEN ! iald
+  ASSOCIATE( FLD => ZRGP_FIELDS%MEMBERS(13)%PTR )
+    SELECT TYPE( FLD )
+      CLASS IS( FIELD_3RB )
+        FIELD_3D => FLD
+        CALL FIELD_3D%GET_HOST_DATA_RDWR(PFIELD_iald)
+      CLASS DEFAULT
+        WRITE(NULERR, '(A)') 'UNEXPECTED CLASS FOR iald'
+        CALL ABOR1('ERROR in RADIATION_SCHEME_LAYER')
+    END SELECT
+  END ASSOCIATE
+END IF
+IF(.true.) THEN ! ialp
+  ASSOCIATE( FLD => ZRGP_FIELDS%MEMBERS(14)%PTR )
+    SELECT TYPE( FLD )
+      CLASS IS( FIELD_3RB )
+        FIELD_3D => FLD
+        CALL FIELD_3D%GET_HOST_DATA_RDWR(PFIELD_ialp)
+      CLASS DEFAULT
+        WRITE(NULERR, '(A)') 'UNEXPECTED CLASS FOR ialp'
+        CALL ABOR1('ERROR in RADIATION_SCHEME_LAYER')
+    END SELECT
+  END ASSOCIATE
+END IF
+IF(.true.) THEN ! iti
+  ASSOCIATE( FLD => ZRGP_FIELDS%MEMBERS(15)%PTR )
+    SELECT TYPE( FLD )
+      CLASS IS( FIELD_3RB )
+        FIELD_3D => FLD
+        CALL FIELD_3D%GET_HOST_DATA_RDWR(PFIELD_iti)
+      CLASS DEFAULT
+        WRITE(NULERR, '(A)') 'UNEXPECTED CLASS FOR iti'
+        CALL ABOR1('ERROR in RADIATION_SCHEME_LAYER')
+    END SELECT
+  END ASSOCIATE
+END IF
+IF(.true.) THEN ! ipr
+  ASSOCIATE( FLD => ZRGP_FIELDS%MEMBERS(16)%PTR )
+    SELECT TYPE( FLD )
+      CLASS IS( FIELD_3RB )
+        FIELD_3D => FLD
+        CALL FIELD_3D%GET_HOST_DATA_RDWR(PFIELD_ipr)
+      CLASS DEFAULT
+        WRITE(NULERR, '(A)') 'UNEXPECTED CLASS FOR ipr'
+        CALL ABOR1('ERROR in RADIATION_SCHEME_LAYER')
+    END SELECT
+  END ASSOCIATE
+END IF
+IF(.true.) THEN ! iqs
+  ASSOCIATE( FLD => ZRGP_FIELDS%MEMBERS(17)%PTR )
+    SELECT TYPE( FLD )
+      CLASS IS( FIELD_3RB )
+        FIELD_3D => FLD
+        CALL FIELD_3D%GET_HOST_DATA_RDWR(PFIELD_iqs)
+      CLASS DEFAULT
+        WRITE(NULERR, '(A)') 'UNEXPECTED CLASS FOR iqs'
+        CALL ABOR1('ERROR in RADIATION_SCHEME_LAYER')
+    END SELECT
+  END ASSOCIATE
+END IF
+IF(.true.) THEN ! iwv
+  ASSOCIATE( FLD => ZRGP_FIELDS%MEMBERS(18)%PTR )
+    SELECT TYPE( FLD )
+      CLASS IS( FIELD_3RB )
+        FIELD_3D => FLD
+        CALL FIELD_3D%GET_HOST_DATA_RDWR(PFIELD_iwv)
+      CLASS DEFAULT
+        WRITE(NULERR, '(A)') 'UNEXPECTED CLASS FOR iwv'
+        CALL ABOR1('ERROR in RADIATION_SCHEME_LAYER')
+    END SELECT
+  END ASSOCIATE
+END IF
+IF(.true.) THEN ! iclc
+  ASSOCIATE( FLD => ZRGP_FIELDS%MEMBERS(19)%PTR )
+    SELECT TYPE( FLD )
+      CLASS IS( FIELD_3RB )
+        FIELD_3D => FLD
+        CALL FIELD_3D%GET_HOST_DATA_RDWR(PFIELD_iclc)
+      CLASS DEFAULT
+        WRITE(NULERR, '(A)') 'UNEXPECTED CLASS FOR iclc'
+        CALL ABOR1('ERROR in RADIATION_SCHEME_LAYER')
+    END SELECT
+  END ASSOCIATE
+END IF
+IF(.true.) THEN ! ilwa
+  ASSOCIATE( FLD => ZRGP_FIELDS%MEMBERS(20)%PTR )
+    SELECT TYPE( FLD )
+      CLASS IS( FIELD_3RB )
+        FIELD_3D => FLD
+        CALL FIELD_3D%GET_HOST_DATA_RDWR(PFIELD_ilwa)
+      CLASS DEFAULT
+        WRITE(NULERR, '(A)') 'UNEXPECTED CLASS FOR ilwa'
+        CALL ABOR1('ERROR in RADIATION_SCHEME_LAYER')
+    END SELECT
+  END ASSOCIATE
+END IF
+IF(.true.) THEN ! iiwa
+  ASSOCIATE( FLD => ZRGP_FIELDS%MEMBERS(21)%PTR )
+    SELECT TYPE( FLD )
+      CLASS IS( FIELD_3RB )
+        FIELD_3D => FLD
+        CALL FIELD_3D%GET_HOST_DATA_RDWR(PFIELD_iiwa)
+      CLASS DEFAULT
+        WRITE(NULERR, '(A)') 'UNEXPECTED CLASS FOR iiwa'
+        CALL ABOR1('ERROR in RADIATION_SCHEME_LAYER')
+    END SELECT
+  END ASSOCIATE
+END IF
+IF(.true.) THEN ! iswa
+  ASSOCIATE( FLD => ZRGP_FIELDS%MEMBERS(22)%PTR )
+    SELECT TYPE( FLD )
+      CLASS IS( FIELD_3RB )
+        FIELD_3D => FLD
+        CALL FIELD_3D%GET_HOST_DATA_RDWR(PFIELD_iswa)
+      CLASS DEFAULT
+        WRITE(NULERR, '(A)') 'UNEXPECTED CLASS FOR iswa'
+        CALL ABOR1('ERROR in RADIATION_SCHEME_LAYER')
+    END SELECT
+  END ASSOCIATE
+END IF
+IF(.true.) THEN ! irwa
+  ASSOCIATE( FLD => ZRGP_FIELDS%MEMBERS(23)%PTR )
+    SELECT TYPE( FLD )
+      CLASS IS( FIELD_3RB )
+        FIELD_3D => FLD
+        CALL FIELD_3D%GET_HOST_DATA_RDWR(PFIELD_irwa)
+      CLASS DEFAULT
+        WRITE(NULERR, '(A)') 'UNEXPECTED CLASS FOR irwa'
+        CALL ABOR1('ERROR in RADIATION_SCHEME_LAYER')
+    END SELECT
+  END ASSOCIATE
+END IF
+IF(.true.) THEN ! irra
+  ASSOCIATE( FLD => ZRGP_FIELDS%MEMBERS(24)%PTR )
+    SELECT TYPE( FLD )
+      CLASS IS( FIELD_3RB )
+        FIELD_3D => FLD
+        CALL FIELD_3D%GET_HOST_DATA_RDWR(PFIELD_irra)
+      CLASS DEFAULT
+        WRITE(NULERR, '(A)') 'UNEXPECTED CLASS FOR irra'
+        CALL ABOR1('ERROR in RADIATION_SCHEME_LAYER')
+    END SELECT
+  END ASSOCIATE
+END IF
+IF(.true.) THEN ! idp
+  ASSOCIATE( FLD => ZRGP_FIELDS%MEMBERS(25)%PTR )
+    SELECT TYPE( FLD )
+      CLASS IS( FIELD_3RB )
+        FIELD_3D => FLD
+        CALL FIELD_3D%GET_HOST_DATA_RDWR(PFIELD_idp)
+      CLASS DEFAULT
+        WRITE(NULERR, '(A)') 'UNEXPECTED CLASS FOR idp'
+        CALL ABOR1('ERROR in RADIATION_SCHEME_LAYER')
+    END SELECT
+  END ASSOCIATE
+END IF
+IF(.true.) THEN ! ioz
+  ASSOCIATE( FLD => ZRGP_FIELDS%MEMBERS(26)%PTR )
+    SELECT TYPE( FLD )
+      CLASS IS( FIELD_3RB )
+        FIELD_3D => FLD
+        CALL FIELD_3D%GET_HOST_DATA_RDWR(PFIELD_ioz)
+      CLASS DEFAULT
+        WRITE(NULERR, '(A)') 'UNEXPECTED CLASS FOR ioz'
+        CALL ABOR1('ERROR in RADIATION_SCHEME_LAYER')
+    END SELECT
+  END ASSOCIATE
+END IF
+IF(.true.) THEN ! ihpr
+  ASSOCIATE( FLD => ZRGP_FIELDS%MEMBERS(27)%PTR )
+    SELECT TYPE( FLD )
+      CLASS IS( FIELD_3RB )
+        FIELD_3D => FLD
+        CALL FIELD_3D%GET_HOST_DATA_RDWR(PFIELD_ihpr)
+      CLASS DEFAULT
+        WRITE(NULERR, '(A)') 'UNEXPECTED CLASS FOR ihpr'
+        CALL ABOR1('ERROR in RADIATION_SCHEME_LAYER')
+    END SELECT
+  END ASSOCIATE
+END IF
+IF(.true.) THEN ! iaprs
+  ASSOCIATE( FLD => ZRGP_FIELDS%MEMBERS(28)%PTR )
+    SELECT TYPE( FLD )
+      CLASS IS( FIELD_3RB )
+        FIELD_3D => FLD
+        CALL FIELD_3D%GET_HOST_DATA_RDWR(PFIELD_iaprs)
+      CLASS DEFAULT
+        WRITE(NULERR, '(A)') 'UNEXPECTED CLASS FOR iaprs'
+        CALL ABOR1('ERROR in RADIATION_SCHEME_LAYER')
+    END SELECT
+  END ASSOCIATE
+END IF
+IF(.true.) THEN ! ihti
+  ASSOCIATE( FLD => ZRGP_FIELDS%MEMBERS(29)%PTR )
+    SELECT TYPE( FLD )
+      CLASS IS( FIELD_3RB )
+        FIELD_3D => FLD
+        CALL FIELD_3D%GET_HOST_DATA_RDWR(PFIELD_ihti)
+      CLASS DEFAULT
+        WRITE(NULERR, '(A)') 'UNEXPECTED CLASS FOR ihti'
+        CALL ABOR1('ERROR in RADIATION_SCHEME_LAYER')
+    END SELECT
+  END ASSOCIATE
+END IF
+IF(.true.) THEN ! iaero
+  ASSOCIATE( FLD => ZRGP_FIELDS%MEMBERS(30)%PTR )
+    SELECT TYPE( FLD )
+      CLASS IS( FIELD_3RB )
+        FIELD_3D => FLD
+        CALL FIELD_3D%GET_HOST_DATA_RDWR(PFIELD_iaero)
+      CLASS DEFAULT
+        WRITE(NULERR, '(A)') 'UNEXPECTED CLASS FOR iaero'
+        CALL ABOR1('ERROR in RADIATION_SCHEME_LAYER')
+    END SELECT
+  END ASSOCIATE
+END IF
+IF(.true.) THEN ! ifrsod
+  ASSOCIATE( FLD => ZRGP_FIELDS%MEMBERS(31)%PTR )
+    SELECT TYPE( FLD )
+      CLASS IS( FIELD_2RB )
+        FIELD_2D => FLD
+        CALL FIELD_2D%GET_HOST_DATA_RDWR(PFIELD_ifrsod)
+      CLASS DEFAULT
+        WRITE(NULERR, '(A)') 'UNEXPECTED CLASS FOR ifrsod'
+        CALL ABOR1('ERROR in RADIATION_SCHEME_LAYER')
+    END SELECT
+  END ASSOCIATE
+END IF
+IF(.true.) THEN ! ifrted
+  ASSOCIATE( FLD => ZRGP_FIELDS%MEMBERS(32)%PTR )
+    SELECT TYPE( FLD )
+      CLASS IS( FIELD_2RB )
+        FIELD_2D => FLD
+        CALL FIELD_2D%GET_HOST_DATA_RDWR(PFIELD_ifrted)
+      CLASS DEFAULT
+        WRITE(NULERR, '(A)') 'UNEXPECTED CLASS FOR ifrted'
+        CALL ABOR1('ERROR in RADIATION_SCHEME_LAYER')
+    END SELECT
+  END ASSOCIATE
+END IF
+IF(.true.) THEN ! ifrsodc
+  ASSOCIATE( FLD => ZRGP_FIELDS%MEMBERS(33)%PTR )
+    SELECT TYPE( FLD )
+      CLASS IS( FIELD_2RB )
+        FIELD_2D => FLD
+        CALL FIELD_2D%GET_HOST_DATA_RDWR(PFIELD_ifrsodc)
+      CLASS DEFAULT
+        WRITE(NULERR, '(A)') 'UNEXPECTED CLASS FOR ifrsodc'
+        CALL ABOR1('ERROR in RADIATION_SCHEME_LAYER')
+    END SELECT
+  END ASSOCIATE
+END IF
+IF(.true.) THEN ! ifrtedc
+  ASSOCIATE( FLD => ZRGP_FIELDS%MEMBERS(34)%PTR )
+    SELECT TYPE( FLD )
+      CLASS IS( FIELD_2RB )
+        FIELD_2D => FLD
+        CALL FIELD_2D%GET_HOST_DATA_RDWR(PFIELD_ifrtedc)
+      CLASS DEFAULT
+        WRITE(NULERR, '(A)') 'UNEXPECTED CLASS FOR ifrtedc'
+        CALL ABOR1('ERROR in RADIATION_SCHEME_LAYER')
+    END SELECT
+  END ASSOCIATE
+END IF
+IF(.true.) THEN ! iemit
+  ASSOCIATE( FLD => ZRGP_FIELDS%MEMBERS(35)%PTR )
+    SELECT TYPE( FLD )
+      CLASS IS( FIELD_2RB )
+        FIELD_2D => FLD
+        CALL FIELD_2D%GET_HOST_DATA_RDWR(PFIELD_iemit)
+      CLASS DEFAULT
+        WRITE(NULERR, '(A)') 'UNEXPECTED CLASS FOR iemit'
+        CALL ABOR1('ERROR in RADIATION_SCHEME_LAYER')
+    END SELECT
+  END ASSOCIATE
+END IF
+IF(.true.) THEN ! isudu
+  ASSOCIATE( FLD => ZRGP_FIELDS%MEMBERS(36)%PTR )
+    SELECT TYPE( FLD )
+      CLASS IS( FIELD_2RB )
+        FIELD_2D => FLD
+        CALL FIELD_2D%GET_HOST_DATA_RDWR(PFIELD_isudu)
+      CLASS DEFAULT
+        WRITE(NULERR, '(A)') 'UNEXPECTED CLASS FOR isudu'
+        CALL ABOR1('ERROR in RADIATION_SCHEME_LAYER')
+    END SELECT
+  END ASSOCIATE
+END IF
+IF(.true.) THEN ! iuvdf
+  ASSOCIATE( FLD => ZRGP_FIELDS%MEMBERS(37)%PTR )
+    SELECT TYPE( FLD )
+      CLASS IS( FIELD_2RB )
+        FIELD_2D => FLD
+        CALL FIELD_2D%GET_HOST_DATA_RDWR(PFIELD_iuvdf)
+      CLASS DEFAULT
+        WRITE(NULERR, '(A)') 'UNEXPECTED CLASS FOR iuvdf'
+        CALL ABOR1('ERROR in RADIATION_SCHEME_LAYER')
+    END SELECT
+  END ASSOCIATE
+END IF
+IF(.true.) THEN ! iparf
+  ASSOCIATE( FLD => ZRGP_FIELDS%MEMBERS(38)%PTR )
+    SELECT TYPE( FLD )
+      CLASS IS( FIELD_2RB )
+        FIELD_2D => FLD
+        CALL FIELD_2D%GET_HOST_DATA_RDWR(PFIELD_iparf)
+      CLASS DEFAULT
+        WRITE(NULERR, '(A)') 'UNEXPECTED CLASS FOR iparf'
+        CALL ABOR1('ERROR in RADIATION_SCHEME_LAYER')
+    END SELECT
+  END ASSOCIATE
+END IF
+IF(.true.) THEN ! iparcf
+  ASSOCIATE( FLD => ZRGP_FIELDS%MEMBERS(39)%PTR )
+    SELECT TYPE( FLD )
+      CLASS IS( FIELD_2RB )
+        FIELD_2D => FLD
+        CALL FIELD_2D%GET_HOST_DATA_RDWR(PFIELD_iparcf)
+      CLASS DEFAULT
+        WRITE(NULERR, '(A)') 'UNEXPECTED CLASS FOR iparcf'
+        CALL ABOR1('ERROR in RADIATION_SCHEME_LAYER')
+    END SELECT
+  END ASSOCIATE
+END IF
+IF(.true.) THEN ! itincf
+  ASSOCIATE( FLD => ZRGP_FIELDS%MEMBERS(40)%PTR )
+    SELECT TYPE( FLD )
+      CLASS IS( FIELD_2RB )
+        FIELD_2D => FLD
+        CALL FIELD_2D%GET_HOST_DATA_RDWR(PFIELD_itincf)
+      CLASS DEFAULT
+        WRITE(NULERR, '(A)') 'UNEXPECTED CLASS FOR itincf'
+        CALL ABOR1('ERROR in RADIATION_SCHEME_LAYER')
+    END SELECT
+  END ASSOCIATE
+END IF
+IF(.true.) THEN ! ifdir
+  ASSOCIATE( FLD => ZRGP_FIELDS%MEMBERS(41)%PTR )
+    SELECT TYPE( FLD )
+      CLASS IS( FIELD_2RB )
+        FIELD_2D => FLD
+        CALL FIELD_2D%GET_HOST_DATA_RDWR(PFIELD_ifdir)
+      CLASS DEFAULT
+        WRITE(NULERR, '(A)') 'UNEXPECTED CLASS FOR ifdir'
+        CALL ABOR1('ERROR in RADIATION_SCHEME_LAYER')
+    END SELECT
+  END ASSOCIATE
+END IF
+IF(.true.) THEN ! ifdif
+  ASSOCIATE( FLD => ZRGP_FIELDS%MEMBERS(42)%PTR )
+    SELECT TYPE( FLD )
+      CLASS IS( FIELD_2RB )
+        FIELD_2D => FLD
+        CALL FIELD_2D%GET_HOST_DATA_RDWR(PFIELD_ifdif)
+      CLASS DEFAULT
+        WRITE(NULERR, '(A)') 'UNEXPECTED CLASS FOR ifdif'
+        CALL ABOR1('ERROR in RADIATION_SCHEME_LAYER')
+    END SELECT
+  END ASSOCIATE
+END IF
+IF(.true.) THEN ! icdir
+  ASSOCIATE( FLD => ZRGP_FIELDS%MEMBERS(43)%PTR )
+    SELECT TYPE( FLD )
+      CLASS IS( FIELD_2RB )
+        FIELD_2D => FLD
+        CALL FIELD_2D%GET_HOST_DATA_RDWR(PFIELD_icdir)
+      CLASS DEFAULT
+        WRITE(NULERR, '(A)') 'UNEXPECTED CLASS FOR icdir'
+        CALL ABOR1('ERROR in RADIATION_SCHEME_LAYER')
+    END SELECT
+  END ASSOCIATE
+END IF
+IF(yradiation%yrerad%lapproxlwupdate) THEN ! ilwderivative
+  ASSOCIATE( FLD => ZRGP_FIELDS%MEMBERS(44)%PTR )
+    SELECT TYPE( FLD )
+      CLASS IS( FIELD_3RB )
+        FIELD_3D => FLD
+        CALL FIELD_3D%GET_HOST_DATA_RDWR(PFIELD_ilwderivative)
+      CLASS DEFAULT
+        WRITE(NULERR, '(A)') 'UNEXPECTED CLASS FOR ilwderivative'
+        CALL ABOR1('ERROR in RADIATION_SCHEME_LAYER')
+    END SELECT
+  END ASSOCIATE
+END IF
+IF(yradiation%yrerad%lapproxswupdate) THEN ! iswdirectband
+  ASSOCIATE( FLD => ZRGP_FIELDS%MEMBERS(45)%PTR )
+    SELECT TYPE( FLD )
+      CLASS IS( FIELD_3RB )
+        FIELD_3D => FLD
+        CALL FIELD_3D%GET_HOST_DATA_RDWR(PFIELD_iswdirectband)
+      CLASS DEFAULT
+        WRITE(NULERR, '(A)') 'UNEXPECTED CLASS FOR iswdirectband'
+        CALL ABOR1('ERROR in RADIATION_SCHEME_LAYER')
+    END SELECT
+  END ASSOCIATE
+END IF
+IF(yradiation%yrerad%lapproxswupdate) THEN ! iswdiffuseband
+  ASSOCIATE( FLD => ZRGP_FIELDS%MEMBERS(46)%PTR )
+    SELECT TYPE( FLD )
+      CLASS IS( FIELD_3RB )
+        FIELD_3D => FLD
+        CALL FIELD_3D%GET_HOST_DATA_RDWR(PFIELD_iswdiffuseband)
+      CLASS DEFAULT
+        WRITE(NULERR, '(A)') 'UNEXPECTED CLASS FOR iswdiffuseband'
+        CALL ABOR1('ERROR in RADIATION_SCHEME_LAYER')
+    END SELECT
+  END ASSOCIATE
+END IF
+IF(.true.) THEN ! ifrso
+  ASSOCIATE( FLD => ZRGP_FIELDS%MEMBERS(47)%PTR )
+    SELECT TYPE( FLD )
+      CLASS IS( FIELD_3RB )
+        FIELD_3D => FLD
+        CALL FIELD_3D%GET_HOST_DATA_RDWR(PFIELD_ifrso)
+      CLASS DEFAULT
+        WRITE(NULERR, '(A)') 'UNEXPECTED CLASS FOR ifrso'
+        CALL ABOR1('ERROR in RADIATION_SCHEME_LAYER')
+    END SELECT
+  END ASSOCIATE
+END IF
+IF(.true.) THEN ! iswfc
+  ASSOCIATE( FLD => ZRGP_FIELDS%MEMBERS(48)%PTR )
+    SELECT TYPE( FLD )
+      CLASS IS( FIELD_3RB )
+        FIELD_3D => FLD
+        CALL FIELD_3D%GET_HOST_DATA_RDWR(PFIELD_iswfc)
+      CLASS DEFAULT
+        WRITE(NULERR, '(A)') 'UNEXPECTED CLASS FOR iswfc'
+        CALL ABOR1('ERROR in RADIATION_SCHEME_LAYER')
+    END SELECT
+  END ASSOCIATE
+END IF
+IF(.true.) THEN ! ifrth
+  ASSOCIATE( FLD => ZRGP_FIELDS%MEMBERS(49)%PTR )
+    SELECT TYPE( FLD )
+      CLASS IS( FIELD_3RB )
+        FIELD_3D => FLD
+        CALL FIELD_3D%GET_HOST_DATA_RDWR(PFIELD_ifrth)
+      CLASS DEFAULT
+        WRITE(NULERR, '(A)') 'UNEXPECTED CLASS FOR ifrth'
+        CALL ABOR1('ERROR in RADIATION_SCHEME_LAYER')
+    END SELECT
+  END ASSOCIATE
+END IF
+IF(.true.) THEN ! ilwfc
+  ASSOCIATE( FLD => ZRGP_FIELDS%MEMBERS(50)%PTR )
+    SELECT TYPE( FLD )
+      CLASS IS( FIELD_3RB )
+        FIELD_3D => FLD
+        CALL FIELD_3D%GET_HOST_DATA_RDWR(PFIELD_ilwfc)
+      CLASS DEFAULT
+        WRITE(NULERR, '(A)') 'UNEXPECTED CLASS FOR ilwfc'
+        CALL ABOR1('ERROR in RADIATION_SCHEME_LAYER')
+    END SELECT
+  END ASSOCIATE
+END IF
+IF(.true.) THEN ! iaer
+  ASSOCIATE( FLD => ZRGP_FIELDS%MEMBERS(51)%PTR )
+    SELECT TYPE( FLD )
+      CLASS IS( FIELD_3RB )
+        FIELD_3D => FLD
+        CALL FIELD_3D%GET_HOST_DATA_RDWR(PFIELD_iaer)
+      CLASS DEFAULT
+        WRITE(NULERR, '(A)') 'UNEXPECTED CLASS FOR iaer'
+        CALL ABOR1('ERROR in RADIATION_SCHEME_LAYER')
+    END SELECT
+  END ASSOCIATE
+END IF
+IF(.true.) THEN ! iico2
+  ASSOCIATE( FLD => ZRGP_FIELDS%MEMBERS(52)%PTR )
+    SELECT TYPE( FLD )
+      CLASS IS( FIELD_3RB )
+        FIELD_3D => FLD
+        CALL FIELD_3D%GET_HOST_DATA_RDWR(PFIELD_iico2)
+      CLASS DEFAULT
+        WRITE(NULERR, '(A)') 'UNEXPECTED CLASS FOR iico2'
+        CALL ABOR1('ERROR in RADIATION_SCHEME_LAYER')
+    END SELECT
+  END ASSOCIATE
+END IF
+IF(.true.) THEN ! iich4
+  ASSOCIATE( FLD => ZRGP_FIELDS%MEMBERS(53)%PTR )
+    SELECT TYPE( FLD )
+      CLASS IS( FIELD_3RB )
+        FIELD_3D => FLD
+        CALL FIELD_3D%GET_HOST_DATA_RDWR(PFIELD_iich4)
+      CLASS DEFAULT
+        WRITE(NULERR, '(A)') 'UNEXPECTED CLASS FOR iich4'
+        CALL ABOR1('ERROR in RADIATION_SCHEME_LAYER')
+    END SELECT
+  END ASSOCIATE
+END IF
+IF(.true.) THEN ! iin2o
+  ASSOCIATE( FLD => ZRGP_FIELDS%MEMBERS(54)%PTR )
+    SELECT TYPE( FLD )
+      CLASS IS( FIELD_3RB )
+        FIELD_3D => FLD
+        CALL FIELD_3D%GET_HOST_DATA_RDWR(PFIELD_iin2o)
+      CLASS DEFAULT
+        WRITE(NULERR, '(A)') 'UNEXPECTED CLASS FOR iin2o'
+        CALL ABOR1('ERROR in RADIATION_SCHEME_LAYER')
+    END SELECT
+  END ASSOCIATE
+END IF
+IF(.true.) THEN ! ino2
+  ASSOCIATE( FLD => ZRGP_FIELDS%MEMBERS(55)%PTR )
+    SELECT TYPE( FLD )
+      CLASS IS( FIELD_3RB )
+        FIELD_3D => FLD
+        CALL FIELD_3D%GET_HOST_DATA_RDWR(PFIELD_ino2)
+      CLASS DEFAULT
+        WRITE(NULERR, '(A)') 'UNEXPECTED CLASS FOR ino2'
+        CALL ABOR1('ERROR in RADIATION_SCHEME_LAYER')
+    END SELECT
+  END ASSOCIATE
+END IF
+IF(.true.) THEN ! ic11
+  ASSOCIATE( FLD => ZRGP_FIELDS%MEMBERS(56)%PTR )
+    SELECT TYPE( FLD )
+      CLASS IS( FIELD_3RB )
+        FIELD_3D => FLD
+        CALL FIELD_3D%GET_HOST_DATA_RDWR(PFIELD_ic11)
+      CLASS DEFAULT
+        WRITE(NULERR, '(A)') 'UNEXPECTED CLASS FOR ic11'
+        CALL ABOR1('ERROR in RADIATION_SCHEME_LAYER')
+    END SELECT
+  END ASSOCIATE
+END IF
+IF(.true.) THEN ! ic12
+  ASSOCIATE( FLD => ZRGP_FIELDS%MEMBERS(57)%PTR )
+    SELECT TYPE( FLD )
+      CLASS IS( FIELD_3RB )
+        FIELD_3D => FLD
+        CALL FIELD_3D%GET_HOST_DATA_RDWR(PFIELD_ic12)
+      CLASS DEFAULT
+        WRITE(NULERR, '(A)') 'UNEXPECTED CLASS FOR ic12'
+        CALL ABOR1('ERROR in RADIATION_SCHEME_LAYER')
+    END SELECT
+  END ASSOCIATE
+END IF
+IF(.true.) THEN ! ic22
+  ASSOCIATE( FLD => ZRGP_FIELDS%MEMBERS(58)%PTR )
+    SELECT TYPE( FLD )
+      CLASS IS( FIELD_3RB )
+        FIELD_3D => FLD
+        CALL FIELD_3D%GET_HOST_DATA_RDWR(PFIELD_ic22)
+      CLASS DEFAULT
+        WRITE(NULERR, '(A)') 'UNEXPECTED CLASS FOR ic22'
+        CALL ABOR1('ERROR in RADIATION_SCHEME_LAYER')
+    END SELECT
+  END ASSOCIATE
+END IF
+IF(.true.) THEN ! icl4
+  ASSOCIATE( FLD => ZRGP_FIELDS%MEMBERS(59)%PTR )
+    SELECT TYPE( FLD )
+      CLASS IS( FIELD_3RB )
+        FIELD_3D => FLD
+        CALL FIELD_3D%GET_HOST_DATA_RDWR(PFIELD_icl4)
+      CLASS DEFAULT
+        WRITE(NULERR, '(A)') 'UNEXPECTED CLASS FOR icl4'
+        CALL ABOR1('ERROR in RADIATION_SCHEME_LAYER')
+    END SELECT
+  END ASSOCIATE
+END IF
+IF(.false.) THEN ! igix
+  ASSOCIATE( FLD => ZRGP_FIELDS%MEMBERS(60)%PTR )
+    SELECT TYPE( FLD )
+      CLASS IS( FIELD_2RB )
+        FIELD_2D => FLD
+        CALL FIELD_2D%GET_HOST_DATA_RDWR(PFIELD_igix)
+      CLASS DEFAULT
+        WRITE(NULERR, '(A)') 'UNEXPECTED CLASS FOR igix'
+        CALL ABOR1('ERROR in RADIATION_SCHEME_LAYER')
+    END SELECT
+  END ASSOCIATE
+END IF
+IF(.true.) THEN ! iccno
+  ASSOCIATE( FLD => ZRGP_FIELDS%MEMBERS(61)%PTR )
+    SELECT TYPE( FLD )
+      CLASS IS( FIELD_2RB )
+        FIELD_2D => FLD
+        CALL FIELD_2D%GET_HOST_DATA_RDWR(PFIELD_iccno)
+      CLASS DEFAULT
+        WRITE(NULERR, '(A)') 'UNEXPECTED CLASS FOR iccno'
+        CALL ABOR1('ERROR in RADIATION_SCHEME_LAYER')
+    END SELECT
+  END ASSOCIATE
+END IF
+IF(.true.) THEN ! ire_liq
+  ASSOCIATE( FLD => ZRGP_FIELDS%MEMBERS(62)%PTR )
+    SELECT TYPE( FLD )
+      CLASS IS( FIELD_3RB )
+        FIELD_3D => FLD
+        CALL FIELD_3D%GET_HOST_DATA_RDWR(PFIELD_ire_liq)
+      CLASS DEFAULT
+        WRITE(NULERR, '(A)') 'UNEXPECTED CLASS FOR ire_liq'
+        CALL ABOR1('ERROR in RADIATION_SCHEME_LAYER')
+    END SELECT
+  END ASSOCIATE
+END IF
+IF(.true.) THEN ! ire_ice
+  ASSOCIATE( FLD => ZRGP_FIELDS%MEMBERS(63)%PTR )
+    SELECT TYPE( FLD )
+      CLASS IS( FIELD_3RB )
+        FIELD_3D => FLD
+        CALL FIELD_3D%GET_HOST_DATA_RDWR(PFIELD_ire_ice)
+      CLASS DEFAULT
+        WRITE(NULERR, '(A)') 'UNEXPECTED CLASS FOR ire_ice'
+        CALL ABOR1('ERROR in RADIATION_SCHEME_LAYER')
+    END SELECT
+  END ASSOCIATE
+END IF
+IF(.true.) THEN ! ioverlap
+  ASSOCIATE( FLD => ZRGP_FIELDS%MEMBERS(64)%PTR )
+    SELECT TYPE( FLD )
+      CLASS IS( FIELD_3RB )
+        FIELD_3D => FLD
+        CALL FIELD_3D%GET_HOST_DATA_RDWR(PFIELD_ioverlap)
+      CLASS DEFAULT
+        WRITE(NULERR, '(A)') 'UNEXPECTED CLASS FOR ioverlap'
+        CALL ABOR1('ERROR in RADIATION_SCHEME_LAYER')
+    END SELECT
+  END ASSOCIATE
+END IF
+
+!$OMP PARALLEL DO SCHEDULE(DYNAMIC,1)&
+!$OMP&PRIVATE(JKGLO,KIDIA,KFDIA,IBL) FIRSTPRIVATE(ZRGP_FIELDS)
+DO JKGLO=1,NGPTOT,NPROMA
+    KIDIA=1
+    KFDIA=MIN(NPROMA,NGPTOT-JKGLO+1)
+    IBL=(JKGLO-1)/NPROMA+1
+
+    ! Create contiguous view pointers for each field in the current block
+    IF ( .false. ) P_igi => PFIELD_igi(:, IBL)
+    IF ( .true. ) P_iamu0 => PFIELD_iamu0(:, IBL)
+    IF ( .true. ) P_its => PFIELD_its(:, IBL)
+    IF ( .true. ) P_islm => PFIELD_islm(:, IBL)
+    IF ( .true. ) P_iccnl => PFIELD_iccnl(:, IBL)
+    IF ( .true. ) P_ibas => PFIELD_ibas(:, IBL)
+    IF ( .true. ) P_itop => PFIELD_itop(:, IBL)
+    IF ( .true. ) P_igelam => PFIELD_igelam(:, IBL)
+    IF ( .true. ) P_igemu => PFIELD_igemu(:, IBL)
+    IF ( .true. ) P_iclon => PFIELD_iclon(:, IBL)
+    IF ( .true. ) P_islon => PFIELD_islon(:, IBL)
+    IF ( .true. ) P_ifrsod => PFIELD_ifrsod(:, IBL)
+    IF ( .true. ) P_ifrted => PFIELD_ifrted(:, IBL)
+    IF ( .true. ) P_ifrsodc => PFIELD_ifrsodc(:, IBL)
+    IF ( .true. ) P_ifrtedc => PFIELD_ifrtedc(:, IBL)
+    IF ( .true. ) P_iemit => PFIELD_iemit(:, IBL)
+    IF ( .true. ) P_isudu => PFIELD_isudu(:, IBL)
+    IF ( .true. ) P_iuvdf => PFIELD_iuvdf(:, IBL)
+    IF ( .true. ) P_iparf => PFIELD_iparf(:, IBL)
+    IF ( .true. ) P_iparcf => PFIELD_iparcf(:, IBL)
+    IF ( .true. ) P_itincf => PFIELD_itincf(:, IBL)
+    IF ( .true. ) P_ifdir => PFIELD_ifdir(:, IBL)
+    IF ( .true. ) P_ifdif => PFIELD_ifdif(:, IBL)
+    IF ( .true. ) P_icdir => PFIELD_icdir(:, IBL)
+    IF ( .false. ) P_igix => PFIELD_igix(:, IBL)
+    IF ( .true. ) P_iccno => PFIELD_iccno(:, IBL)
+    IF ( .true. ) P_iemiss => PFIELD_iemiss(:,:, IBL)
+    IF ( .true. ) P_iald => PFIELD_iald(:,:, IBL)
+    IF ( .true. ) P_ialp => PFIELD_ialp(:,:, IBL)
+    IF ( .true. ) P_iti => PFIELD_iti(:,:, IBL)
+    IF ( .true. ) P_ipr => PFIELD_ipr(:,:, IBL)
+    IF ( .true. ) P_iqs => PFIELD_iqs(:,:, IBL)
+    IF ( .true. ) P_iwv => PFIELD_iwv(:,:, IBL)
+    IF ( .true. ) P_iclc => PFIELD_iclc(:,:, IBL)
+    IF ( .true. ) P_ilwa => PFIELD_ilwa(:,:, IBL)
+    IF ( .true. ) P_iiwa => PFIELD_iiwa(:,:, IBL)
+    IF ( .true. ) P_iswa => PFIELD_iswa(:,:, IBL)
+    IF ( .true. ) P_irwa => PFIELD_irwa(:,:, IBL)
+    IF ( .true. ) P_irra => PFIELD_irra(:,:, IBL)
+    IF ( .true. ) P_idp => PFIELD_idp(:,:, IBL)
+    IF ( .true. ) P_ioz => PFIELD_ioz(:,:, IBL)
+    IF ( .true. ) P_ihpr => PFIELD_ihpr(:,:, IBL)
+    IF ( .true. ) P_iaprs => PFIELD_iaprs(:,:, IBL)
+    IF ( .true. ) P_ihti => PFIELD_ihti(:,:, IBL)
+    IF ( .true. ) P_iaero => PFIELD_iaero(:,:, IBL)
+    IF ( yradiation%yrerad%lapproxlwupdate ) P_ilwderivative => PFIELD_ilwderivative(:,:, IBL)
+    IF ( yradiation%yrerad%lapproxswupdate ) P_iswdirectband => PFIELD_iswdirectband(:,:, IBL)
+    IF ( yradiation%yrerad%lapproxswupdate ) P_iswdiffuseband => PFIELD_iswdiffuseband(:,:, IBL)
+    IF ( .true. ) P_ifrso => PFIELD_ifrso(:,:, IBL)
+    IF ( .true. ) P_iswfc => PFIELD_iswfc(:,:, IBL)
+    IF ( .true. ) P_ifrth => PFIELD_ifrth(:,:, IBL)
+    IF ( .true. ) P_ilwfc => PFIELD_ilwfc(:,:, IBL)
+    IF ( .true. ) P_iaer => PFIELD_iaer(:,:, IBL)
+    IF ( .true. ) P_iico2 => PFIELD_iico2(:,:, IBL)
+    IF ( .true. ) P_iich4 => PFIELD_iich4(:,:, IBL)
+    IF ( .true. ) P_iin2o => PFIELD_iin2o(:,:, IBL)
+    IF ( .true. ) P_ino2 => PFIELD_ino2(:,:, IBL)
+    IF ( .true. ) P_ic11 => PFIELD_ic11(:,:, IBL)
+    IF ( .true. ) P_ic12 => PFIELD_ic12(:,:, IBL)
+    IF ( .true. ) P_ic22 => PFIELD_ic22(:,:, IBL)
+    IF ( .true. ) P_icl4 => PFIELD_icl4(:,:, IBL)
+    IF ( .true. ) P_ire_liq => PFIELD_ire_liq(:,:, IBL)
+    IF ( .true. ) P_ire_ice => PFIELD_ire_ice(:,:, IBL)
+    IF ( .true. ) P_ioverlap => PFIELD_ioverlap(:,:, IBL)
+
+    ! Call the ECRAD radiation scheme
+    CALL RADIATION_SCHEME &
+        & (YRADIATION, &
+        &  KIDIA, KFDIA, NPROMA, &                       ! startcol, endcol, ncol
+        &  NFLEVG, KAEROSOL, &
+        &  PSOLAR_IRRADIANCE &                               ! solar_irrad
+        &, P_iamu0 &
+        &, P_its &
+        &, P_iald &
+        &, P_ialp &
+        &, P_iemiss &
+        &, P_iccnl &
+        &, P_iccno &
+        &, P_igelam &
+        &, P_igemu &
+        &, P_islm &
+        &, P_ipr &
+        &, P_iti &
+        &, P_iaprs &
+        &, P_ihti &
+        &, P_iwv &
+        &, P_iico2 &
+        &, P_iich4 &
+        &, P_iin2o &
+        &, P_ino2 &
+        &, P_ic11 &
+        &, P_ic12 &
+        &, P_ic22 &
+        &, P_icl4 &
+        &, P_ioz &
+        &, P_iclc &
+        &, P_ilwa &
+        &, P_iiwa &
+        &, P_irwa &
+        &, P_iswa &
+        &, P_iaer &
+        &, P_iaero &
+        &, P_ifrso &
+        &, P_ifrth &
+        &, P_iswfc &
+        &, P_ilwfc &
+        &, P_ifrsod &
+        &, P_ifrted &
+        &, P_ifrsodc &
+        &, P_ifrtedc &
+        &, P_ifdir &
+        &, P_icdir &
+        &, P_isudu &
+        &, P_iuvdf &
+        &, P_iparf &
+        &, P_iparcf &
+        &, P_itincf &
+        &, P_iemit &
+        &, P_ilwderivative &
+        &, P_iswdiffuseband &
+        &, P_iswdirectband &
+#ifdef BITIDENTITY_TESTING
+        ! To validate results against standalone ecrad, we overwrite effective
+        ! radii, cloud overlap and seed with input values
+        &, pre_liq=p_ire_liq, pre_ice=p_ire_ice &
+        &, pcloud_overlap=p_ioverlap, iseed=iseed(:,ibl) &
+#endif
+        & )
+
+end do
+!$OMP END PARALLEL DO
+
+END SUBROUTINE RADIATION_SCHEME_LAYER
+
+END MODULE RADIATION_SCHEME_LAYER_MOD
