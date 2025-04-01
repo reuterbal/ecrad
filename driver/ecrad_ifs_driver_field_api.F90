@@ -392,6 +392,16 @@ program ecrad_ifs_driver
 #endif
   do jrepeat = 1,driver_config%nrepeat
 
+#ifdef _OPENACC
+    call RADIATION_SCHEME_LAYER_OPENACC( &
+      & yradiation, zrgp_fields, &
+      & ncol, nproma, nlev, size(aerosol%mixing_ratio, 3), &
+      & single_level%solar_irradiance &
+#ifdef BITIDENTITY_TESTING
+      & , iseed=iseed &
+#endif
+      & )
+#else
     call RADIATION_SCHEME_LAYER( &
       & yradiation, zrgp_fields, &
       & ncol, nproma, nlev, size(aerosol%mixing_ratio, 3), &
@@ -400,9 +410,9 @@ program ecrad_ifs_driver
       & , iseed=iseed &
 #endif
       & )
+#endif
 
   end do
-
 #ifndef NO_OPENMP
   tstop = omp_get_wtime()
   write(nulout, '(a,g12.5,a)') 'Time elapsed in radiative transfer: ', tstop-tstart, ' seconds'
