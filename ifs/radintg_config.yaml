@@ -7,7 +7,7 @@
   - name: igi
     dimension:
     - 1
-    condition: .false. #(driver_config%iverbose>4)
+    condition: iverbose>4
   - name: iamu0
     dimension:
     - 1
@@ -245,7 +245,7 @@
   - name: igix
     dimension:
     - 1
-    condition: .false. #(driver_config%iverbose>4)
+    condition: iverbose>4
   - name: iccno
     dimension:
     - 1

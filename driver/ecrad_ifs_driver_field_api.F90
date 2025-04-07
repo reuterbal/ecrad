@@ -365,9 +365,10 @@ program ecrad_ifs_driver
   ! Section 4a: Reshuffle into blocked memory layout
   ! --------------------------------------------------------
 
-  call ifs_setup_indices(driver_config, ifs_config, yradiation, nlev)
-  call ifs_copy_inputs_to_blocked(driver_config, ifs_config, yradiation,&
-        & ncol, nlev, single_level, thermodynamics, gas, cloud, aerosol,&
+  call ifs_setup_indices(ifs_config, yradiation, nlev, driver_config%iverbose)
+  call ifs_copy_inputs_to_blocked(ifs_config, yradiation,&
+        & ncol, nlev, driver_config%nblocksize, &
+        & single_level, thermodynamics, gas, cloud, aerosol,&
         & sin_latitude, longitude_rad, land_frac, pressure_fl, temperature_fl,&
         & zrgp &
 #ifdef BITIDENTITY_TESTING
@@ -375,7 +376,7 @@ program ecrad_ifs_driver
 #endif
         & )
 
-  call ifs_setup_fapi(zrgp_fields, zrgp, driver_config, yradiation, nlev)
+  call ifs_setup_fapi(zrgp_fields, zrgp, yradiation, nlev, driver_config%iverbose)
 
   ! --------------------------------------------------------
   ! Section 4b: Call radiation_scheme with blocked memory data
@@ -395,7 +396,8 @@ program ecrad_ifs_driver
     call RADIATION_SCHEME_LAYER( &
       & yradiation, zrgp_fields, &
       & ncol, nproma, nlev, size(aerosol%mixing_ratio, 3), &
-      & single_level%solar_irradiance &
+      & single_level%solar_irradiance, &
+      & driver_config%iverbose &
 #ifdef BITIDENTITY_TESTING
       & , iseed=iseed &
 #endif
@@ -412,7 +414,8 @@ program ecrad_ifs_driver
   ! Section 4c: Copy fluxes from blocked memory data
   ! --------------------------------------------------------
 
-  call ifs_copy_fluxes_from_blocked(driver_config, ifs_config, yradiation, ncol, nlev,&
+  call ifs_copy_fluxes_from_blocked(ifs_config, yradiation, &
+          & ncol, nlev, driver_config%nblocksize, &
           & zrgp, flux, flux_sw_direct_normal, flux_uv, flux_par, flux_par_clear, &
           & emissivity_out, flux_diffuse_band, flux_direct_band)
 

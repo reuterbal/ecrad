@@ -44,7 +44,7 @@ CONTAINS
 
 SUBROUTINE RADIATION_SCHEME_LAYER &
      & (YRADIATION, ZRGP_FIELDS, NGPTOT, NPROMA, NFLEVG, KAEROSOL, &
-     &  PSOLAR_IRRADIANCE, &
+     &  PSOLAR_IRRADIANCE, IVERBOSE, &
      ! OPTIONAL ARGUMENT for bit-identical results in tests
      &  ISEED)
 
@@ -72,6 +72,8 @@ INTEGER(KIND=JPIM),INTENT(IN)   :: KAEROSOL ! Number of aerosol types
 
 ! *** Single-level fields
 REAL(KIND=JPRB),   INTENT(IN)   :: PSOLAR_IRRADIANCE ! (W m-2)
+
+INTEGER,           INTENT(IN)   :: IVERBOSE
 
 ! Optional input argument (Added for validating against ecrad standalone!)
 INTEGER,           INTENT(IN), OPTIONAL :: ISEED(:,:)

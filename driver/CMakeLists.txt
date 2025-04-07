@@ -7,26 +7,6 @@
 # granted to it by virtue of its status as an intergovernmental organisation
 # nor does it submit to any jurisdiction.
 
-# If FYPP has been enabled, regenerate the F90 source files first
-if( HAVE_FYPP AND NOT TARGET ecrad_fypp_files )
-    set( fypp_files radiation_scheme_layer ifs_blocking )
-    foreach( fypp_file ${fypp_files} )
-        add_custom_command(
-            OUTPUT
-                ${CMAKE_CURRENT_SOURCE_DIR}/${fypp_file}.F90
-            COMMAND
-                ${FYPP} -m os -m field_config -M ${CMAKE_CURRENT_SOURCE_DIR}
-                ${CMAKE_CURRENT_SOURCE_DIR}/${fypp_file}.fypp
-                ${CMAKE_CURRENT_SOURCE_DIR}/${fypp_file}.F90
-            DEPENDS
-                ${CMAKE_CURRENT_SOURCE_DIR}/${fypp_file}.fypp
-                ${CMAKE_CURRENT_SOURCE_DIR}/radintg_config.yaml
-        )
-    endforeach()
-    list( TRANSFORM fypp_files APPEND .F90 )
-    add_custom_target( ecrad_fypp_files ALL DEPENDS ${fypp_files} )
-endif()
-
 ecbuild_add_library(
     TARGET driver_lib.${PREC}
     TYPE OBJECT
@@ -63,17 +43,12 @@ ecbuild_add_executable(
     TARGET ecrad_ifs_blocked_${PREC}
     SOURCES
         ecrad_ifs_driver_blocked.F90
-        ifs_blocking.F90
     DEFINITIONS
         $<$<NOT:${HAVE_OMP}>:NO_OPENMP>
     LIBS
         driver_lib.${PREC}
         ifs.${PREC}
         ecrad.${PREC}
-)
-set_target_properties( ecrad_ifs_blocked_${PREC}
-    PROPERTIES
-        Fortran_MODULE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/module-blocked"
 )
 
 # For ecrad_ifs_driver_blocked we have to disable bounds checking
@@ -104,20 +79,13 @@ if( HAVE_FIELD_API )
         TARGET ecrad_ifs_field_api_${PREC}
         SOURCES
             ecrad_ifs_driver_field_api.F90
-            ifs_blocking.F90
-            radiation_scheme_layer.F90
         DEFINITIONS
             $<$<NOT:${HAVE_OMP}>:NO_OPENMP>
             HAVE_FIELD_API
         LIBS
             driver_lib.${PREC}
-            ifs.${PREC}
+            ifs_field_api.${PREC}
             ecrad.${PREC}
-            field_api_${PREC}
-    )
-    set_target_properties( ecrad_ifs_field_api_${PREC}
-        PROPERTIES
-            Fortran_MODULE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/module-field_api"
     )
 endif()
 
