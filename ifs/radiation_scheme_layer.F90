@@ -19,7 +19,7 @@ CONTAINS
 
 SUBROUTINE RADIATION_SCHEME_LAYER &
      & (YRADIATION, ZRGP_FIELDS, NGPTOT, NPROMA, NFLEVG, KAEROSOL, &
-     &  PSOLAR_IRRADIANCE, &
+     &  PSOLAR_IRRADIANCE, IVERBOSE, &
      ! OPTIONAL ARGUMENT for bit-identical results in tests
      &  ISEED)
 
@@ -47,6 +47,8 @@ INTEGER(KIND=JPIM),INTENT(IN)   :: KAEROSOL ! Number of aerosol types
 
 ! *** Single-level fields
 REAL(KIND=JPRB),   INTENT(IN)   :: PSOLAR_IRRADIANCE ! (W m-2)
+
+INTEGER,           INTENT(IN)   :: IVERBOSE
 
 ! Optional input argument (Added for validating against ecrad standalone!)
 INTEGER,           INTENT(IN), OPTIONAL :: ISEED(:,:)
@@ -189,7 +191,7 @@ REAL(KIND=JPRB), POINTER, CONTIGUOUS :: P_ioverlap(:,:) => NULL()
 
 #include "radiation_scheme.intfb.h"
 
-IF(.false.) THEN ! igi
+IF(iverbose>4) THEN ! igi
   ASSOCIATE( FLD => ZRGP_FIELDS%MEMBERS(1)%PTR )
     SELECT TYPE( FLD )
       CLASS IS( FIELD_2RB )
@@ -897,7 +899,7 @@ IF(.true.) THEN ! icl4
     END SELECT
   END ASSOCIATE
 END IF
-IF(.false.) THEN ! igix
+IF(iverbose>4) THEN ! igix
   ASSOCIATE( FLD => ZRGP_FIELDS%MEMBERS(60)%PTR )
     SELECT TYPE( FLD )
       CLASS IS( FIELD_2RB )
@@ -966,7 +968,7 @@ DO JKGLO=1,NGPTOT,NPROMA
     IBL=(JKGLO-1)/NPROMA+1
 
     ! Create contiguous view pointers for each field in the current block
-    IF ( .false. ) P_igi => PFIELD_igi(:, IBL)
+    IF ( iverbose>4 ) P_igi => PFIELD_igi(:, IBL)
     IF ( .true. ) P_iamu0 => PFIELD_iamu0(:, IBL)
     IF ( .true. ) P_its => PFIELD_its(:, IBL)
     IF ( .true. ) P_islm => PFIELD_islm(:, IBL)
@@ -990,7 +992,7 @@ DO JKGLO=1,NGPTOT,NPROMA
     IF ( .true. ) P_ifdir => PFIELD_ifdir(:, IBL)
     IF ( .true. ) P_ifdif => PFIELD_ifdif(:, IBL)
     IF ( .true. ) P_icdir => PFIELD_icdir(:, IBL)
-    IF ( .false. ) P_igix => PFIELD_igix(:, IBL)
+    IF ( iverbose>4 ) P_igix => PFIELD_igix(:, IBL)
     IF ( .true. ) P_iccno => PFIELD_iccno(:, IBL)
     IF ( .true. ) P_iemiss => PFIELD_iemiss(:,:, IBL)
     IF ( .true. ) P_iald => PFIELD_iald(:,:, IBL)
@@ -1102,7 +1104,7 @@ END SUBROUTINE RADIATION_SCHEME_LAYER
 
 SUBROUTINE RADIATION_SCHEME_LAYER_OPENACC &
   & (YRADIATION, ZRGP_FIELDS, NGPTOT, NPROMA, NFLEVG, KAEROSOL, &
-  &  PSOLAR_IRRADIANCE, &
+  &  PSOLAR_IRRADIANCE, IVERBOSE, &
   ! OPTIONAL ARGUMENT for bit-identical results in tests
   &  ISEED)
 
@@ -1130,6 +1132,8 @@ INTEGER(KIND=JPIM),INTENT(IN)   :: KAEROSOL ! Number of aerosol types
 
 ! *** Single-level fields
 REAL(KIND=JPRB),   INTENT(IN)   :: PSOLAR_IRRADIANCE ! (W m-2)
+
+INTEGER,           INTENT(IN)   :: IVERBOSE
 
 ! Optional input argument (Added for validating against ecrad standalone!)
 INTEGER,           INTENT(IN), OPTIONAL :: ISEED(:,:)
@@ -1272,7 +1276,7 @@ REAL(KIND=JPRB), POINTER, CONTIGUOUS :: P_ioverlap(:,:) => NULL()
 
 #include "radiation_scheme.intfb.h"
 
-IF(.false.) THEN ! igi
+IF(iverbose>4) THEN ! igi
 ASSOCIATE( FLD => ZRGP_FIELDS%MEMBERS(1)%PTR )
  SELECT TYPE( FLD )
    CLASS IS( FIELD_2RB )
@@ -1980,7 +1984,7 @@ ASSOCIATE( FLD => ZRGP_FIELDS%MEMBERS(59)%PTR )
  END SELECT
 END ASSOCIATE
 END IF
-IF(.false.) THEN ! igix
+IF(iverbose>4) THEN ! igix
 ASSOCIATE( FLD => ZRGP_FIELDS%MEMBERS(60)%PTR )
  SELECT TYPE( FLD )
    CLASS IS( FIELD_2RB )
@@ -2049,7 +2053,7 @@ DO JKGLO=1,NGPTOT,NPROMA
  IBL=(JKGLO-1)/NPROMA+1
 
  ! Create contiguous view pointers for each field in the current block
- IF ( .false. ) P_igi => PFIELD_igi(:, IBL)
+ IF ( iverbose>4 ) P_igi => PFIELD_igi(:, IBL)
  IF ( .true. ) P_iamu0 => PFIELD_iamu0(:, IBL)
  IF ( .true. ) P_its => PFIELD_its(:, IBL)
  IF ( .true. ) P_islm => PFIELD_islm(:, IBL)
@@ -2073,7 +2077,7 @@ DO JKGLO=1,NGPTOT,NPROMA
  IF ( .true. ) P_ifdir => PFIELD_ifdir(:, IBL)
  IF ( .true. ) P_ifdif => PFIELD_ifdif(:, IBL)
  IF ( .true. ) P_icdir => PFIELD_icdir(:, IBL)
- IF ( .false. ) P_igix => PFIELD_igix(:, IBL)
+ IF ( iverbose>4 ) P_igix => PFIELD_igix(:, IBL)
  IF ( .true. ) P_iccno => PFIELD_iccno(:, IBL)
  IF ( .true. ) P_iemiss => PFIELD_iemiss(:,:, IBL)
  IF ( .true. ) P_iald => PFIELD_iald(:,:, IBL)
@@ -2183,7 +2187,7 @@ end do
 !$acc wait(1)
 !$acc end data
 
-IF(.false.) THEN ! igi
+IF(iverbose>4) THEN ! igi
 ASSOCIATE( FLD => ZRGP_FIELDS%MEMBERS(1)%PTR )
  SELECT TYPE( FLD )
    CLASS IS( FIELD_2RB )
@@ -2891,7 +2895,7 @@ ASSOCIATE( FLD => ZRGP_FIELDS%MEMBERS(59)%PTR )
  END SELECT
 END ASSOCIATE
 END IF
-IF(.false.) THEN ! igix
+IF(iverbose>4) THEN ! igix
 ASSOCIATE( FLD => ZRGP_FIELDS%MEMBERS(60)%PTR )
  SELECT TYPE( FLD )
    CLASS IS( FIELD_2RB )

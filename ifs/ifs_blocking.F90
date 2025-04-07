@@ -120,20 +120,18 @@ integer(kind=jpim) function indrad(knext,kflds,lduse)
 
 end function indrad
 
-subroutine ifs_setup_indices (driver_config, ifs_config, yradiation, nlev)
+subroutine ifs_setup_indices (ifs_config, yradiation, nlev, iverbose)
 
   use radiation_io,             only : nulout
-  use ecrad_driver_config,      only : driver_config_type
   use radiation_setup,          only : tradiation
 
-  ! Configuration specific to this driver
-  type(driver_config_type), intent(in)     :: driver_config
   type(ifs_config_type), intent(inout)     :: ifs_config
 
   ! Configuration for the radiation scheme, IFS style
   type(tradiation), intent(inout)          :: yradiation
 
   integer, intent(inout) :: nlev
+  integer, intent(in)    :: iverbose
 
   integer :: inext
 
@@ -144,7 +142,7 @@ subroutine ifs_setup_indices (driver_config, ifs_config, yradiation, nlev)
   inext = 1
   ifs_config%igi = indrad( &
       & inext, 1, &
-      & .false.)
+      & iverbose>4)
   ifs_config%iamu0 = indrad( &
       & inext, 1, &
       & .true.)
@@ -321,7 +319,7 @@ subroutine ifs_setup_indices (driver_config, ifs_config, yradiation, nlev)
       & .true.)
   ifs_config%igix = indrad( &
       & inext, 1, &
-      & .false.)
+      & iverbose>4)
   ifs_config%iccno = indrad( &
       & inext, 1, &
       & .true.)
@@ -336,12 +334,12 @@ subroutine ifs_setup_indices (driver_config, ifs_config, yradiation, nlev)
       & .true.)
   ifs_config%ifldstot = inext  - 1
 
-  if( driver_config%iverbose > 4 )then
+  if( iverbose > 4 )then
     write(nulout,'(a," = ",i0,", dim = ",i0,", condition = ",a)') &
         & 'ifs_config%igi', &
         & ifs_config%igi, &
         & 1, &
-        & '.false.'
+        & 'iverbose>4'
     write(nulout,'(a," = ",i0,", dim = ",i0,", condition = ",a)') &
         & 'ifs_config%iamu0', &
         & ifs_config%iamu0, &
@@ -636,7 +634,7 @@ subroutine ifs_setup_indices (driver_config, ifs_config, yradiation, nlev)
         & 'ifs_config%igix', &
         & ifs_config%igix, &
         & 1, &
-        & '.false.'
+        & 'iverbose>4'
     write(nulout,'(a," = ",i0,", dim = ",i0,", condition = ",a)') &
         & 'ifs_config%iccno', &
         & ifs_config%iccno, &
@@ -683,10 +681,9 @@ SUBROUTINE FIELD_INDRAD(MEMBER_MAP, KIDX, KNEXT, KFLDS, LDUSE)
   MEMBER_MAP(2*KIDX) = IEND
 END SUBROUTINE FIELD_INDRAD
 
-SUBROUTINE IFS_SETUP_FAPI(ZRGP_FIELDS, ZRGP, DRIVER_CONFIG, YRADIATION, NLEV)
+SUBROUTINE IFS_SETUP_FAPI(ZRGP_FIELDS, ZRGP, YRADIATION, NLEV, IVERBOSE)
 
   USE FIELD_FACTORY_MODULE
-  USE ECRAD_DRIVER_CONFIG,      ONLY : DRIVER_CONFIG_TYPE
   USE RADIATION_SETUP,          ONLY : TRADIATION
   USE RADIATION_IO,             ONLY : NULERR
 
@@ -694,9 +691,8 @@ SUBROUTINE IFS_SETUP_FAPI(ZRGP_FIELDS, ZRGP, DRIVER_CONFIG, YRADIATION, NLEV)
 
   TYPE(RADINTG_ZRGP_TYPE), INTENT(INOUT) :: ZRGP_FIELDS
   REAL(KIND=JPRB), INTENT(INOUT), TARGET :: ZRGP(:,:,:)
-  TYPE(DRIVER_CONFIG_TYPE), INTENT(IN)   :: DRIVER_CONFIG
   TYPE(TRADIATION), INTENT(IN)           :: YRADIATION
-  INTEGER, INTENT(IN)                     :: NLEV
+  INTEGER, INTENT(IN)                     :: NLEV, IVERBOSE
 
   INTEGER(KIND=JPIM), ALLOCATABLE     :: MEMBER_MAP(:)
   INTEGER(KIND=JPIM)                  :: INEXT
@@ -707,7 +703,7 @@ SUBROUTINE IFS_SETUP_FAPI(ZRGP_FIELDS, ZRGP, DRIVER_CONFIG, YRADIATION, NLEV)
 
   INEXT = 1
   ! igi
-  CALL FIELD_INDRAD( MEMBER_MAP, 1, INEXT, 1, .false.)
+  CALL FIELD_INDRAD( MEMBER_MAP, 1, INEXT, 1, iverbose>4)
   ! iamu0
   CALL FIELD_INDRAD( MEMBER_MAP, 2, INEXT, 1, .true.)
   ! iemiss
@@ -825,7 +821,7 @@ SUBROUTINE IFS_SETUP_FAPI(ZRGP_FIELDS, ZRGP, DRIVER_CONFIG, YRADIATION, NLEV)
   ! icl4
   CALL FIELD_INDRAD( MEMBER_MAP, 59, INEXT, nlev, .true.)
   ! igix
-  CALL FIELD_INDRAD( MEMBER_MAP, 60, INEXT, 1, .false.)
+  CALL FIELD_INDRAD( MEMBER_MAP, 60, INEXT, 1, iverbose>4)
   ! iccno
   CALL FIELD_INDRAD( MEMBER_MAP, 61, INEXT, 1, .true.)
   ! ire_liq
@@ -842,7 +838,7 @@ END SUBROUTINE IFS_SETUP_FAPI
 #endif
 
 subroutine ifs_copy_inputs_to_blocked ( &
-  & driver_config, ifs_config, yradiation, ncol, nlev, &
+  & ifs_config, yradiation, ncol, nlev, nproma, &
   & single_level, thermodynamics, gas, cloud, aerosol, &
   & sin_latitude, longitude_rad, land_frac, pressure_fl, temperature_fl, &
   & zrgp, thermodynamics_out, iseed)
@@ -853,20 +849,16 @@ subroutine ifs_copy_inputs_to_blocked ( &
         &   IH2O, ICO2, IO3, IN2O, ICH4, ICFC11, ICFC12, IHCFC22, ICCL4
   use radiation_cloud,          only : cloud_type
   use radiation_aerosol,        only : aerosol_type
-  use ecrad_driver_config,      only : driver_config_type
   use radiation_setup,          only : tradiation
 
   implicit none
-
-  ! Configuration specific to this driver
-  type(driver_config_type), intent(in)     :: driver_config
 
   type(ifs_config_type), intent(in)     :: ifs_config
 
   ! Configuration for the radiation scheme, IFS style
   type(tradiation), intent(in)          :: yradiation
 
-  integer, intent(in) :: ncol, nlev         ! Number of columns and levels
+  integer, intent(in) :: ncol, nlev, nproma  ! Number of columns and levels
 
   ! Derived types for the inputs to the radiation scheme
   type(single_level_type), intent(in)   :: single_level
@@ -889,12 +881,11 @@ subroutine ifs_copy_inputs_to_blocked ( &
   integer, intent(out), allocatable, optional :: iseed(:,:)
 
   ! number of column blocks, block size
-  integer :: ngpblks, nproma
+  integer :: ngpblks
 
   integer :: jrl, ibeg, iend, il, ib, ifld, jemiss, jalb, jlev, joff, jaer
 
   ! Extract some config values
-  nproma=driver_config%nblocksize        ! nproma size
   ngpblks=(ncol-1)/nproma+1              ! number of column blocks
 
   ! Allocate blocked data structure
@@ -1066,22 +1057,18 @@ subroutine ifs_copy_inputs_to_blocked ( &
 end subroutine ifs_copy_inputs_to_blocked
 
 subroutine ifs_copy_fluxes_from_blocked(&
-    & driver_config, ifs_config, yradiation, ncol, nlev,&
+    & ifs_config, yradiation, ncol, nlev, nproma, &
     & zrgp, flux, flux_sw_direct_normal, flux_uv, flux_par, flux_par_clear,&
     & emissivity_out, flux_diffuse_band, flux_direct_band)
-  use ecrad_driver_config,      only : driver_config_type
   use radiation_setup,          only : tradiation
   use radiation_flux,           only : flux_type
-
-  ! Configuration specific to this driver
-  type(driver_config_type), intent(in)     :: driver_config
 
   type(ifs_config_type), intent(in)     :: ifs_config
 
   ! Configuration for the radiation scheme, IFS style
   type(tradiation), intent(in)          :: yradiation
 
-  integer, intent(in) :: ncol, nlev         ! Number of columns and levels
+  integer, intent(in) :: ncol, nlev, nproma  ! Number of columns and levels
 
   ! monolithic IFS data structure passed to radiation scheme
   real(kind=jprb), intent(inout), allocatable :: zrgp(:,:,:)
@@ -1095,12 +1082,11 @@ subroutine ifs_copy_fluxes_from_blocked(&
   real(jprb), dimension(:,:), intent(inout) :: flux_diffuse_band, flux_direct_band
 
   ! number of column blocks, block size
-  integer :: ngpblks, nproma
+  integer :: ngpblks
 
   integer :: jrl, ibeg, iend, il, ib, jlev, jg
 
   ! Extract some config values
-  nproma=driver_config%nblocksize        ! nproma size
   ngpblks=(ncol-1)/nproma+1              ! number of column blocks
 
     !  -------------------------------------------------------
