@@ -183,7 +183,7 @@ jobs:
         dependencies: |
           ecmwf/ecbuild
           ecmwf-ifs/fiat
-          awnawab/field_api@refs/heads/naan-field-stack
+          awnawab/field_api@refs/heads/naan-field-stack-rebase
         dependency_branch: develop
         dependency_cmake_options: |
           ecmwf-ifs/fiat: "-G Ninja -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} -DENABLE_TESTS=OFF"

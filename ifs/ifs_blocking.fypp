@@ -25,7 +25,7 @@ module ifs_blocking
 
 #ifdef HAVE_FIELD_API
   use field_module
-  use field_stack_module
+  use field_basic_module
 #endif
 
   implicit none
@@ -44,7 +44,7 @@ end type ifs_config_type
 ! Field stack wrapper for ZRGP
   TYPE RADINTG_ZRGP_TYPE
   CLASS(FIELD_3RB), POINTER :: FIELD_WRAPPER
-  TYPE(FIELD_3RB_STACK_MEMBER_PTR), ALLOCATABLE :: MEMBERS(:)
+  TYPE(FIELD_BASIC_PTR), ALLOCATABLE :: MEMBERS(:)
   END TYPE RADINTG_ZRGP_TYPE
 #endif
 
