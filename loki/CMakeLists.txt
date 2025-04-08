@@ -61,6 +61,7 @@ if( HAVE_BITIDENTITY_TESTING )
 else()
     set( LOKI_DEFINITIONS )
 endif()
+
 loki_transform_target(
     TARGET ecrad_loki.${PREC}
     MODE ${LOKI_MODE}

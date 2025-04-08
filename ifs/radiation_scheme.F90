@@ -68,6 +68,7 @@ SUBROUTINE RADIATION_SCHEME &
 
 ! Modules from ifs or ifsaux libraries
 USE PARKIND1       , ONLY : JPIM, JPRB, JPRD
+USE MPL_MODULE     , ONLY : MPL_MYRANK
 USE YOMHOOK        , ONLY : LHOOK, DR_HOOK, JPHOOK
 USE YOMCST         , ONLY : RPI, RSIGMA ! Stefan-Boltzmann constant
 USE YOMLUN         , ONLY : NULERR, NULOUT
@@ -248,10 +249,6 @@ REAL(KIND=JPHOOK) :: ZHOOK_HANDLE
 
 ! Dummy from YOMCT3
 ! INTEGER(KIND=JPIM) :: NSTEP = 0
-
-! Dummy from MPL_MYRANK_MOD
-INTEGER(KIND=JPIM) :: MPL_MYRANK
-MPL_MYRANK() = 1
 
 ! Import time functions for iseed calculation
 #include "fcttim.func.h"
