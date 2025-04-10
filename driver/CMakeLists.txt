@@ -115,7 +115,7 @@ if( TARGET ecrad_loki.${PREC} )
     ecbuild_add_executable(
         TARGET ecrad_loki_${PREC}
         SOURCES
-            ecrad_ifs_driver_blocked.F90
+            ecrad_ifs_driver_field_api.F90
         DEFINITIONS
             $<$<NOT:${HAVE_OMP}>:NO_OPENMP>
         LIBS
@@ -124,19 +124,6 @@ if( TARGET ecrad_loki.${PREC} )
             $<${HAVE_OMP}:OpenMP::OpenMP_Fortran>
     )
 
-    if( HAVE_FIELD_API )
-        ecbuild_add_executable(
-            TARGET ecrad_loki_field_api_${PREC}
-            SOURCES
-                ecrad_ifs_driver_field_api.F90
-            DEFINITIONS
-                $<$<NOT:${HAVE_OMP}>:NO_OPENMP>
-            LIBS
-            loki_driver_lib.${PREC}
-                ecrad_base.${PREC}
-                $<${HAVE_OMP}:OpenMP::OpenMP_Fortran>
-        )
-    endif()
 endif()
 
 # Create a symlink for each driver without the precision suffix.

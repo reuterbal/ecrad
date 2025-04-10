@@ -111,7 +111,7 @@ function( add_ecrad_ifs_test )
             DEPENDS config_${_PAR_NAME}_${PREC}
         )
 
-        foreach( binary ecrad_${PREC} ecrad_ifs_${PREC} ecrad_ifs_blocked_${PREC} ecrad_ifs_field_api_${PREC} ecrad_loki_${PREC} ecrad_loki_field_api_${PREC} )
+        foreach( binary ecrad_${PREC} ecrad_ifs_${PREC} ecrad_ifs_blocked_${PREC} ecrad_ifs_field_api_${PREC} ecrad_loki_${PREC} )
 
             if( TARGET ${binary} )
                 ecbuild_add_test(
@@ -144,7 +144,7 @@ function( add_ecrad_ifs_test )
                 set( NCCMP_OPTIONS )
             endif()
 
-            foreach( binary ecrad_ifs_${PREC} ecrad_ifs_blocked_${PREC} ecrad_ifs_field_api_${PREC} ecrad_loki_${PREC} ecrad_loki_field_api_${PREC} )
+            foreach( binary ecrad_ifs_${PREC} ecrad_ifs_blocked_${PREC} ecrad_ifs_field_api_${PREC} ecrad_loki_${PREC} )
 
                 if( TARGET ${binary} )
                     add_ecrad_nccmp_test(

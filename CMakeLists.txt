@@ -85,6 +85,7 @@ ecbuild_add_option(
     DEFAULT ON
     DESCRIPTION "Use Loki source-to-source processing"
     REQUIRED_PACKAGES "loki"
+    CONDITION HAVE_FIELD_API
 )
 
 # Set default Loki transformation mode
