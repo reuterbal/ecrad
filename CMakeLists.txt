@@ -88,7 +88,7 @@ ecbuild_add_option(
 )
 
 # Set default Loki transformation mode
-set( LOKI_MODE "idem" CACHE STRING "Transformation mode for Loki source transformations" )
+set( LOKI_MODE "remove_code" CACHE STRING "Transformation mode for Loki source transformations" )
 
 set( _PRECISIONS "" )
 ecbuild_add_option(
