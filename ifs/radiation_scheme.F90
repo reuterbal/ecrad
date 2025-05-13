@@ -661,14 +661,14 @@ ENDIF
 ! possible to provide a broadband emissivity that can reproduce the
 ! upwelling surface flux given the downwelling flux and the skin
 ! temperature.
-ZBLACK_BODY_NET_LW = PFLUX_LW_DN(KIDIA:KFDIA) &
+ZBLACK_BODY_NET_LW(KIDIA:KFDIA) = PFLUX_LW_DN(KIDIA:KFDIA) &
      &  - RSIGMA*PTEMPERATURE_SKIN(KIDIA:KFDIA)**4
 PEMIS_OUT(KIDIA:KFDIA) = PSPECTRALEMISS(KIDIA:KFDIA,1) ! Default value
 IF (RAD_CONFIG%DO_LW) THEN
-  WHERE (ABS(ZBLACK_BODY_NET_LW) > 1.0E-5)
+  WHERE (ABS(ZBLACK_BODY_NET_LW(KIDIA:KFDIA)) > 1.0E-5)
     ! This calculation can go outside the range of any individual
     ! spectral emissivity value, so needs to be capped
-    PEMIS_OUT(KIDIA:KFDIA) = MAX(0.8_JPRB, MIN(0.99_JPRB, PFLUX_LW(KIDIA:KFDIA,KLEV+1) / ZBLACK_BODY_NET_LW))
+    PEMIS_OUT(KIDIA:KFDIA) = MAX(0.8_JPRB, MIN(0.99_JPRB, PFLUX_LW(KIDIA:KFDIA,KLEV+1) / ZBLACK_BODY_NET_LW(KIDIA:KFDIA)))
   ENDWHERE
 ENDIF
 
