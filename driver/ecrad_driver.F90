@@ -275,6 +275,7 @@ program ecrad_driver
   end if
 
   ! Store inputs
+  !$loki remove
   if (driver_config%do_save_inputs) then
     call save_inputs('inputs.nc', config, single_level, thermodynamics, &
          &                gas, cloud, aerosol, &
@@ -282,7 +283,7 @@ program ecrad_driver
          &                lon=spread(0.0_jprb,1,ncol), &
          &                iverbose=driver_config%iverbose)
   end if
-
+  !$loki end remove
   ! --------------------------------------------------------
   ! Section 4: Call radiation scheme
   ! --------------------------------------------------------

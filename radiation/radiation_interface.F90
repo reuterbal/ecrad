@@ -171,7 +171,9 @@ contains
 
     type(config_type), intent(in)    :: config
     type(gas_type),    intent(inout) :: gas
+    integer :: kidia, kfdia
 
+    !$loki remove
     if (config%i_gas_model_sw == IGasModelMonochromatic) then
       call set_gas_units_mono(gas)
     elseif (config%i_gas_model_sw == IGasModelIFSRRTMG &
@@ -180,9 +182,15 @@ contains
       ! work with this but performs an internal scaling
       call set_gas_units_ifs(gas)
     else
+    !$loki end remove
       ! Use volume mixing ratio preferred by ecCKD
+      !$loki inline
       call set_gas_units_ecckd(gas)
+      !$loki end inline
+
+    !$loki remove
     end if
+    !$loki end remove
 
   end subroutine set_gas_units
 
@@ -400,6 +408,7 @@ contains
         end if
       end if
 
+      !$loki remove
       ! For diagnostic purposes, save these intermediate variables to
       ! a NetCDF file
       if (config%do_save_radiative_properties) then
@@ -418,6 +427,7 @@ contains
              &  od_lw_cloud, ssa_lw_cloud, g_lw_cloud, &
              &  od_sw_cloud, ssa_sw_cloud, g_sw_cloud)
       end if
+      !$loki end remove
 
       if (config%do_lw) then
         if (config%iverbose >= 2) then
