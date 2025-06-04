@@ -7,10 +7,12 @@
 ! granted to it by virtue of its status as an intergovernmental organisation
 ! nor does it submit to any jurisdiction.
 
-MODULE YOMLUN
+MODULE YOMLUN_ECRAD
 
+#ifdef HAVE_FIAT
+USE EC_LUN    ,ONLY : NULOUT, NULERR
+#endif
 USE PARKIND1,      ONLY : JPIM
-USE YOMLUN_IFSAUX, ONLY : NULOUT, NULERR
 
 IMPLICIT NONE
 
@@ -18,7 +20,17 @@ PUBLIC
 
 SAVE
 
+
+!*    Logical units used by code
+
+!     NULOUT :   output unit
+!     NULERR :   unit number for comparison with reference run
+
+#ifndef HAVE_FIAT
+INTEGER(KIND=JPIM) :: NULOUT = 6
+INTEGER(KIND=JPIM) :: NULERR = 0
+#endif
 INTEGER(KIND=JPIM) :: NULRAD = 25
 
 !     ------------------------------------------------------------------
-END MODULE YOMLUN
+END MODULE YOMLUN_ECRAD

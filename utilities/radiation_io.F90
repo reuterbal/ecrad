@@ -29,14 +29,14 @@ module radiation_io
   ! equivalent to standard error, and text sent to this unit from any
   ! node will be logged. Normally, nulerr should only be used before
   ! calling radiation_abort.
-  use yomlun_ifsaux, only : nulout, nulerr
+  USE YOMLUN_ECRAD, only : nulout, nulerr, nulrad
 
   implicit none
   public
 
   ! This unit may be used for reading radiation configuration files,
   ! but should be closed as soon as the file is read
-  integer :: nulrad = 25
+  ! integer :: nulrad = 25
 
 contains
 
