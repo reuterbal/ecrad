@@ -6,7 +6,8 @@ This module is intended to be used with the Fypp preprocesser to
 concisely define ``Variable`` objects from which templated Fortran
 type hierarchies can be created through templating.
 """
-import yaml
+from fckit_yaml_reader import YAML
+yaml = YAML()
 
 __all__ = ['Variable', 'VariableGroup', 'VariableConfiguration']
 
@@ -18,9 +19,14 @@ class Variable(object):
 
     def __init__(self, **kwargs):
         self.name = kwargs.get('name')
-        self.dimension = kwargs.get('dimension', 3)
+        self.dim = kwargs.get('dim', 3)
         self.comment = kwargs.get('comment', '')
         self.condition = kwargs.get('condition', '.true.')
+
+        # Indicates multi-dimensional array of Variable objects.
+        # Note that ``self.array`` normalizes to the variable array
+        # rank so scalar variables have ``array==0``.
+        self.array = int(kwargs.get('array', False))
 
     def __repr__(self):
         return self.name
@@ -40,7 +46,7 @@ class VariableGroup(object):
         self.short = kwargs.get('short', self.name)
         self.comment = kwargs.get('comment', '')
         self.dimension = kwargs.get('dimension')
-        self.variables = [Variable(**v) for v in kwargs['variables']]
+        self.variables = [Variable(**({'dim': self.dimension} | v)) for v in kwargs['variables']]
 
     def __repr__(self):
         return 'Group<%sD>::%s (%s):: %s' % (self.dimension, self.name, self.short, self.variables)
@@ -52,6 +58,7 @@ class VariableConfiguration(object):
     """
 
     def __init__(self, filename):
+        print("Reading field types configuration from file: %s" % filename)
 
         with open(filename, 'r') as stream:
             self.schema = yaml.safe_load(stream)

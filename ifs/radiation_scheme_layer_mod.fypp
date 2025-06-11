@@ -1,0 +1,359 @@
+! (C) Copyright 2015- ECMWF.
+!
+! This software is licensed under the terms of the Apache Licence Version 2.0
+! which can be obtained at http://www.apache.org/licenses/LICENSE-2.0.
+!
+! In applying this licence, ECMWF does not waive the privileges and immunities
+! granted to it by virtue of its status as an intergovernmental organisation
+! nor does it submit to any jurisdiction.
+
+#:mute
+#:set radiation_config_file = os.path.dirname(os.path.abspath(_THIS_FILE_)) + '/radiation_fields_config.yaml'
+#:set radiation_config = field_config.VariableConfiguration(radiation_config_file)
+#:set zrgp_in = radiation_config.groups['ZRGP_IN']
+#:set zrgp_out = radiation_config.groups['ZRGP_OUT']
+#:set zrgp_local = radiation_config.groups['ZRGP_LOCAL']
+#:set variables = zrgp_in.variables + zrgp_out.variables + zrgp_local.variables
+#:set variable_names = list(dict.fromkeys(v.name for v in variables))
+#:set variable_dim = {v.name: 2 if v.dim[0] == 1 else 3 for v in variables}
+! Arguments to radiation_scheme
+#:set arg_list = [ &
+&     'iamu0', 'its', 'iald', 'ialp', &
+&     'iemiss', &
+&     'iccnl', 'iccno', &
+&     'igelam', 'igemu', 'islm', &
+&     'ipr', 'iti', 'iaprs', 'ihti', &
+&     'iwv', 'iico2', 'iich4', 'iin2o', 'ino2', 'ic11', 'ic12', 'ic22', 'icl4', 'ioz', &
+&     'iclc', 'ilwa', 'iiwa', 'irwa', 'iswa', &
+&     'iaer', 'iaero', &
+&     'ifrso', 'ifrth', 'iswfc', 'ilwfc', &
+&     'ifrsod', 'ifrted', 'ifrsodc', 'ifrtedc', &
+&     'ifdir', 'icdir', 'isudu', &
+&     'iuvdf', 'iparf', 'iparcf', &
+&     'itincf', 'iemit', 'ilwderivative', &
+&     'iswdiffuseband', 'iswdirectband', &
+&     'ifsd' &
+& ]
+#:endmute
+
+
+MODULE RADIATION_SCHEME_LAYER_MOD
+
+IMPLICIT NONE
+
+CONTAINS
+
+SUBROUTINE RADIATION_SCHEME_LAYER &
+     & (YRADIATION, ZRGP_FIELDS, NGPTOT, NPROMA, NFLEVG, KAEROSOL, &
+     &  PSOLAR_IRRADIANCE, NFSD, LSPPRAD, &
+     ! OPTIONAL ARGUMENT for bit-identical results in tests
+     &  ISEED)
+
+USE FIELD_MODULE
+
+! Modules from ifs or ifsaux libraries
+USE RADIATION_SETUP , ONLY : TRADIATION
+USE PARKIND1        , ONLY : JPIM, JPRB
+USE YOMHOOK         , ONLY : LHOOK, DR_HOOK, JPHOOK
+USE YOMLUN_ECRAD    , ONLY : NULERR
+USE RADINTG_ZRGP_MOD, ONLY : RADINTG_ZRGP_TYPE
+
+IMPLICIT NONE
+
+! INPUT ARGUMENTS
+
+TYPE(TRADIATION)       ,INTENT(IN), TARGET :: YRADIATION
+TYPE(RADINTG_ZRGP_TYPE), INTENT(INOUT) :: ZRGP_FIELDS
+
+! *** Array dimensions and ranges
+INTEGER(KIND=JPIM),INTENT(IN)   :: NGPTOT   ! Number of columns
+INTEGER(KIND=JPIM),INTENT(IN)   :: NPROMA   ! Number of columns
+INTEGER(KIND=JPIM),INTENT(IN)   :: NFLEVG   ! Number of levels
+INTEGER(KIND=JPIM),INTENT(IN)   :: KAEROSOL ! Number of aerosol types
+
+! *** Single-level fields
+REAL(KIND=JPRB),   INTENT(IN)   :: PSOLAR_IRRADIANCE ! (W m-2)
+
+INTEGER,           INTENT(IN)   :: NFSD
+LOGICAL,           INTENT(IN)   :: LSPPRAD
+
+! Optional input argument (Added for validating against ecrad standalone!)
+INTEGER,           INTENT(IN), OPTIONAL :: ISEED(:,:)
+
+IF (YRADIATION%YRERAD%LERAD_ON_GPU) THEN
+  CALL RADIATION_SCHEME_LAYER_OPENACC( &
+     & YRADIATION, ZRGP_FIELDS, NGPTOT, NPROMA, NFLEVG, KAEROSOL, &
+     &  PSOLAR_IRRADIANCE, NFSD, LSPPRAD, ISEED)
+ELSE
+  CALL RADIATION_SCHEME_LAYER_PARALLEL( &
+     & YRADIATION, ZRGP_FIELDS, NGPTOT, NPROMA, NFLEVG, KAEROSOL, &
+     &  PSOLAR_IRRADIANCE, NFSD, LSPPRAD, ISEED)
+ENDIF
+
+END SUBROUTINE RADIATION_SCHEME_LAYER
+
+SUBROUTINE RADIATION_SCHEME_LAYER_PARALLEL &
+     & (YRADIATION, ZRGP_FIELDS, NGPTOT, NPROMA, NFLEVG, KAEROSOL, &
+     &  PSOLAR_IRRADIANCE, NFSD, LSPPRAD, &
+     ! OPTIONAL ARGUMENT for bit-identical results in tests
+     &  ISEED)
+
+USE FIELD_MODULE
+
+! Modules from ifs or ifsaux libraries
+USE RADIATION_SETUP , ONLY : TRADIATION
+USE PARKIND1        , ONLY : JPIM, JPRB
+USE YOMHOOK         , ONLY : LHOOK, DR_HOOK, JPHOOK
+USE YOMLUN_ECRAD    , ONLY : NULERR
+USE RADINTG_ZRGP_MOD, ONLY : RADINTG_ZRGP_TYPE
+
+IMPLICIT NONE
+
+! INPUT ARGUMENTS
+
+TYPE(TRADIATION)        ,INTENT(IN), TARGET :: YRADIATION
+TYPE(RADINTG_ZRGP_TYPE), INTENT(INOUT) :: ZRGP_FIELDS
+
+! *** Array dimensions and ranges
+INTEGER(KIND=JPIM),INTENT(IN)   :: NGPTOT   ! Number of columns
+INTEGER(KIND=JPIM),INTENT(IN)   :: NPROMA   ! Number of columns
+INTEGER(KIND=JPIM),INTENT(IN)   :: NFLEVG   ! Number of levels
+INTEGER(KIND=JPIM),INTENT(IN)   :: KAEROSOL ! Number of aerosol types
+
+! *** Single-level fields
+REAL(KIND=JPRB),   INTENT(IN)   :: PSOLAR_IRRADIANCE ! (W m-2)
+
+INTEGER,           INTENT(IN)   :: NFSD
+LOGICAL,           INTENT(IN)   :: LSPPRAD
+
+! Optional input argument (Added for validating against ecrad standalone!)
+INTEGER,           INTENT(IN), OPTIONAL :: ISEED(:,:)
+
+INTEGER(KIND=JPIM) :: KIDIA, KFDIA, IBL, JKGLO
+INTEGER(KIND=JPIM) :: NRADAER, NPROGAER
+
+LOGICAL, PARAMETER :: LDEBUG = .false.
+
+LOGICAL, PARAMETER :: LRAYFM = .false.
+#ifdef BITIDENTITY_TESTING
+LOGICAL, PARAMETER :: LTEST_BITID = .TRUE.
+#else
+LOGICAL, PARAMETER :: LTEST_BITID = .FALSE.
+#endif
+
+! Field object pointers
+CLASS(FIELD_2RB), POINTER :: FIELD_2D => NULL()
+CLASS(FIELD_3RB), POINTER :: FIELD_3D => NULL()
+
+! Field pointers for each field in ZRGP
+#:for v_name in variable_names
+#:set d = variable_dim[v_name]
+REAL(KIND=JPRB), POINTER :: PFIELD_${v_name}$(${','.join([':'] * d)}$) => NULL()
+#:endfor
+
+#include "radiation_scheme.intfb.h"
+
+ASSOCIATE(YDERAD=>YRADIATION%YRERAD)
+ASSOCIATE(LEPO3RA=>YDERAD%LEPO3RA, &
+  & LAPPROXLWUPDATE=>YDERAD%LAPPROXLWUPDATE, LAPPROXSWUPDATE=>YDERAD%LAPPROXSWUPDATE, &
+  & LDIAGFORCING=>YDERAD%LDIAGFORCING)
+
+NPROGAER    = 1 !YAER_RAD_DESC%NPROGNOSTIC
+NRADAER     = YRADIATION%RAD_CONFIG%N_AEROSOL_TYPES
+
+#:for idx, v in enumerate(variables)
+#:set d = variable_dim[v.name]
+IF(${v.condition}$) THEN ! ${v.name}$
+  ASSOCIATE( FLD => ZRGP_FIELDS%MEMBERS(${idx + 1}$)%PTR )
+    SELECT TYPE( FLD )
+      CLASS IS( FIELD_${d}$RB )
+        FIELD_${d}$D => FLD
+        CALL FIELD_${d}$D%GET_HOST_DATA_RDWR(PFIELD_${v.name}$)
+      CLASS DEFAULT
+        WRITE(NULERR, '(A)') 'UNEXPECTED CLASS FOR ${v.name}$'
+        CALL ABOR1('ERROR in RADIATION_SCHEME_LAYER')
+    END SELECT
+  END ASSOCIATE
+END IF
+#:endfor
+
+!!$OMP PARALLEL DO SCHEDULE(DYNAMIC,1)&
+!!$OMP&PRIVATE(JKGLO,KIDIA,KFDIA,IBL) FIRSTPRIVATE(ZRGP_FIELDS)
+DO JKGLO=1,NGPTOT,NPROMA
+    KIDIA=1
+    KFDIA=MIN(NPROMA,NGPTOT-JKGLO+1)
+    IBL=(JKGLO-1)/NPROMA+1
+
+    ! Call the ECRAD radiation scheme
+    CALL RADIATION_SCHEME &
+        & (YRADIATION, &
+        &  KIDIA, KFDIA, NPROMA, &                       ! startcol, endcol, ncol
+        &  NFLEVG, KAEROSOL, &
+        &  PSOLAR_IRRADIANCE &                               ! solar_irrad
+        #:for v_name in arg_list
+        #:set d = variable_dim[v_name]
+        & ,PFIELD_${v_name}$(${','.join([':'] * (d-1))}$, IBL) &
+        #:endfor
+        & ,LACC=.FALSE. &
+#ifdef BITIDENTITY_TESTING
+        ! To validate results against standalone ecrad, we overwrite effective
+        ! radii, cloud overlap and seed with input values
+        &, PRE_LIQ=PFIELD_IRE_LIQ(:,:,IBL), PRE_ICE=PFIELD_IRE_ICE(:,:,IBL) &
+        &, PCLOUD_OVERLAP=PFIELD_IOVERLAP(:,:,IBL), ISEED=ISEED(:,IBL) &
+#endif
+        & )
+
+END DO
+!!$OMP END PARALLEL DO
+
+END ASSOCIATE
+END ASSOCIATE
+
+END SUBROUTINE RADIATION_SCHEME_LAYER_PARALLEL
+
+SUBROUTINE RADIATION_SCHEME_LAYER_OPENACC &
+     & (YRADIATION, ZRGP_FIELDS, NGPTOT, NPROMA, NFLEVG, KAEROSOL, &
+     &  PSOLAR_IRRADIANCE, NFSD, LSPPRAD, &
+     ! OPTIONAL ARGUMENT for bit-identical results in tests
+     &  ISEED)
+
+USE FIELD_MODULE
+
+! Modules from ifs or ifsaux libraries
+USE RADIATION_SETUP , ONLY : TRADIATION
+USE PARKIND1        , ONLY : JPIM, JPRB
+USE YOMHOOK         , ONLY : LHOOK, DR_HOOK, JPHOOK
+USE YOMLUN_ECRAD    , ONLY : NULERR
+USE RADINTG_ZRGP_MOD, ONLY : RADINTG_ZRGP_TYPE
+
+IMPLICIT NONE
+
+! INPUT ARGUMENTS
+
+TYPE(TRADIATION)        ,INTENT(IN), TARGET :: YRADIATION
+TYPE(RADINTG_ZRGP_TYPE), INTENT(INOUT) :: ZRGP_FIELDS
+
+! *** Array dimensions and ranges
+INTEGER(KIND=JPIM),INTENT(IN)   :: NGPTOT   ! Number of columns
+INTEGER(KIND=JPIM),INTENT(IN)   :: NPROMA   ! Number of columns
+INTEGER(KIND=JPIM),INTENT(IN)   :: NFLEVG   ! Number of levels
+INTEGER(KIND=JPIM),INTENT(IN)   :: KAEROSOL ! Number of aerosol types
+
+! *** Single-level fields
+REAL(KIND=JPRB),   INTENT(IN)   :: PSOLAR_IRRADIANCE ! (W m-2)
+
+INTEGER,           INTENT(IN)   :: NFSD
+LOGICAL,           INTENT(IN)   :: LSPPRAD
+
+! Optional input argument (Added for validating against ecrad standalone!)
+INTEGER,           INTENT(IN), OPTIONAL :: ISEED(:,:)
+
+INTEGER(KIND=JPIM) :: KIDIA, KFDIA, IBL, JKGLO
+INTEGER(KIND=JPIM) :: NRADAER, NPROGAER
+
+integer :: jlon,jlev
+
+LOGICAL, PARAMETER :: LDEBUG = .false.
+
+LOGICAL, PARAMETER :: LRAYFM = .false.
+#ifdef BITIDENTITY_TESTING
+LOGICAL, PARAMETER :: LTEST_BITID = .TRUE.
+#else
+LOGICAL, PARAMETER :: LTEST_BITID = .FALSE.
+#endif
+
+! Field object pointers
+CLASS(FIELD_2RB), POINTER :: FIELD_2D => NULL()
+CLASS(FIELD_3RB), POINTER :: FIELD_3D => NULL()
+
+! Field pointers for each field in ZRGP
+#:for v_name in variable_names
+#:set d = variable_dim[v_name]
+REAL(KIND=JPRB), POINTER :: PFIELD_${v_name}$(${','.join([':'] * d)}$) => NULL()
+#:endfor
+
+#include "radiation_scheme.intfb.h"
+
+ASSOCIATE(YDERAD=>YRADIATION%YRERAD)
+ASSOCIATE(LEPO3RA=>YDERAD%LEPO3RA, &
+  & LAPPROXLWUPDATE=>YDERAD%LAPPROXLWUPDATE, LAPPROXSWUPDATE=>YDERAD%LAPPROXSWUPDATE, &
+  & LDIAGFORCING=>YDERAD%LDIAGFORCING)
+
+NPROGAER    = 1 !YAER_RAD_DESC%NPROGNOSTIC
+NRADAER     = YRADIATION%RAD_CONFIG%N_AEROSOL_TYPES
+
+#:for idx, v in enumerate(variables)
+#:set d = variable_dim[v.name]
+IF(${v.condition}$) THEN ! ${v.name}$
+  ASSOCIATE( FLD => ZRGP_FIELDS%MEMBERS(${idx + 1}$)%PTR )
+    SELECT TYPE( FLD )
+      CLASS IS( FIELD_${d}$RB )
+        FIELD_${d}$D => FLD
+        CALL FIELD_${d}$D%GET_DEVICE_DATA_RDWR(PFIELD_${v.name}$)
+      CLASS DEFAULT
+        WRITE(NULERR, '(A)') 'UNEXPECTED CLASS FOR ${v.name}$'
+        CALL ABOR1('ERROR in RADIATION_SCHEME_LAYER')
+    END SELECT
+  END ASSOCIATE
+END IF
+#:endfor
+
+#ifdef BITIDENTITY_TESTING
+!$ACC DATA COPYIN(iseed) ASYNC(1)
+#endif
+
+DO JKGLO=1,NGPTOT,NPROMA
+    KIDIA=1
+    KFDIA=MIN(NPROMA,NGPTOT-JKGLO+1)
+    IBL=(JKGLO-1)/NPROMA+1
+
+    ! Call the ECRAD radiation scheme
+    CALL RADIATION_SCHEME &
+        & (YRADIATION, &
+        &  KIDIA, KFDIA, NPROMA, &                       ! startcol, endcol, ncol
+        &  NFLEVG, KAEROSOL, &
+        &  PSOLAR_IRRADIANCE &                               ! solar_irrad
+        #:for v_name in arg_list
+        #:set d = variable_dim[v_name]
+        & ,PFIELD_${v_name}$(${','.join([':'] * (d-1))}$, IBL) &
+        #:endfor
+        &, LACC=.TRUE. &
+#ifdef BITIDENTITY_TESTING
+        ! To validate results against standalone ecrad, we overwrite effective
+        ! radii, cloud overlap and seed with input values
+        &, PRE_LIQ=PFIELD_IRE_LIQ(:,:,IBL), PRE_ICE=PFIELD_IRE_ICE(:,:,IBL) &
+        &, PCLOUD_OVERLAP=PFIELD_IOVERLAP(:,:,IBL), ISEED=ISEED(:,IBL) &
+#endif
+        & )
+
+END DO
+
+!$ACC WAIT
+
+#ifdef BITIDENTITY_TESTING
+!$ACC END DATA
+#endif
+
+#:for idx, v in enumerate(variables)
+#:set d = variable_dim[v.name]
+IF(${v.condition}$) THEN ! ${v.name}$
+  ASSOCIATE( FLD => ZRGP_FIELDS%MEMBERS(${idx + 1}$)%PTR )
+    SELECT TYPE( FLD )
+      CLASS IS( FIELD_${d}$RB )
+        FIELD_${d}$D => FLD
+        CALL FIELD_${d}$D%SYNC_HOST_RDWR()
+      CLASS DEFAULT
+        WRITE(NULERR, '(A)') 'UNEXPECTED CLASS FOR ${v.name}$'
+        CALL ABOR1('ERROR in RADIATION_SCHEME_LAYER')
+    END SELECT
+  END ASSOCIATE
+END IF
+#:endfor
+
+END ASSOCIATE
+END ASSOCIATE
+
+END SUBROUTINE RADIATION_SCHEME_LAYER_OPENACC
+
+
+END MODULE RADIATION_SCHEME_LAYER_MOD

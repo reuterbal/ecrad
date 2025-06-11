@@ -68,7 +68,7 @@ program ecrad_ifs_driver
   use ecrad_driver_config,      only : driver_config_type
   use ecrad_driver_read_input,  only : read_input
   use easy_netcdf
-  use ifs_blocking
+  use radintg_zrgp_mod
   use radiation_scheme_layer_mod
 
   implicit none
@@ -100,7 +100,7 @@ program ecrad_ifs_driver
   real(jprb), allocatable, dimension(:,:) :: flux_diffuse_band, flux_direct_band
 
   ! Bespoke data types to set-up the blocked memory layout
-  type(ifs_config_type)        :: ifs_config
+  type(radintg_zrgp_type)      :: zrgp_fields
   real(kind=jprb), allocatable :: zrgp(:,:,:) ! monolithic IFS data structure
 #ifdef BITIDENTITY_TESTING
   integer, allocatable         :: iseed(:,:) ! Seed for random number generator
@@ -139,9 +139,6 @@ program ecrad_ifs_driver
 
   ! Are any variables out of bounds?
   logical :: is_out_of_bounds
-
-  ! Pointers for field api objects
-  type(radintg_zrgp_type) :: zrgp_fields
 
 !  integer    :: iband(20), nweights
 !  real(jprb) :: weight(20)
@@ -211,6 +208,11 @@ program ecrad_ifs_driver
   else
     yradiation%yrerad%naermacc = 0
   endif
+
+  ! Enable GPU offloading
+#ifdef _OPENACC
+  yradiation%yrerad%lerad_on_gpu = .true.
+#endif
 
   ! Setup the radiation scheme: load the coefficients for gas and
   ! cloud optics, currently from RRTMG
@@ -365,8 +367,13 @@ program ecrad_ifs_driver
   ! Section 4a: Reshuffle into blocked memory layout
   ! --------------------------------------------------------
 
-  call ifs_setup_indices(ifs_config, yradiation, nlev, driver_config%iverbose)
-  call ifs_copy_inputs_to_blocked(ifs_config, yradiation,&
+  call zrgp_fields%setup(nlev, &
+        & yradiation%yrerad%nlwemiss, yradiation%yrerad%nlwout, yradiation%yrerad%nsw, 0, &
+        & 0, 1, yradiation%rad_config%n_aerosol_types, &
+        & driver_config%iverbose > 2, .false., .false., &
+        & yradiation%yrerad%lapproxlwupdate, yradiation%yrerad%lapproxswupdate, &
+        & yradiation%yrerad%lepo3ra, yradiation%yrerad%ldiagforcing)
+  call zrgp_fields%copy_inputs(yradiation,&
         & ncol, nlev, driver_config%nblocksize, &
         & single_level, thermodynamics, gas, cloud, aerosol,&
         & sin_latitude, longitude_rad, land_frac, pressure_fl, temperature_fl,&
@@ -375,8 +382,12 @@ program ecrad_ifs_driver
         &, iseed=iseed &
 #endif
         & )
-
-  call ifs_setup_fapi(zrgp_fields, zrgp, yradiation, nlev, driver_config%iverbose)
+  call zrgp_fields%setup_field(zrgp, nlev, &
+        & yradiation%yrerad%nlwemiss, yradiation%yrerad%nlwout, yradiation%yrerad%nsw, 0, &
+        & 0, 1, yradiation%rad_config%n_aerosol_types, &
+        & driver_config%iverbose > 2, .false., .false., &
+        & yradiation%yrerad%lapproxlwupdate, yradiation%yrerad%lapproxswupdate, &
+        & yradiation%yrerad%lepo3ra, yradiation%yrerad%ldiagforcing)
 
   ! --------------------------------------------------------
   ! Section 4b: Call radiation_scheme with blocked memory data
@@ -393,27 +404,14 @@ program ecrad_ifs_driver
 #endif
   do jrepeat = 1,driver_config%nrepeat
 
-#ifdef _OPENACC
-    call RADIATION_SCHEME_LAYER_OPENACC( &
-      & yradiation, zrgp_fields, &
-      & ncol, nproma, nlev, size(aerosol%mixing_ratio, 3), &
-      & single_level%solar_irradiance, &
-      & driver_config%iverbose &
-#ifdef BITIDENTITY_TESTING
-      & , iseed=iseed &
-#endif
-      & )
-#else
     call RADIATION_SCHEME_LAYER( &
       & yradiation, zrgp_fields, &
       & ncol, nproma, nlev, size(aerosol%mixing_ratio, 3), &
-      & single_level%solar_irradiance, &
-      & driver_config%iverbose &
+      & single_level%solar_irradiance, 0, .false. &
 #ifdef BITIDENTITY_TESTING
       & , iseed=iseed &
 #endif
       & )
-#endif
 
   end do
 #ifndef NO_OPENMP
@@ -425,7 +423,8 @@ program ecrad_ifs_driver
   ! Section 4c: Copy fluxes from blocked memory data
   ! --------------------------------------------------------
 
-  call ifs_copy_fluxes_from_blocked(ifs_config, yradiation, &
+
+  call zrgp_fields%copy_fluxes(yradiation, &
           & ncol, nlev, driver_config%nblocksize, &
           & zrgp, flux, flux_sw_direct_normal, flux_uv, flux_par, flux_par_clear, &
           & emissivity_out, flux_diffuse_band, flux_direct_band)
