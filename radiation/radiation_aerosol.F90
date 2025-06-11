@@ -123,27 +123,12 @@ contains
       allocate(this%ssa_lw(config%n_bands_lw,istartlev:iendlev,ncol))
       allocate(this%g_lw  (config%n_bands_lw,istartlev:iendlev,ncol))
 
-      ! for openacc, this is done during create_device
-#ifndef _OPENACC
       ! If longwave scattering by aerosol is not to be represented,
       ! then the user may wish to just provide absorption optical
       ! depth in od_lw, in which case we must set the following two
       ! variables to zero
-
-      ! !$ACC WAIT ! ACCWA (nvhpc 22.7) crashes otherwise
-
-      ! !$ACC PARALLEL DEFAULT(NONE) PRESENT(this, config) ASYNC(1)
-      ! !$ACC LOOP GANG VECTOR COLLAPSE(3)
-      do jcol = 1,ncol
-        do jlev = istartlev,iendlev
-          do jband = 1,config%n_bands_lw
-            this%ssa_lw(jband,jlev,jcol) = 0.0_jprb
-            this%g_lw(jband,jlev,jcol) = 0.0_jprb
-          end do
-        end do
-      end do
-      ! !$ACC END PARALLEL
-#endif
+      this%ssa_lw(:,:,:) = 0.0_jprb
+      this%g_lw(:,:,:) = 0.0_jprb
     end if
 
     if (lhook) call dr_hook('radiation_aerosol:allocate_direct',1,hook_handle)
@@ -227,6 +212,7 @@ contains
 
     class(aerosol_type), intent(inout) :: this
 
+!    !$ACC ENTER DATA COPYIN(this) ASYNC(1)
     !$ACC ENTER DATA CREATE(this%mixing_ratio) IF(allocated(this%mixing_ratio)) ASYNC(1)
     !$ACC ENTER DATA CREATE(this%od_sw) IF(allocated(this%od_sw)) ASYNC(1)
     !$ACC ENTER DATA CREATE(this%ssa_sw) IF(allocated(this%ssa_sw)) ASYNC(1)
@@ -255,6 +241,7 @@ contains
 
     class(aerosol_type), intent(inout) :: this
 
+    !!$ACC UPDATE HOST(this, this%is_direct, this%istartlev, this%iendlev) ASYNC(1)
     !$ACC UPDATE HOST(this%mixing_ratio) IF(allocated(this%mixing_ratio)) ASYNC(1)
     !$ACC UPDATE HOST(this%od_sw) IF(allocated(this%od_sw)) ASYNC(1)
     !$ACC UPDATE HOST(this%ssa_sw) IF(allocated(this%ssa_sw)) ASYNC(1)
@@ -271,6 +258,7 @@ contains
 
     class(aerosol_type), intent(inout) :: this
 
+    !!$ACC UPDATE DEVICE(this, this%is_direct, this%istartlev, this%iendlev) ASYNC(1)
     !$ACC UPDATE DEVICE(this%mixing_ratio) IF(allocated(this%mixing_ratio)) ASYNC(1)
     !$ACC UPDATE DEVICE(this%od_sw) IF(allocated(this%od_sw)) ASYNC(1)
     !$ACC UPDATE DEVICE(this%ssa_sw) IF(allocated(this%ssa_sw)) ASYNC(1)
@@ -294,6 +282,7 @@ contains
     !$ACC EXIT DATA DELETE(this%od_lw) IF(allocated(this%od_lw)) ASYNC(1)
     !$ACC EXIT DATA DELETE(this%ssa_lw) IF(allocated(this%ssa_lw)) ASYNC(1)
     !$ACC EXIT DATA DELETE(this%g_lw) IF(allocated(this%g_lw)) ASYNC(1)
+    !!$ACC EXIT DATA DELETE(this) ASYNC(1)
 
   end subroutine delete_device
 #endif

@@ -110,10 +110,6 @@ contains
 
     use yomhook,     only : lhook, dr_hook, jphook
 
-! #ifdef _OPENACC
-!     use openacc,       only : acc_attach
-! #endif
-
     class(cloud_type), intent(inout), target :: this
     integer, intent(in)              :: ncol   ! Number of columns
     integer, intent(in)              :: nlev   ! Number of levels
@@ -382,7 +378,7 @@ contains
       ! !$ACC ENTER DATA CREATE(this%overlap_param) ASYNC(1) IF(LLACC)
     ! end if
 
-    !$ACC UPDATE HOST(thermodynamics%pressure_hl(istartcol,1:2)) WAIT(1)
+    !$ACC UPDATE HOST(thermodynamics%pressure_hl(istartcol,1:2)) WAIT(1) IF(LLACC)
     if (thermodynamics%pressure_hl(istartcol,2) > thermodynamics%pressure_hl(istartcol,1)) then
       ! Pressure is increasing with index (order of layers is
       ! top-of-atmosphere to surface). In case pressure_hl(:,1)=0, we
@@ -783,18 +779,56 @@ contains
 
     class(cloud_type), intent(inout) :: this
     integer,           intent(in)    :: istartcol, iendcol
+    real(jprb),        intent(in)    :: cloud_fraction_threshold, cloud_mixing_ratio_threshold
 
     integer :: nlev
     integer :: jcol, jlev, jh
 
-    real(jprb) :: cloud_fraction_threshold, cloud_mixing_ratio_threshold
+#if 0 == 1
+    real(jprb) :: sum_mixing_ratio
+#else
     real(jprb) :: sum_mixing_ratio(istartcol:iendcol)
+#endif
 
     real(jphook) :: hook_handle
 
     if (lhook) call dr_hook('radiation_cloud:crop_cloud_fraction',0,hook_handle)
 
+   !!$ACC UPDATE HOST(this%mixing_ratio,this%fraction,this%ntype,cloud_fraction_threshold,cloud_mixing_ratio_threshold) WAIT(1)
     nlev = size(this%fraction,2)
+
+!    write(0,'(a)') 'radiation_cloud:crop_cloud_fraction'
+ !   write(0,'(a,i,i,i,i,i,i)') 'bounds:',lbound(this%mixing_ratio,1), ubound(this%mixing_ratio,1),lbound(this%mixing_ratio,2), ubound(this%mixing_ratio,2),lbound(this%mixing_ratio,3), ubound(this%mixing_ratio,3)
+  !  write(0,'(a,i,a,i,a,i,a,i)') 'nlev=',nlev,',istartcol=',istartcol,',iendcol=',iendcol,',this%ntype=',this%ntype
+   ! flush(0)
+
+
+#if 0 == 1
+!    write(0,'(a)') 'on host'
+!    flush(0)
+    !$ACC PARALLEL DEFAULT(NONE) PRESENT(this,this%mixing_ratio,this%fraction) ASYNC(1) &
+    !$ACC   NUM_GANGS(1) NUM_WORKERS(1) VECTOR_LENGTH(1)
+    !$ACC LOOP GANG VECTOR COLLAPSE(2) PRIVATE(sum_mixing_ratio,jh)
+    do jlev=1,nlev
+      do jcol = istartcol,iendcol
+        sum_mixing_ratio = 0.0_jprb
+!       !$ACC LOOP SEQ
+        do jh = 1,this%ntype
+          sum_mixing_ratio = sum_mixing_ratio + this%mixing_ratio(jcol,jlev,jh)
+        end do
+        if (this%fraction(jcol,jlev) < cloud_fraction_threshold &
+            & .or. sum_mixing_ratio  < cloud_mixing_ratio_threshold) then
+              this%fraction(jcol,jlev) = 0.0_jprb
+        end if
+      end do
+    end do
+!    write(0,'(a)') 'done'
+!    flush(0)
+    !$ACC END PARALLEL
+!    !$ACC UPDATE DEVICE(this%fraction)
+!    write(0,'(a)') 'back to device'
+!    flush(0)
+#else
 
     !$ACC PARALLEL DEFAULT(PRESENT) CREATE(sum_mixing_ratio) ASYNC(1)
     !$ACC LOOP SEQ
@@ -819,6 +853,7 @@ contains
       end do
     end do
     !$ACC END PARALLEL
+#endif
 
     if (lhook) call dr_hook('radiation_cloud:crop_cloud_fraction',1,hook_handle)
 
@@ -871,15 +906,30 @@ contains
 
 #ifdef _OPENACC
   subroutine create_device(this)
+    ! use openacc,       only : acc_attach
 
     class(cloud_type), intent(inout) :: this
 
+!    !$ACC ENTER DATA COPYIN(this) ASYNC(1)
     !$ACC ENTER DATA CREATE(this%mixing_ratio) IF(allocated(this%mixing_ratio)) ASYNC(1)
     !$ACC ENTER DATA CREATE(this%effective_radius) IF(allocated(this%effective_radius)) ASYNC(1)
-    !$ACC ENTER DATA COPYIN(this%q_liq) IF(allocated(this%q_liq)) ASYNC(1)
-    !$ACC ENTER DATA COPYIN(this%re_liq) IF(allocated(this%re_liq)) ASYNC(1)
-    !$ACC ENTER DATA COPYIN(this%q_ice) IF(allocated(this%q_ice)) ASYNC(1)
-    !$ACC ENTER DATA COPYIN(this%re_ice) IF(allocated(this%re_ice)) ASYNC(1)
+    ! if(associated(this%q_liq)) then
+      ! print *,'associating q_liq'
+    !$ACC ENTER DATA ATTACH(this%q_liq) IF(associated(this%q_liq)) ASYNC(1)
+      ! call acc_attach(this%q_liq)
+    ! endif
+    ! if(associated(this%q_ice)) then
+    !$ACC ENTER DATA ATTACH(this%q_ice)
+      ! call acc_attach(this%q_ice) IF(associated(this%q_ice)) ASYNC(1)
+    ! endif
+    ! if(associated(this%re_liq)) then
+    !$ACC ENTER DATA ATTACH(this%re_liq) IF(associated(this%re_liq)) ASYNC(1)
+      ! call acc_attach(this%re_liq)
+    ! endif
+    ! if(associated(this%re_ice)) then
+    !$ACC ENTER DATA ATTACH(this%re_ice) IF(associated(this%re_ice)) ASYNC(1)
+      ! call acc_attach(this%re_ice)
+    ! endif
     !$ACC ENTER DATA CREATE(this%fraction) IF(allocated(this%fraction)) ASYNC(1)
     !$ACC ENTER DATA CREATE(this%overlap_param) IF(allocated(this%overlap_param)) ASYNC(1)
     !$ACC ENTER DATA CREATE(this%fractional_std) IF(allocated(this%fractional_std)) ASYNC(1)
@@ -893,6 +943,7 @@ contains
 
     class(cloud_type), intent(inout) :: this
 
+    !$ACC UPDATE HOST(this%ntype) ASYNC(1)
     !$ACC UPDATE HOST(this%mixing_ratio) IF(allocated(this%mixing_ratio)) ASYNC(1)
     !$ACC UPDATE HOST(this%effective_radius) IF(allocated(this%effective_radius)) ASYNC(1)
     !$ACC UPDATE HOST(this%fraction) IF(allocated(this%fraction)) ASYNC(1)
@@ -906,16 +957,12 @@ contains
   !---------------------------------------------------------------------
   ! updates fields on device
   subroutine update_device(this)
-use openacc,       only : acc_attach
 
     class(cloud_type), intent(inout) :: this
 
+    !$ACC UPDATE DEVICE(this%ntype) ASYNC(1)
     !$ACC UPDATE DEVICE(this%mixing_ratio) IF(allocated(this%mixing_ratio)) ASYNC(1)
     !$ACC UPDATE DEVICE(this%effective_radius) IF(allocated(this%effective_radius)) ASYNC(1)
-    CALL acc_attach(this%q_liq)
-    CALL acc_attach(this%q_ice)
-    CALL acc_attach(this%re_liq)
-    CALL acc_attach(this%re_ice)
     !$ACC UPDATE DEVICE(this%fraction) IF(allocated(this%fraction)) ASYNC(1)
     !$ACC UPDATE DEVICE(this%overlap_param) IF(allocated(this%overlap_param)) ASYNC(1)
     !$ACC UPDATE DEVICE(this%fractional_std) IF(allocated(this%fractional_std)) ASYNC(1)
@@ -930,15 +977,16 @@ use openacc,       only : acc_attach
 
     !$ACC EXIT DATA DELETE(this%mixing_ratio) IF(allocated(this%mixing_ratio)) ASYNC(1)
     !$ACC EXIT DATA DELETE(this%effective_radius) IF(allocated(this%effective_radius)) ASYNC(1)
-    !$ACC EXIT DATA DELETE(this%q_liq) IF(allocated(this%q_liq)) ASYNC(1)
-    !$ACC EXIT DATA DELETE(this%re_liq) IF(allocated(this%re_liq)) ASYNC(1)
-    !$ACC EXIT DATA DELETE(this%q_ice) IF(allocated(this%q_ice)) ASYNC(1)
-    !$ACC EXIT DATA DELETE(this%re_ice) IF(allocated(this%re_ice)) ASYNC(1)
+    !$ACC EXIT DATA DETACH(this%q_liq) IF(associated(this%q_liq)) ASYNC(1)
+    !$ACC EXIT DATA DETACH(this%re_liq) IF(associated(this%re_liq)) ASYNC(1)
+    !$ACC EXIT DATA DETACH(this%q_ice) IF(associated(this%q_ice)) ASYNC(1)
+    !$ACC EXIT DATA DETACH(this%re_ice) IF(associated(this%re_ice)) ASYNC(1)
     !$ACC EXIT DATA DELETE(this%fraction) IF(allocated(this%fraction)) ASYNC(1)
     !$ACC EXIT DATA DELETE(this%overlap_param) IF(allocated(this%overlap_param)) ASYNC(1)
     !$ACC EXIT DATA DELETE(this%fractional_std) IF(allocated(this%fractional_std)) ASYNC(1)
     !$ACC EXIT DATA DELETE(this%inv_cloud_effective_size) IF(allocated(this%inv_cloud_effective_size)) ASYNC(1)
     !$ACC EXIT DATA DELETE(this%inv_inhom_effective_size) IF(allocated(this%inv_inhom_effective_size)) ASYNC(1)
+    !!$ACC EXIT DATA DELETE(this) ASYNC(1)
 
   end subroutine delete_device
 #endif

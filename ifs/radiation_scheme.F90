@@ -1,3 +1,12 @@
+!! (C) Copyright 2005- ECMWF.
+!
+! This software is licensed under the terms of the Apache Licence Version 2.0
+! which can be obtained at http://www.apache.org/licenses/LICENSE-2.0.
+!
+! In applying this licence, ECMWF does not waive the privileges and immunities
+! granted to it by virtue of its status as an intergovernmental organisation
+! nor does it submit to any jurisdiction.
+!
 SUBROUTINE RADIATION_SCHEME &
      & (YRADIATION,KIDIA, KFDIA, KLON, KLEV, KAEROSOL, &
      &  PSOLAR_IRRADIANCE, &
@@ -7,7 +16,7 @@ SUBROUTINE RADIATION_SCHEME &
      &  PGELAM, PGEMU, PLAND_SEA_MASK, &
      &  PPRESSURE, PTEMPERATURE, &
      &  PPRESSURE_H, PTEMPERATURE_H, &
-     &  PQ, PCO2, PCH4, PN2O, PNO2, PCFC11, PCFC12, PHCFC22, PCCL4, PO3, &
+     &  PQ, PCO2, PCH4, PN2O, PNO2, PCFC11, PCFC12, PHCFC22, PCCL4, PO3_DP, &
      &  PCLOUD_FRAC, PQ_LIQUID, PQ_ICE, PQ_RAIN, PQ_SNOW, &
      &  PAEROSOL_OLD, PAEROSOL, &
      &  PFLUX_SW, PFLUX_LW, PFLUX_SW_CLEAR, PFLUX_LW_CLEAR, &
@@ -15,20 +24,11 @@ SUBROUTINE RADIATION_SCHEME &
      &  PFLUX_DIR, PFLUX_DIR_CLEAR, PFLUX_DIR_INTO_SUN, &
      &  PFLUX_UV, PFLUX_PAR, PFLUX_PAR_CLEAR, &
      &  PFLUX_SW_DN_TOA, PEMIS_OUT, PLWDERIVATIVE, &
-     &  PSWDIFFUSEBAND, PSWDIRECTBAND, &
+     &  PSWDIFFUSEBAND, PSWDIRECTBAND, PFSD, LACC, &
      ! OPTIONAL ARGUMENTS for bit-identical results in tests
      &  PRE_LIQ, PRE_ICE, ISEED, PCLOUD_OVERLAP)
 
 ! RADIATION_SCHEME - Interface to modular radiation scheme
-!
-! (C) Copyright 2015- ECMWF.
-!
-! This software is licensed under the terms of the Apache Licence Version 2.0
-! which can be obtained at http://www.apache.org/licenses/LICENSE-2.0.
-!
-! In applying this licence, ECMWF does not waive the privileges and immunities
-! granted to it by virtue of its status as an intergovernmental organisation
-! nor does it submit to any jurisdiction.
 !
 ! PURPOSE
 ! -------
@@ -63,6 +63,9 @@ SUBROUTINE RADIATION_SCHEME &
 !   2019-01-23  R. Hogan  Spectral longwave emissivity in NLWEMISS bands
 !   2019-02-04  R. Hogan  Pass out surface longwave downwelling in each emissivity interval
 !   2019-02-07  R. Hogan  SPARTACUS cloud size from PARAM_CLOUD_EFFECTIVE_SEPARATION_ETA
+!   2020-10-12  M. Leutbecher SPP abstraction
+!   2021-08-26  R. Hogan  Added "true" Coddington solar spectrum
+!   2022-07-08  R. El Khatib Contribution to the encapsulation of YOMCST and YOETHF
 !
 !-----------------------------------------------------------------------
 
@@ -70,11 +73,11 @@ SUBROUTINE RADIATION_SCHEME &
 USE PARKIND1       , ONLY : JPIM, JPRB, JPRD
 USE YOMHOOK        , ONLY : LHOOK, DR_HOOK, JPHOOK
 USE YOMCST         , ONLY : RPI, RSIGMA ! Stefan-Boltzmann constant
-USE YOMLUN_ECRAD         , ONLY : NULERR
+USE YOMLUN_ECRAD         , ONLY : NULERR, NULOUT
 USE RADIATION_SETUP, ONLY : ITYPE_TROP_BG_AER, ITYPE_STRAT_BG_AER, TRADIATION
 
 ! Modules from ecRad radiation library
-USE RADIATION_CONFIG,         ONLY : ISOLVERSPARTACUS
+USE RADIATION_CONFIG,         ONLY : ISOLVERSPARTACUS, CONFIG_TYPE
 USE RADIATION_SINGLE_LEVEL,   ONLY : SINGLE_LEVEL_TYPE
 USE RADIATION_THERMODYNAMICS, ONLY : THERMODYNAMICS_TYPE
 USE RADIATION_GAS,            ONLY : GAS_TYPE,&
@@ -93,7 +96,7 @@ IMPLICIT NONE
 
 ! INPUT ARGUMENTS
 
-TYPE(TRADIATION), INTENT(IN)    :: YRADIATION
+TYPE(TRADIATION), INTENT(IN), TARGET :: YRADIATION
 
 ! *** Array dimensions and ranges
 INTEGER(KIND=JPIM),INTENT(IN)   :: KIDIA    ! Start column to process
@@ -134,7 +137,7 @@ REAL(KIND=JPRB),   INTENT(IN) :: PCFC11(KLON,KLEV)
 REAL(KIND=JPRB),   INTENT(IN) :: PCFC12(KLON,KLEV)
 REAL(KIND=JPRB),   INTENT(IN) :: PHCFC22(KLON,KLEV)
 REAL(KIND=JPRB),   INTENT(IN) :: PCCL4(KLON,KLEV)
-REAL(KIND=JPRB),   INTENT(IN) :: PO3(KLON,KLEV)
+REAL(KIND=JPRB),   INTENT(IN) :: PO3_DP(KLON,KLEV) ! (Pa*kg/kg) !
 
 ! *** Cloud fraction and hydrometeor mass mixing ratios
 REAL(KIND=JPRB),   INTENT(IN) :: PCLOUD_FRAC(KLON,KLEV)
@@ -160,7 +163,7 @@ REAL(KIND=JPRB),  INTENT(OUT) :: PFLUX_LW_CLEAR(KLON,KLEV+1)
 
 ! *** Surface flux components (W m-2)
 REAL(KIND=JPRB),  INTENT(OUT) :: PFLUX_SW_DN(KLON)
-REAL(KIND=JPRB),  INTENT(OUT) :: PFLUX_LW_DN(KLON)
+REAL(KIND=JPRB),  INTENT(OUT) :: PFLUX_LW_DN(KLON, YRADIATION%YRERAD%NLWOUT)
 REAL(KIND=JPRB),  INTENT(OUT) :: PFLUX_SW_DN_CLEAR(KLON)
 REAL(KIND=JPRB),  INTENT(OUT) :: PFLUX_LW_DN_CLEAR(KLON)
 ! Direct component of surface flux into horizontal plane
@@ -194,6 +197,13 @@ REAL(KIND=JPRB),  INTENT(OUT) :: PLWDERIVATIVE(KLON,KLEV+1)
 REAL(KIND=JPRB),  INTENT(OUT) :: PSWDIFFUSEBAND(KLON,YRADIATION%YRERAD%NSW)
 REAL(KIND=JPRB),  INTENT(OUT) :: PSWDIRECTBAND (KLON,YRADIATION%YRERAD%NSW)
 
+! Regime dependent cloud heterogeneity
+REAL(KIND=JPRB),  INTENT(IN), OPTIONAL :: PFSD(KLON,KLEV)
+
+! Enable GPU code paths
+LOGICAL,          INTENT(IN), OPTIONAL :: LACC
+LOGICAL :: LLACC
+
 ! Optional input arguments (Added for validating against ecrad standalone!)
 REAL(KIND=JPRB), INTENT(IN), OPTIONAL :: PRE_LIQ(KLON, KLEV)
 REAL(KIND=JPRB), INTENT(IN), OPTIONAL :: PRE_ICE(KLON, KLEV)
@@ -207,6 +217,9 @@ TYPE(GAS_TYPE)            :: GAS
 TYPE(CLOUD_TYPE)          :: YLCLOUD
 TYPE(AEROSOL_TYPE)        :: AEROSOL
 TYPE(FLUX_TYPE)           :: FLUX
+
+! Mass mixing ratio of ozone (kg/kg)
+REAL(KIND=JPRB)           :: ZO3(KLON,KLEV)
 
 ! Cloud effective radii in microns
 REAL(KIND=JPRB)           :: ZRE_LIQUID_UM(KLON,KLEV)
@@ -223,11 +236,19 @@ REAL(KIND=JPRB)           :: ZDECORR_LEN_RATIO
 ! to compute the effective broadband surface emissivity
 REAL(KIND=JPRB)           :: ZBLACK_BODY_NET_LW
 
+REAL(KIND=JPRB)           :: ZSUM_PFLUX_LW_DN
+
 ! Layer mass in kg m-2
 REAL(KIND=JPRB)           :: ZLAYER_MASS(KIDIA:KFDIA,KLEV)
 
+! Stefan Boltzmann constant
+REAL(KIND=JPRB)           :: ZSIGMA
+
+! SPP variables
+REAL(KIND=JPRB)           :: ZFACTOR
+
 ! Time integers
-! INTEGER(KIND=JPIM) :: ITIM, IDAY
+INTEGER(KIND=JPIM) :: ITIM, IDAY
 
 ! Loop indices
 INTEGER(KIND=JPIM) :: JLON, JLEV, JBAND, JAER
@@ -247,6 +268,13 @@ INTEGER(KIND=JPIM), SAVE :: N_OUTPUT_FLUXES = 0
 ! NetCDF file name in case of bad fluxes
 CHARACTER(LEN=512) :: CL_FILE_NAME
 
+! Old Tegen aerosol scheme diagnosed by other logicals being false:
+! the logic setting this needs to be the same as in
+! su_radiation_scheme.F90
+LOGICAL :: LL_USE_TEGEN_AEROSOLS
+
+TYPE (CONFIG_TYPE), POINTER :: RAD_CONFIG
+
 REAL(KIND=JPHOOK) :: ZHOOK_HANDLE
 
 ! Dummy from YOMCT3
@@ -255,6 +283,13 @@ REAL(KIND=JPHOOK) :: ZHOOK_HANDLE
 ! Dummy from MPL_MYRANK_MOD
 INTEGER(KIND=JPIM) :: MPL_MYRANK
 MPL_MYRANK() = 1
+
+#ifdef WITH_ECRAD_GPU
+#define PASS_LACC ,LACC=LLACC
+#else
+#define PASS_LACC
+#endif
+
 
 ! Import time functions for iseed calculation
 #include "fcttim.func.h"
@@ -267,8 +302,14 @@ MPL_MYRANK() = 1
 
 IF (LHOOK) CALL DR_HOOK('RADIATION_SCHEME',0,ZHOOK_HANDLE)
 
+! RAD_CONFIG is modified in this routine
+! - either use a private object
+! - or move the modification outside this routine
+! For now use pointer laundering
+
+RAD_CONFIG => YRADIATION%RAD_CONFIG
+
 ASSOCIATE(YRERAD    =>YRADIATION%YRERAD, &
-     &    RAD_CONFIG=>YRADIATION%RAD_CONFIG, &
      &    NWEIGHT_UV=>YRADIATION%NWEIGHT_UV, &
      &    IBAND_UV  =>YRADIATION%IBAND_UV(:), &
      &    WEIGHT_UV =>YRADIATION%WEIGHT_UV(:), &
@@ -277,6 +318,8 @@ ASSOCIATE(YRERAD    =>YRADIATION%YRERAD, &
      &    WEIGHT_PAR=>YRADIATION%WEIGHT_PAR(:), &
      &    TROP_BG_AER_MASS_EXT=>YRADIATION%TROP_BG_AER_MASS_EXT, &
      &    STRAT_BG_AER_MASS_EXT=>YRADIATION%STRAT_BG_AER_MASS_EXT)
+
+ZSIGMA = RSIGMA
 ! Allocate memory in radiation objects
 #ifdef HAVE_NVTX
 call nvtxStartRange("allocate")
@@ -287,8 +330,11 @@ CALL THERMODYNAMICS%ALLOCATE(KLON, KLEV, USE_H2O_SAT=.TRUE.)
 CALL GAS%ALLOCATE(KLON, KLEV)
 CALL YLCLOUD%ALLOCATE(KLON, KLEV)
 IF (YRERAD%NAERMACC == 1) THEN
+  LL_USE_TEGEN_AEROSOLS = .FALSE.
   CALL AEROSOL%ALLOCATE(KLON, 1, KLEV, KAEROSOL) ! MACC aerosols
 ELSE
+  LL_USE_TEGEN_AEROSOLS = .TRUE.
+  WRITE(NULOUT,'(A)') 'RADIATION_SCHEME: Warning, assuming Tegen aerosols'
   CALL AEROSOL%ALLOCATE(KLON, 1, KLEV, 6) ! Tegen climatology
 ENDIF
 CALL FLUX%ALLOCATE(RAD_CONFIG, 1, KLON, KLEV)
@@ -296,19 +342,26 @@ CALL FLUX%ALLOCATE(RAD_CONFIG, 1, KLON, KLEV)
 call nvtxEndRange
 #endif
 
-#ifdef _OPENACC
-!$ACC DATA COPYIN(yradiation, rad_config, single_level, thermodynamics, gas, aerosol, ylcloud, flux) ASYNC(1)
-call rad_config%create_device()
-call single_level%create_device()
-call thermodynamics%create_device()
-call gas%create_device()
-call aerosol%create_device()
-call ylcloud%create_device()
-call flux%create_device()
-#endif
+LLACC = .FALSE.
+IF (PRESENT(LACC)) LLACC = LACC
+
+#ifdef WITH_ECRAD_GPU
+!$ACC DATA &
+!$ACC COPYIN(YRADIATION, YRERAD, RAD_CONFIG, SINGLE_LEVEL, THERMODYNAMICS, GAS, AEROSOL, YLCLOUD, FLUX) &
+!$ACC ASYNC(1) IF(LLACC)
+IF (LLACC) THEN
+  CALL RAD_CONFIG%CREATE_DEVICE()
+  ! CALL RAD_CONFIG%UPDATE_DEVICE()
+  CALL SINGLE_LEVEL%CREATE_DEVICE()
+  CALL THERMODYNAMICS%CREATE_DEVICE()
+  CALL GAS%CREATE_DEVICE()
+  CALL AEROSOL%CREATE_DEVICE()
+  CALL YLCLOUD%CREATE_DEVICE()
+  CALL FLUX%CREATE_DEVICE()
+ENDIF
 
 !$ACC DATA &
-!$ACC CREATE(ZRE_LIQUID_UM, ZRE_ICE_UM, ZDECORR_LEN_KM, ZLAYER_MASS) &
+!$ACC CREATE(ZRE_LIQUID_UM, ZRE_ICE_UM, ZDECORR_LEN_KM, ZLAYER_MASS, ZO3) &
 !$ACC PRESENT(PMU0, PTEMPERATURE_SKIN, PALBEDO_DIF, PALBEDO_DIR, PSPECTRALEMISS, &
 !$ACC         PCCN_LAND, PCCN_SEA, PGEMU, PLAND_SEA_MASK, PPRESSURE, PTEMPERATURE, &
 !$ACC         PPRESSURE_H, PTEMPERATURE_H, &
@@ -319,7 +372,8 @@ call flux%create_device()
 !$ACC         PFLUX_DIR, PFLUX_DIR_CLEAR, PFLUX_DIR_INTO_SUN, &
 !$ACC         PFLUX_UV, PFLUX_PAR, PFLUX_PAR_CLEAR, PFLUX_SW_DN_TOA, &
 !$ACC         PEMIS_OUT, PLWDERIVATIVE) &
-!$ACC NO_CREATE(PSWDIRECTBAND, PSWDIFFUSEBAND, PRE_LIQ) ASYNC(1)
+!$ACC NO_CREATE(PSWDIRECTBAND, PSWDIFFUSEBAND, PRE_LIQ) ASYNC(1) IF(LLACC)
+#endif
 
 
 #ifdef HAVE_NVTX
@@ -327,45 +381,46 @@ call nvtxStartRange("thermodynamics setup")
 #endif
 ! Set thermodynamic profiles: simply copy over the half-level
 ! pressure and temperature
-!$ACC PARALLEL LOOP GANG VECTOR COLLAPSE (2) DEFAULT(PRESENT) ASYNC(1)
+!$ACC PARALLEL DEFAULT(PRESENT) &
+!$ACC   ASYNC(1) IF(LLACC)
+!$ACC LOOP GANG VECTOR COLLAPSE (2)
 DO JLEV = 1,KLEV+1
   DO JLON = KIDIA,KFDIA
     THERMODYNAMICS%PRESSURE_HL   (JLON,JLEV) = PPRESSURE_H   (JLON,JLEV)
     IF (JLEV /= KLEV + 1) THEN
       THERMODYNAMICS%TEMPERATURE_HL(JLON,JLEV) = PTEMPERATURE_H(JLON,JLEV)
-
-! IFS currently sets the half-level temperature at the surface to be
-! equal to the skin temperature. The radiation scheme takes as input
-! only the half-level temperatures and assumes the Planck function to
-! vary linearly in optical depth between half levels. In the lowest
-! atmospheric layer, where the atmospheric temperature can be much
-! cooler than the skin temperature, this can lead to significant
-! differences between the effective temperature of this lowest layer
-! and the true value in the model.
-!
-! We may approximate the temperature profile in the lowest model level
-! as piecewise linear between the top of the layer T[k-1/2], the
-! centre of the layer T[k] and the base of the layer Tskin.  The mean
-! temperature of the layer is then 0.25*T[k-1/2] + 0.5*T[k] +
-! 0.25*Tskin, which can be achieved by setting the atmospheric
-! temperature at the half-level corresponding to the surface as
-! follows:
     ELSE
+      ! IFS currently sets the half-level temperature at the surface to be
+      ! equal to the skin temperature. The radiation scheme takes as input
+      ! only the half-level temperatures and assumes the Planck function to
+      ! vary linearly in optical depth between half levels. In the lowest
+      ! atmospheric layer, where the atmospheric temperature can be much
+      ! cooler than the skin temperature, this can lead to significant
+      ! differences between the effective temperature of this lowest layer
+      ! and the true value in the model.
+      !
+      ! We may approximate the temperature profile in the lowest model level
+      ! as piecewise linear between the top of the layer T[k-1/2], the
+      ! centre of the layer T[k] and the base of the layer Tskin.  The mean
+      ! temperature of the layer is then 0.25*T[k-1/2] + 0.5*T[k] +
+      ! 0.25*Tskin, which can be achieved by setting the atmospheric
+      ! temperature at the half-level corresponding to the surface as
+      ! follows:
       THERMODYNAMICS%TEMPERATURE_HL(JLON,KLEV+1)&
         &  = PTEMPERATURE(JLON,KLEV)&
         &  + 0.5_JPRB * (PTEMPERATURE_H(JLON,KLEV+1)&
         &               -PTEMPERATURE_H(JLON,KLEV))
+
+      ! Alternatively we respect the model's atmospheric temperature in the
+      ! lowest model level by setting the temperature at the lowest
+      ! half-level such that the mean temperature of the layer is correct:
+      !THERMODYNAMICS%TEMPERATURE_HL(JLON,KLEV+1) &
+      !     &  = 2.0_JPRB * PTEMPERATURE(JLON,KLEV) &
+      !     &             - PTEMPERATURE_H(JLON,KLEV)
     ENDIF
   ENDDO
 ENDDO
 !$ACC END PARALLEL
-
-! Alternatively we respect the model's atmospheric temperature in the
-! lowest model level by setting the temperature at the lowest
-! half-level such that the mean temperature of the layer is correct:
-!thermodynamics%temperature_hl(KIDIA:KFDIA,KLEV+1) &
-!     &  = 2.0_JPRB * PTEMPERATURE(KIDIA:KFDIA,KLEV) &
-!     &             - PTEMPERATURE_H(KIDIA:KFDIA,KLEV)
 
 ! Compute saturation specific humidity, used to hydrate aerosols. The
 ! "2" for the last argument indicates that the routine is not being
@@ -374,7 +429,7 @@ ENDDO
 !     &  PPRESSURE, PTEMPERATURE, THERMODYNAMICS%H2O_SAT_LIQ, 2)
 ! Alternative approximate version using temperature and pressure from
 ! the thermodynamics structure
-CALL thermodynamics%calc_saturation_wrt_liquid(KIDIA, KFDIA, lacc=.true.)
+CALL THERMODYNAMICS%CALC_SATURATION_WRT_LIQUID(KIDIA, KFDIA PASS_LACC)
 
 #ifdef HAVE_NVTX
 call nvtxEndRange
@@ -383,9 +438,9 @@ call nvtxStartRange("single level setup")
 
 ! Set single-level fileds
 SINGLE_LEVEL%SOLAR_IRRADIANCE              = PSOLAR_IRRADIANCE
-!$ACC UPDATE DEVICE(SINGLE_LEVEL%SOLAR_IRRADIANCE) ASYNC(1)
+!$ACC UPDATE DEVICE(SINGLE_LEVEL%SOLAR_IRRADIANCE) ASYNC(1) IF(LLACC)
 
-!$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
+!$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1) IF(LLACC)
 !$ACC LOOP GANG VECTOR
 DO JLON = KIDIA,KFDIA
   SINGLE_LEVEL%COS_SZA(JLON)          = PMU0(JLON)
@@ -393,14 +448,14 @@ DO JLON = KIDIA,KFDIA
 ENDDO
 
 !$ACC LOOP GANG VECTOR COLLAPSE(2)
-DO JBAND = 1,YRADIATION%YRERAD%NSW
+DO JBAND = 1,YRERAD%NSW
   DO JLON = KIDIA,KFDIA
     SINGLE_LEVEL%SW_ALBEDO(JLON,JBAND)      = PALBEDO_DIF(JLON,JBAND)
     SINGLE_LEVEL%SW_ALBEDO_DIRECT(JLON,JBAND)=PALBEDO_DIR(JLON,JBAND)
   ENDDO
 ENDDO
 !$ACC LOOP GANG VECTOR COLLAPSE(2)
-DO JBAND = 1,YRADIATION%YRERAD%NLWEMISS
+DO JBAND = 1,YRERAD%NLWEMISS
   DO JLON = KIDIA,KFDIA
     ! Spectral longwave emissivity
     SINGLE_LEVEL%LW_EMISSIVITY(JLON,JBAND)  = PSPECTRALEMISS(JLON,JBAND)
@@ -408,27 +463,43 @@ DO JBAND = 1,YRADIATION%YRERAD%NLWEMISS
 ENDDO
 !$ACC END PARALLEL
 
+! Do we adjust the solar spectrum for time in the solar cycle? Only
+! available with the ecCKD gas optics scheme.
+IF (YRERAD%LSPECTRALSOLARCYCLE) THEN
+  ! Solar cycles are counted from solar minima, so whole numbers lead to a
+  ! multiplier of minus one (solar minimum), values ending in .5 lead
+  ! to a multiplier of plus one (solar maximum)
+  ! SINGLE_LEVEL%SPECTRAL_SOLAR_CYCLE_MULTIPLIER = YDERDI%RSOLARCYCLEMULT
+ELSE
+  SINGLE_LEVEL%SPECTRAL_SOLAR_CYCLE_MULTIPLIER = 0.0_JPRB
+END IF
+!$ACC UPDATE DEVICE(SINGLE_LEVEL%SPECTRAL_SOLAR_CYCLE_MULTIPLIER) IF(LLACC)
+
 ! Create the relevant seed from date and time get the starting day
 ! and number of minutes since start
 ! IDAY = NDD(NINDAT)
 ! ITIM = NINT(NSTEP * YDMODEL%YRML_GCONF%YRRIP%TSTEP / 60.0_JPRB)
-! DO JLON = KIDIA, KFDIA
-!   ! This method gives a unique value for roughly every 1-km square
-!   ! on the globe and every minute.  ASIN(PGEMU)*60 gives rough
-!   ! latitude in degrees, which we multiply by 100 to give a unique
-!   ! value for roughly every km. PGELAM*60*100 gives a unique number
-!   ! for roughly every km of longitude around the equator, which we
-!   ! multiply by 180*100 so there is no overlap with the latitude
-!   ! values.  The result can be contained in a 32-byte integer (but
-!   ! since random numbers are generated with the help of integer
-!   ! overflow, it should not matter if the number did overflow).
-!   SINGLE_LEVEL%ISEED(JLON) = ITIM + IDAY &
-!        &  +  NINT(PGELAM(JLON)*108000000.0_JPRD &
-!        &          + ASIN(PGEMU(JLON))*6000.0_JPRD)
-! ENDDO
+
+!$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1) IF(LLACC)
+!$ACC LOOP GANG VECTOR
+DO JLON = KIDIA, KFDIA
+  ! This method gives a unique value for roughly every 1-km square
+  ! on the globe and every minute.  ASIN(PGEMU)*60 gives rough
+  ! latitude in degrees, which we multiply by 100 to give a unique
+  ! value for roughly every km. PGELAM*60*100 gives a unique number
+  ! for roughly every km of longitude around the equator, which we
+  ! multiply by 180*100 so there is no overlap with the latitude
+  ! values.  The result can be contained in a 32-byte integer (but
+  ! since random numbers are generated with the help of integer
+  ! overflow, it should not matter if the number did overflow).
+  SINGLE_LEVEL%ISEED(JLON) = ITIM + IDAY &
+       &  +  NINT(PGELAM(JLON)*108000000.0_JPRD &
+       &          + ASIN(PGEMU(JLON))*6000.0_JPRD)
+ENDDO
+!$ACC END PARALLEL
 
 ! Simple initialization of the seeds for the Monte Carlo scheme
-call single_level%init_seed_simple(kidia, kfdia, lacc=.true.)
+! call single_level%init_seed_simple(kidia, kfdia, lacc=.true.)
 
 ! Added for bit-identity validation against ecrad standalone:
 ! Overwrite seed with user-specified values
@@ -436,17 +507,17 @@ IF (PRESENT(ISEED)) THEN
   !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
   !$ACC LOOP GANG VECTOR
   DO JLON = KIDIA,KFDIA
-    single_level%iseed(jlon) = iseed(jlon)
+    SINGLE_LEVEL%ISEED(JLON) = ISEED(JLON)
   ENDDO
   !$ACC END PARALLEL
-END IF
+ENDIF
 
 ! Set the solar spectrum scaling, if required
-IF (YRERAD%NSOLARSPECTRUM == 1) THEN
+IF (YRERAD%NSOLARSPECTRUM /= 0) THEN
   ALLOCATE(SINGLE_LEVEL%SPECTRAL_SOLAR_SCALING(RAD_CONFIG%N_BANDS_SW))
   ! RRTMG uses the old Kurucz solar spectrum. The following scalings
   ! adjust it to match more recent measured spectra.
-  IF (YRERAD%NSOLARSPECTRUM == 1) THEN
+IF (YRERAD%NSOLARSPECTRUM == 1) THEN
     ! The Whole Heliosphere Interval (WHI) 2008 reference spectrum for
     ! solar minimum conditions in 2008:
     ! https://lasp.colorado.edu/lisird/data/whi_ref_spectra This
@@ -469,7 +540,7 @@ IF (YRERAD%NSOLARSPECTRUM == 1) THEN
          &      1.00553_JPRB, 0.99533_JPRB, 1.01509_JPRB, 0.92331_JPRB, &
          &      0.92681_JPRB, 0.99749_JPRB ]
   ENDIF
-  !$ACC ENTER DATA COPYIN(SINGLE_LEVEL%SPECTRAL_SOLAR_SCALING) ASYNC(1)
+  !$ACC ENTER DATA COPYIN(SINGLE_LEVEL%SPECTRAL_SOLAR_SCALING) ASYNC(1) IF(LLACC)
 ENDIF
 
 #ifdef HAVE_NVTX
@@ -478,7 +549,7 @@ call nvtxStartRange("cloud setup")
 #endif
 
 ! Set cloud fields
-!$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
+!$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1) IF(LLACC)
 !$ACC LOOP GANG VECTOR COLLAPSE(2)
 DO JLEV = 1,KLEV
   DO JLON = KIDIA,KFDIA
@@ -528,7 +599,8 @@ ELSE
   CALL ICE_EFFECTIVE_RADIUS(YRERAD, KIDIA, KFDIA, KLON, KLEV, &
       &  PPRESSURE, PTEMPERATURE, PCLOUD_FRAC, PQ_ICE, PQ_SNOW, PGEMU, &
       &  ZRE_ICE_UM) !, PPERT=PPERT)
-  !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
+
+  !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1) IF(LLACC)
   !$ACC LOOP GANG VECTOR COLLAPSE(2)
   DO JLEV = 1,KLEV
     DO JLON = KIDIA,KFDIA
@@ -548,14 +620,14 @@ CALL CLOUD_OVERLAP_DECORR_LEN(KIDIA,KFDIA,KLON, &
      &  PDECORR_LEN_EDGES_KM=ZDECORR_LEN_KM) !, PDECORR_LEN_RATIO=ZDECORR_LEN_RATIO)
 
 ! Compute cloud overlap parameter from decorrelation length
-!RAD_CONFIG%CLOUD_INHOM_DECORR_SCALING = ZDECORR_LEN_RATIO
+RAD_CONFIG%CLOUD_INHOM_DECORR_SCALING = ZDECORR_LEN_RATIO
 ! DO JLON = KIDIA,KFDIA
 !   CALL YLCLOUD%SET_OVERLAP_PARAM(THERMODYNAMICS,&
 !       &                       ZDECORR_LEN_KM(JLON)*1000.0_JPRB,&
 !       &                       ISTARTCOL=JLON, IENDCOL=JLON)
 ! ENDDO
 ! Or we can call the routine on all columns at once
-!$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
+!$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1) IF(LLACC)
 !$ACC LOOP GANG VECTOR
 DO JLON = KIDIA,KFDIA
   ZDECORR_LEN_KM(JLON) = 1000.0_JPRB*ZDECORR_LEN_KM(JLON)
@@ -563,7 +635,8 @@ ENDDO
 !$ACC END PARALLEL
 CALL YLCLOUD%SET_OVERLAP_PARAM(THERMODYNAMICS,&
     &                       ZDECORR_LEN_KM,&
-    &                       ISTARTCOL=KIDIA, IENDCOL=KFDIA, LACC=.TRUE.)
+    &                       ISTARTCOL=KIDIA, IENDCOL=KFDIA&
+    &                       PASS_LACC)
 
 ! Added for bit-identity validation against ecrad standalone:
 ! Overwrite overlap param with provided value
@@ -581,8 +654,21 @@ ENDIF
 ! Cloud water content fractional standard deviation is configurable
 ! from namelist NAERAD but must be globally constant. Before it was
 ! hard coded at 1.0.
-CALL YLCLOUD%CREATE_FRACTIONAL_STD(KLON, KLEV, YRERAD%RCLOUD_FRAC_STD, LACC=.TRUE.)
+CALL YLCLOUD%CREATE_FRACTIONAL_STD(KLON, KLEV, YRERAD%RCLOUD_FRAC_STD&
+      &                            PASS_LACC)
 
+! if using regionally varying FSD, overwrite constant value with
+! varying value
+! IF (YRADIATION%YRERAD%LRAD_CLOUD_INHOMOG) THEN
+!   !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1) IF(LLACC)
+!   !$ACC LOOP GANG VECTOR COLLAPSE(2)
+!   DO JLEV = 1,KLEV
+!     DO JLON = KIDIA,KFDIA
+!       YLCLOUD%FRACTIONAL_STD(JLON, JLEV)=PFSD(JLON,JLEV)
+!     ENDDO
+!   ENDDO
+!   !$ACC END PARALLEL
+! ENDIF
 
 IF (         RAD_CONFIG%I_SOLVER_LW == ISOLVERSPARTACUS &
      &  .OR. RAD_CONFIG%I_SOLVER_SW == ISOLVERSPARTACUS) THEN
@@ -623,11 +709,11 @@ IF (YRERAD%NAERMACC == 1) THEN
   ENDDO
   !$ACC END PARALLEL
 
-  IF (YRERAD%NAERMACC == 1) THEN
+  IF (.NOT. LL_USE_TEGEN_AEROSOLS) THEN
     ! Add the tropospheric and stratospheric backgrounds contained in the
     ! old Tegen arrays - this is very ugly!
     IF (TROP_BG_AER_MASS_EXT > 0.0_JPRB) THEN
-      !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
+      !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1) IF(LLACC)
       !$ACC LOOP GANG VECTOR COLLAPSE(2)
       DO JLEV = 1,KLEV
         DO JLON = KIDIA,KFDIA
@@ -640,7 +726,7 @@ IF (YRERAD%NAERMACC == 1) THEN
       !$ACC END PARALLEL
     ENDIF
     IF (STRAT_BG_AER_MASS_EXT > 0.0_JPRB) THEN
-      !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
+      !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1) IF(LLACC)
       !$ACC LOOP GANG VECTOR COLLAPSE(2)
       DO JLEV = 1,KLEV
         DO JLON = KIDIA,KFDIA
@@ -664,11 +750,11 @@ ELSE
   ! need to divide by the layer mass (in kg m-2) to obtain the 550-nm
   ! cross-section per unit mass of dry air (so in m2 kg-1).  We also
   ! need to permute the array.
-  !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
+  !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1) IF(LLACC)
   !$ACC LOOP GANG VECTOR COLLAPSE(3)
   DO JLEV = 1,KLEV
     DO JAER = 1,6
-      DO JLON = KIDIA,KFDIA
+      DO JLON=KIDIA,KFDIA
         AEROSOL%MIXING_RATIO(JLON,JLEV,JAER)&
          &  = PAEROSOL_OLD(JLON,JAER,JLEV)&
          &  / ZLAYER_MASS(JLON,JLEV)
@@ -679,27 +765,37 @@ ELSE
 
 ENDIF
 
+! Convert ozone Pa*kg/kg to kg/kg
+!$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1) IF(LLACC)
+!$ACC LOOP GANG VECTOR COLLAPSE(2)
+DO JLEV = 1,KLEV
+  DO JLON = KIDIA,KFDIA
+    ZO3(JLON,JLEV) = PO3_DP(JLON,JLEV)&
+         &         / (PPRESSURE_H(JLON,JLEV+1)-PPRESSURE_H(JLON,JLEV))
+  ENDDO
+ENDDO
+!$ACC END PARALLEL
+
 #ifdef HAVE_NVTX
 call nvtxEndRange
 call nvtxStartRange("gas setup")
 #endif
 
 ! Insert gas mixing ratios
-CALL GAS%PUT(IH2O,    IMASSMIXINGRATIO, PQ, LACC=.TRUE.)
-CALL GAS%PUT(ICO2,    IMASSMIXINGRATIO, PCO2, LACC=.TRUE.)
-CALL GAS%PUT(ICH4,    IMASSMIXINGRATIO, PCH4, LACC=.TRUE.)
-CALL GAS%PUT(IN2O,    IMASSMIXINGRATIO, PN2O, LACC=.TRUE.)
-CALL GAS%PUT(ICFC11,  IMASSMIXINGRATIO, PCFC11, LACC=.TRUE.)
-CALL GAS%PUT(ICFC12,  IMASSMIXINGRATIO, PCFC12, LACC=.TRUE.)
-CALL GAS%PUT(IHCFC22, IMASSMIXINGRATIO, PHCFC22, LACC=.TRUE.)
-CALL GAS%PUT(ICCL4,   IMASSMIXINGRATIO, PCCL4, LACC=.TRUE.)
-CALL GAS%PUT(IO3,     IMASSMIXINGRATIO, PO3, LACC=.TRUE.)
-CALL GAS%PUT_WELL_MIXED(IO2, IVOLUMEMIXINGRATIO, 0.20944_JPRB, LACC=.TRUE.)
+CALL GAS%PUT(IH2O,    IMASSMIXINGRATIO, PQ PASS_LACC)
+CALL GAS%PUT(ICO2,    IMASSMIXINGRATIO, PCO2 PASS_LACC)
+CALL GAS%PUT(IO3,     IMASSMIXINGRATIO, ZO3 PASS_LACC)
+CALL GAS%PUT(IN2O,    IMASSMIXINGRATIO, PN2O PASS_LACC)
+CALL GAS%PUT(ICH4,    IMASSMIXINGRATIO, PCH4 PASS_LACC)
+CALL GAS%PUT(ICFC11,  IMASSMIXINGRATIO, PCFC11 PASS_LACC)
+CALL GAS%PUT(ICFC12,  IMASSMIXINGRATIO, PCFC12 PASS_LACC)
+CALL GAS%PUT(IHCFC22, IMASSMIXINGRATIO, PHCFC22 PASS_LACC)
+CALL GAS%PUT(ICCL4,   IMASSMIXINGRATIO, PCCL4 PASS_LACC)
+CALL GAS%PUT_WELL_MIXED(IO2, IVOLUMEMIXINGRATIO, 0.20944_JPRB PASS_LACC)
 
 ! Ensure the units of the gas mixing ratios are what is required by
 ! the gas absorption model
-CALL SET_GAS_UNITS(RAD_CONFIG, GAS, LACC=.TRUE.)
-!$ACC WAIT(1)
+CALL SET_GAS_UNITS(RAD_CONFIG, GAS PASS_LACC)
 
 #ifdef HAVE_NVTX
 call nvtxEndRange
@@ -772,7 +868,7 @@ call nvtxStartRange("compute fluxes")
 #endif
 ! Compute required output fluxes
 ! First the net fluxes
-!$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
+!$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1) IF(LLACC)
 !$ACC LOOP GANG VECTOR COLLAPSE(2)
 DO JLEV=1,KLEV+1
   DO JLON=KIDIA,KFDIA
@@ -784,18 +880,20 @@ DO JLEV=1,KLEV+1
         &  = FLUX%LW_DN_CLEAR(JLON,JLEV) - FLUX%LW_UP_CLEAR(JLON,JLEV)
   ENDDO
 ENDDO
-!PFLUX_SW(KIDIA:KFDIA,:) = FLUX%SW_DN(KIDIA:KFDIA,:) - FLUX%SW_UP(KIDIA:KFDIA,:)
-!PFLUX_LW(KIDIA:KFDIA,:) = FLUX%LW_DN(KIDIA:KFDIA,:) - FLUX%LW_UP(KIDIA:KFDIA,:)
-!PFLUX_SW_CLEAR(KIDIA:KFDIA,:)&
-!    &  = FLUX%SW_DN_CLEAR(KIDIA:KFDIA,:) - FLUX%SW_UP_CLEAR(KIDIA:KFDIA,:)
-!PFLUX_LW_CLEAR(KIDIA:KFDIA,:)&
-!    &  = FLUX%LW_DN_CLEAR(KIDIA:KFDIA,:) - FLUX%LW_UP_CLEAR(KIDIA:KFDIA,:)
 
-!$ACC LOOP GANG VECTOR
+!$ACC LOOP GANG VECTOR PRIVATE(ZBLACK_BODY_NET_LW,ZSUM_PFLUX_LW_DN)
 DO JLON=KIDIA,KFDIA
   ! Now the surface fluxes
   PFLUX_SW_DN      (JLON) = FLUX%SW_DN             (JLON,KLEV+1)
-  PFLUX_LW_DN      (JLON) = FLUX%LW_DN             (JLON,KLEV+1)
+  IF (YRERAD%NLWOUT == 1) THEN
+    ! Broadband longwave flux
+    PFLUX_LW_DN    (JLON,1)=FLUX%LW_DN             (JLON,KLEV+1)
+  ELSE
+    ! Spectral longwave fluxes
+    DO JBAND=1,YRERAD%NLWOUT
+      PFLUX_LW_DN    (JLON,JBAND)=FLUX%LW_DN_SURF_CANOPY(JBAND,JLON)
+    ENDDO
+  ENDIF
   PFLUX_SW_DN_CLEAR(JLON) = FLUX%SW_DN_CLEAR       (JLON,KLEV+1)
   PFLUX_LW_DN_CLEAR(JLON) = FLUX%LW_DN_CLEAR       (JLON,KLEV+1)
   PFLUX_DIR        (JLON) = FLUX%SW_DN_DIRECT      (JLON,KLEV+1)
@@ -823,11 +921,11 @@ DO JLON=KIDIA,KFDIA
   DO JBAND = 1,NWEIGHT_PAR
 !DEC$ IVDEP
     PFLUX_PAR(JLON) = PFLUX_PAR(JLON) + WEIGHT_PAR(JBAND)&
-          &  * FLUX%SW_DN_SURF_BAND(IBAND_PAR(JBAND),JLON)
+        &  * FLUX%SW_DN_SURF_BAND(IBAND_PAR(JBAND),JLON)
 !DEC$ IVDEP
     PFLUX_PAR_CLEAR(JLON) = PFLUX_PAR_CLEAR(JLON)&
         &  + WEIGHT_PAR(JBAND)&
-          &  * FLUX%SW_DN_SURF_CLEAR_BAND(IBAND_PAR(JBAND),JLON)
+        &  * FLUX%SW_DN_SURF_CLEAR_BAND(IBAND_PAR(JBAND),JLON)
   ENDDO
 
 ! Compute effective broadband emissivity. This is only approximate -
@@ -835,13 +933,25 @@ DO JLON=KIDIA,KFDIA
 ! possible to provide a broadband emissivity that can reproduce the
 ! upwelling surface flux given the downwelling flux and the skin
 ! temperature.
-  ZBLACK_BODY_NET_LW = PFLUX_LW_DN(JLON) &
-      &  - RSIGMA*PTEMPERATURE_SKIN(JLON)**4
-  PEMIS_OUT(JLON) = PSPECTRALEMISS(JLON,1) ! Default value
-  IF (ABS(ZBLACK_BODY_NET_LW) > 1.0E-5) THEN
-    ! This calculation can go outside the range of any individual
-    ! spectral emissivity value, so needs to be capped
-    PEMIS_OUT(JLON) = MAX(0.8_JPRB, MIN(0.99_JPRB, PFLUX_LW(JLON,KLEV+1) / ZBLACK_BODY_NET_LW))
+  IF (YRERAD%NLWOUT == 1) THEN
+    ZBLACK_BODY_NET_LW = PFLUX_LW_DN(JLON,1) &
+        &  - ZSIGMA*PTEMPERATURE_SKIN(JLON)**4
+    PEMIS_OUT(JLON) = PSPECTRALEMISS(JLON,1) ! Default value
+    IF (ABS(ZBLACK_BODY_NET_LW) > 1.0E-5) THEN
+      ! This calculation can go outside the range of any individual
+      ! spectral emissivity value, so needs to be capped
+      PEMIS_OUT(JLON) = MAX(0.8_JPRB, MIN(0.99_JPRB, PFLUX_LW(JLON,KLEV+1) / ZBLACK_BODY_NET_LW))
+    ENDIF
+  ELSE
+    ! Weight by the spectral distribution of downwelling fluxes
+    ZSUM_PFLUX_LW_DN = 0._JPRB
+    PEMIS_OUT(JLON) = 0._JPRB
+    !$ACC LOOP SEQ
+    DO JBAND=1,YRERAD%NLWOUT
+      PEMIS_OUT(JLON) = PEMIS_OUT(JLON) + PSPECTRALEMISS(JLON,JBAND) * PFLUX_LW_DN(JLON,JBAND)
+      ZSUM_PFLUX_LW_DN = ZSUM_PFLUX_LW_DN + PFLUX_LW_DN(JLON,JBAND)
+    ENDDO
+    PEMIS_OUT(JLON) = PEMIS_OUT(JLON) / ZSUM_PFLUX_LW_DN
   ENDIF
 ENDDO
 
@@ -862,24 +972,25 @@ DO JLEV=1,KLEV+1
 ENDDO
 !$ACC END PARALLEL
 
-!$ACC END DATA
 #ifdef HAVE_NVTX
 call nvtxEndRange
 call nvtxStartRange("cleanup")
 #endif
 
-#ifdef _OPENACC
-call rad_config%delete_device()
-call single_level%delete_device()
-call thermodynamics%delete_device()
-call gas%delete_device()
-call aerosol%delete_device()
-call ylcloud%delete_device()
-call flux%delete_device()
+#ifdef WITH_ECRAD_GPU
 !$ACC END DATA
+IF (LLACC) THEN
+  CALL FLUX%DELETE_DEVICE()
+  CALL YLCLOUD%DELETE_DEVICE()
+  CALL AEROSOL%DELETE_DEVICE()
+  CALL GAS%DELETE_DEVICE()
+  CALL THERMODYNAMICS%DELETE_DEVICE()
+  CALL SINGLE_LEVEL%DELETE_DEVICE()
+  CALL RAD_CONFIG%DELETE_DEVICE()
+ENDIF
+!$ACC END DATA
+!$ACC WAIT
 #endif
-
-!$ACC WAIT(1)
 
 CALL SINGLE_LEVEL%DEALLOCATE
 CALL THERMODYNAMICS%DEALLOCATE

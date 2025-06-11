@@ -172,6 +172,13 @@ contains
       call radiation_abort()
     end if
 
+#ifdef _OPENACC
+      if (config%do_lw_aerosol_scattering) then
+      write(nulerr,'(a)') '*** Error: longwave aerosol scattering in McICA ACC not ported to GPU'
+      call radiation_abort()
+    end if
+#endif
+
     ng = config%n_g_lw
 
     !$ACC DATA CREATE(flux_up, flux_dn, flux_up_clear, flux_dn_clear, &
@@ -180,6 +187,10 @@ contains
     !$ACC             pair_cloud_cover, cum_product, ibegin, iend) &
     !$ACC     PRESENT(config, single_level, cloud, od, ssa, g, od_cloud, ssa_cloud, &
     !$ACC             g_cloud, planck_hl, emission, albedo, flux) ASYNC(1)
+
+    !!$ACC WAIT(1)
+    !write(0,'(a)') 'lw data create done'
+    !flush(0)
 
     !$ACC PARALLEL DEFAULT(NONE) ASYNC(1)
     !$ACC LOOP GANG VECTOR COLLAPSE(2)
@@ -210,6 +221,10 @@ contains
     end do
     !$ACC END PARALLEL
 
+
+    !!$ACC WAIT(1)
+    !write(0,'(a)') 'lw data layout flip done'
+    !flush(0)
 
     !$ACC PARALLEL DEFAULT(NONE) ASYNC(1)
     !$ACC LOOP GANG VECTOR COLLAPSE(2) PRIVATE(overlap_alpha)
@@ -287,8 +302,9 @@ contains
 
 
     ! Loop through columns
+    !!$ACC   NUM_GANGS(iendcol-istartcol+1) NUM_WORKERS((config%n_g_lw-1)/32+1) VECTOR_LENGTH(32)
     !$ACC PARALLEL DEFAULT(NONE) ASYNC(1)  &
-    !$ACC   NUM_GANGS(iendcol-istartcol+1) NUM_WORKERS((config%n_g_lw-1)/32+1) VECTOR_LENGTH(32)
+    !$ACC   NUM_GANGS(1) NUM_WORKERS(1) VECTOR_LENGTH(1)
     !$ACC LOOP GANG PRIVATE(g_total, i_cloud_top, od_cloud_new, od_scaling, od_total, ref_clear, &
     !$ACC   reflectance, tmp_work_inv_denominator, tmp_work_albedo, tmp_work_source, &
     !$ACC   scat_od_total, source_dn, source_dn_clear, source_up, source_up_clear, ssa_total, &
@@ -346,6 +362,7 @@ contains
 
       ! Do cloudy-sky calculation; add a prime number to the seed in
       ! the longwave
+      ! print *, 'lw cloud_generator_acc',jcol
       call cloud_generator_acc(ng, nlev, &
            &  single_level%iseed(jcol) + 997, &
            &  config%cloud_fraction_threshold, &
@@ -361,6 +378,7 @@ contains
 
       if (flux%cloud_cover_lw(jcol) >= config%cloud_fraction_threshold) then
         ! Total-sky calculation
+        ! print *,'lw entered if',jcol
 
         i_cloud_top = nlev+1
         !$ACC LOOP SEQ
@@ -455,7 +473,10 @@ contains
               source_dn(jg,jlev) = source_dn_clear(jg,jlev)
             end do
           end if
+          ! print *,'column',jcol,'finished level',jlev
         end do
+
+        ! print *,'adding_ica',jcol
 
 #ifndef _OPENACC
         if (config%do_lw_aerosol_scattering) then
@@ -493,6 +514,8 @@ contains
               &  + (1.0_jprb - flux%cloud_cover_lw(jcol))*flux%lw_dn_surf_clear_g(jg,jcol)
         end do
 
+        ! print *,'lw derivatives', jcol
+
         ! Compute the longwave derivatives needed by Hogan and Bozzo
         ! (2015) approximate radiation update scheme
         if (config%do_lw_derivatives) then
@@ -506,6 +529,7 @@ contains
         end if
 
       else
+        ! print *,'lw entered else',jcol
         ! No cloud in profile and clear-sky fluxes already
         ! calculated: copy them over
         !$ACC LOOP WORKER VECTOR
@@ -518,8 +542,14 @@ contains
 
         end if
       end if ! Cloud is present in profile
+
+      ! print *,'lw done',jcol
     end do
     !$ACC END PARALLEL
+
+    !$ACC WAIT(1)
+    write(0,'(a)') 'lw reduction loop start'
+    flush(0)
 
     ! Loop through columns
     !$ACC PARALLEL DEFAULT(NONE) ASYNC(1) &

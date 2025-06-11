@@ -2217,6 +2217,8 @@ contains
   subroutine create_device(this)
     class(config_type), intent(inout) :: this
 
+!    !$ACC ENTER DATA COPYIN(this) ASYNC(1)
+
     !$ACC ENTER DATA COPYIN(this%g_frac_sw) IF(allocated(this%g_frac_sw)) ASYNC(1)
     !$ACC ENTER DATA COPYIN(this%g_frac_lw) IF(allocated(this%g_frac_lw)) ASYNC(1)
     !$ACC ENTER DATA COPYIN(this%i_albedo_from_band_sw) IF(allocated(this%i_albedo_from_band_sw)) ASYNC(1)
@@ -2248,6 +2250,7 @@ contains
   subroutine update_host(this)
     class(config_type), intent(inout) :: this
 
+    !!$ACC UPDATE HOST(this) ASYNC(1)
     !$ACC UPDATE HOST(this%g_frac_sw) IF(allocated(this%g_frac_sw)) ASYNC(1)
     !$ACC UPDATE HOST(this%g_frac_lw) IF(allocated(this%g_frac_lw)) ASYNC(1)
     !$ACC UPDATE HOST(this%i_albedo_from_band_sw) IF(allocated(this%i_albedo_from_band_sw)) ASYNC(1)
@@ -2279,6 +2282,7 @@ contains
   subroutine update_device(this)
     class(config_type), intent(inout) :: this
 
+    !!$ACC UPDATE DEVICE(this) ASYNC(1)
     !$ACC UPDATE DEVICE(this%g_frac_sw) IF(allocated(this%g_frac_sw)) ASYNC(1)
     !$ACC UPDATE DEVICE(this%g_frac_lw) IF(allocated(this%g_frac_lw)) ASYNC(1)
     !$ACC UPDATE DEVICE(this%i_albedo_from_band_sw) IF(allocated(this%i_albedo_from_band_sw)) ASYNC(1)
@@ -2325,16 +2329,18 @@ contains
 
     ! NB: ckd_model_type not yet implemented
 
-    !$ACC EXIT DATA DELETE(this%cloud_optics) ASYNC(1)
     call this%cloud_optics%delete_device()
+    !$ACC EXIT DATA DELETE(this%cloud_optics) ASYNC(1)
 
     ! NB: general_cloud_optics_type not yet implemented
 
-    !$ACC EXIT DATA DELETE(this%aerosol_optics) ASYNC(1)
     call this%aerosol_optics%delete_device()
+    !$ACC EXIT DATA DELETE(this%aerosol_optics) ASYNC(1)
 
-    !$ACC EXIT DATA DELETE(this%pdf_sampler) ASYNC(1)
     call this%pdf_sampler%delete_device()
+    !$ACC EXIT DATA DELETE(this%pdf_sampler) ASYNC(1)
+
+    !!$ACC EXIT DATA DELETE(this)
 
   end subroutine delete_device
 #endif

@@ -759,44 +759,50 @@ contains
   subroutine create_device(this)
     class(aerosol_optics_type), intent(inout) :: this
 
-    !$ACC ENTER DATA COPYIN(this%iclass) IF(allocated(this%iclass)) ASYNC(1)
-    !$ACC ENTER DATA COPYIN(this%itype) IF(allocated(this%itype)) ASYNC(1)
+    !!$ACC ENTER DATA COPYIN(this) ASYNC(1)
 
-    !$ACC ENTER DATA COPYIN(this%wavenumber1_sw) IF(allocated(this%wavenumber1_sw)) ASYNC(1)
-    !$ACC ENTER DATA COPYIN(this%wavenumber2_sw) IF(allocated(this%wavenumber2_sw)) ASYNC(1)
-    !$ACC ENTER DATA COPYIN(this%wavenumber1_lw) IF(allocated(this%wavenumber1_lw)) ASYNC(1)
-    !$ACC ENTER DATA COPYIN(this%wavenumber2_lw) IF(allocated(this%wavenumber2_lw)) ASYNC(1)
+    !$ACC ENTER DATA CREATE(this%iclass) IF(allocated(this%iclass)) ASYNC(1)
+    !$ACC ENTER DATA CREATE(this%itype) IF(allocated(this%itype)) ASYNC(1)
 
-    !$ACC ENTER DATA COPYIN(this%mass_ext_sw_phobic) IF(allocated(this%mass_ext_sw_phobic)) ASYNC(1)
-    !$ACC ENTER DATA COPYIN(this%ssa_sw_phobic) IF(allocated(this%ssa_sw_phobic)) ASYNC(1)
-    !$ACC ENTER DATA COPYIN(this%g_sw_phobic) IF(allocated(this%g_sw_phobic)) ASYNC(1)
-    !$ACC ENTER DATA COPYIN(this%mass_ext_lw_phobic) IF(allocated(this%mass_ext_lw_phobic)) ASYNC(1)
-    !$ACC ENTER DATA COPYIN(this%ssa_lw_phobic) IF(allocated(this%ssa_lw_phobic)) ASYNC(1)
-    !$ACC ENTER DATA COPYIN(this%g_lw_phobic) IF(allocated(this%g_lw_phobic)) ASYNC(1)
+    !$ACC ENTER DATA CREATE(this%wavenumber1_sw) IF(allocated(this%wavenumber1_sw)) ASYNC(1)
+    !$ACC ENTER DATA CREATE(this%wavenumber2_sw) IF(allocated(this%wavenumber2_sw)) ASYNC(1)
+    !$ACC ENTER DATA CREATE(this%wavenumber1_lw) IF(allocated(this%wavenumber1_lw)) ASYNC(1)
+    !$ACC ENTER DATA CREATE(this%wavenumber2_lw) IF(allocated(this%wavenumber2_lw)) ASYNC(1)
 
-    !$ACC ENTER DATA COPYIN(this%mass_ext_sw_philic) IF(allocated(this%mass_ext_sw_philic)) ASYNC(1)
-    !$ACC ENTER DATA COPYIN(this%ssa_sw_philic) IF(allocated(this%ssa_sw_philic)) ASYNC(1)
-    !$ACC ENTER DATA COPYIN(this%g_sw_philic) IF(allocated(this%g_sw_philic)) ASYNC(1)
-    !$ACC ENTER DATA COPYIN(this%mass_ext_lw_philic) IF(allocated(this%mass_ext_lw_philic)) ASYNC(1)
-    !$ACC ENTER DATA COPYIN(this%ssa_lw_philic) IF(allocated(this%ssa_lw_philic)) ASYNC(1)
-    !$ACC ENTER DATA COPYIN(this%g_lw_philic) IF(allocated(this%g_lw_philic)) ASYNC(1)
+    !$ACC ENTER DATA CREATE(this%mass_ext_sw_phobic) IF(allocated(this%mass_ext_sw_phobic)) ASYNC(1)
+    !$ACC ENTER DATA CREATE(this%ssa_sw_phobic) IF(allocated(this%ssa_sw_phobic)) ASYNC(1)
+    !$ACC ENTER DATA CREATE(this%g_sw_phobic) IF(allocated(this%g_sw_phobic)) ASYNC(1)
+    !$ACC ENTER DATA CREATE(this%mass_ext_lw_phobic) IF(allocated(this%mass_ext_lw_phobic)) ASYNC(1)
+    !$ACC ENTER DATA CREATE(this%ssa_lw_phobic) IF(allocated(this%ssa_lw_phobic)) ASYNC(1)
+    !$ACC ENTER DATA CREATE(this%g_lw_phobic) IF(allocated(this%g_lw_phobic)) ASYNC(1)
 
-    !$ACC ENTER DATA COPYIN(this%wavelength_mono) IF(allocated(this%wavelength_mono)) ASYNC(1)
-    !$ACC ENTER DATA COPYIN(this%mass_ext_mono_phobic) IF(allocated(this%mass_ext_mono_phobic)) ASYNC(1)
-    !$ACC ENTER DATA COPYIN(this%ssa_mono_phobic) IF(allocated(this%ssa_mono_phobic)) ASYNC(1)
-    !$ACC ENTER DATA COPYIN(this%g_mono_phobic) IF(allocated(this%g_mono_phobic)) ASYNC(1)
-    !$ACC ENTER DATA COPYIN(this%lidar_ratio_mono_phobic) IF(allocated(this%lidar_ratio_mono_phobic)) ASYNC(1)
-    !$ACC ENTER DATA COPYIN(this%mass_ext_mono_philic) IF(allocated(this%mass_ext_mono_philic)) ASYNC(1)
-    !$ACC ENTER DATA COPYIN(this%ssa_mono_philic) IF(allocated(this%ssa_mono_philic)) ASYNC(1)
-    !$ACC ENTER DATA COPYIN(this%g_mono_philic) IF(allocated(this%g_mono_philic)) ASYNC(1)
-    !$ACC ENTER DATA COPYIN(this%lidar_ratio_mono_philic) IF(allocated(this%lidar_ratio_mono_philic)) ASYNC(1)
+    !$ACC ENTER DATA CREATE(this%mass_ext_sw_philic) IF(allocated(this%mass_ext_sw_philic)) ASYNC(1)
+    !$ACC ENTER DATA CREATE(this%ssa_sw_philic) IF(allocated(this%ssa_sw_philic)) ASYNC(1)
+    !$ACC ENTER DATA CREATE(this%g_sw_philic) IF(allocated(this%g_sw_philic)) ASYNC(1)
+    !$ACC ENTER DATA CREATE(this%mass_ext_lw_philic) IF(allocated(this%mass_ext_lw_philic)) ASYNC(1)
+    !$ACC ENTER DATA CREATE(this%ssa_lw_philic) IF(allocated(this%ssa_lw_philic)) ASYNC(1)
+    !$ACC ENTER DATA CREATE(this%g_lw_philic) IF(allocated(this%g_lw_philic)) ASYNC(1)
 
-    !$ACC ENTER DATA COPYIN(this%rh_lower) IF(allocated(this%rh_lower)) ASYNC(1)
+    !$ACC ENTER DATA CREATE(this%wavelength_mono) IF(allocated(this%wavelength_mono)) ASYNC(1)
+    !$ACC ENTER DATA CREATE(this%mass_ext_mono_phobic) IF(allocated(this%mass_ext_mono_phobic)) ASYNC(1)
+    !$ACC ENTER DATA CREATE(this%ssa_mono_phobic) IF(allocated(this%ssa_mono_phobic)) ASYNC(1)
+    !$ACC ENTER DATA CREATE(this%g_mono_phobic) IF(allocated(this%g_mono_phobic)) ASYNC(1)
+    !$ACC ENTER DATA CREATE(this%lidar_ratio_mono_phobic) IF(allocated(this%lidar_ratio_mono_phobic)) ASYNC(1)
+    !$ACC ENTER DATA CREATE(this%mass_ext_mono_philic) IF(allocated(this%mass_ext_mono_philic)) ASYNC(1)
+    !$ACC ENTER DATA CREATE(this%ssa_mono_philic) IF(allocated(this%ssa_mono_philic)) ASYNC(1)
+    !$ACC ENTER DATA CREATE(this%g_mono_philic) IF(allocated(this%g_mono_philic)) ASYNC(1)
+    !$ACC ENTER DATA CREATE(this%lidar_ratio_mono_philic) IF(allocated(this%lidar_ratio_mono_philic)) ASYNC(1)
+
+    !$ACC ENTER DATA CREATE(this%rh_lower) IF(allocated(this%rh_lower)) ASYNC(1)
 
   end subroutine create_device
 
   subroutine update_host(this)
     class(aerosol_optics_type), intent(inout) :: this
+
+    !$ACC UPDATE HOST(this%ntype, this%n_type_phobic, this%n_type_philic, &
+    !$ACC     this%nrh, this%n_bands_lw, this%n_bands_sw, this%n_mono_wl, &
+    !$ACC     this%use_hydrophilic, this%use_monochromatic) ASYNC(1)
 
     !$ACC UPDATE HOST(this%iclass) IF(allocated(this%iclass)) ASYNC(1)
     !$ACC UPDATE HOST(this%itype) IF(allocated(this%itype)) ASYNC(1)
@@ -836,6 +842,10 @@ contains
 
   subroutine update_device(this)
     class(aerosol_optics_type), intent(inout) :: this
+
+    !$ACC UPDATE DEVICE(this%ntype, this%n_type_phobic, this%n_type_philic, &
+    !$ACC     this%nrh, this%n_bands_lw, this%n_bands_sw, this%n_mono_wl, &
+    !$ACC     this%use_hydrophilic, this%use_monochromatic) ASYNC(1)
 
     !$ACC UPDATE DEVICE(this%iclass) IF(allocated(this%iclass)) ASYNC(1)
     !$ACC UPDATE DEVICE(this%itype) IF(allocated(this%itype)) ASYNC(1)
@@ -909,6 +919,7 @@ contains
     !$ACC EXIT DATA DELETE(this%lidar_ratio_mono_philic) IF(allocated(this%lidar_ratio_mono_philic)) ASYNC(1)
 
     !$ACC EXIT DATA DELETE(this%rh_lower) IF(allocated(this%rh_lower)) ASYNC(1)
+!    !$ACC EXIT DATA DELETE(this)
 
   end subroutine delete_device
 

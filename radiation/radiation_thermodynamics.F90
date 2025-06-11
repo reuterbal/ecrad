@@ -391,6 +391,8 @@ contains
 
     class(thermodynamics_type), intent(inout) :: this
 
+    !!$ACC ENTER DATA COPYIN(this) ASYNC(1)
+
     !$ACC ENTER DATA CREATE(this%pressure_hl) ASYNC(1) &
     !$ACC   IF(allocated(this%pressure_hl))
 
@@ -414,6 +416,8 @@ contains
 
     class(thermodynamics_type), intent(inout) :: this
 
+    !$ACC UPDATE HOST(this%rrtm_pass_temppres_fl) ASYNC(1)
+
     !$ACC UPDATE HOST(this%pressure_hl) &
     !$ACC   IF(allocated(this%pressure_hl))
 
@@ -436,6 +440,8 @@ contains
   subroutine update_device(this)
 
     class(thermodynamics_type), intent(inout) :: this
+
+    !$ACC UPDATE DEVICE(this%rrtm_pass_temppres_fl) ASYNC(1)
 
     !$ACC UPDATE DEVICE(this%pressure_hl) ASYNC(1) &
     !$ACC   IF(allocated(this%pressure_hl))
@@ -474,6 +480,8 @@ contains
 
     !$ACC EXIT DATA DELETE(this%h2o_sat_liq) ASYNC(1) &
     !$ACC   IF(allocated(this%h2o_sat_liq))
+
+!    !$ACC EXIT DATA DELETE(this) ASYNC(1)
 
   end subroutine delete_device
 #endif

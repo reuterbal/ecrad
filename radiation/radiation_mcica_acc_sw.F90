@@ -286,8 +286,9 @@ contains
     !$ACC END PARALLEL
 
     ! Loop through columns
+    !!$ACC   NUM_GANGS(iendcol-istartcol+1) NUM_WORKERS((config%n_g_sw-1)/32+1) VECTOR_LENGTH(32)
     !$ACC PARALLEL DEFAULT(NONE) ASYNC(1) &
-    !$ACC   NUM_GANGS(iendcol-istartcol+1) NUM_WORKERS((config%n_g_sw-1)/32+1) VECTOR_LENGTH(32)
+    !$ACC   NUM_GANGS(1) NUM_WORKERS(1) VECTOR_LENGTH(1)
     !$ACC LOOP GANG PRIVATE(cos_sza, g_total, gamma1, gamma2, gamma3, od_cloud_new, od_scaling, od_total, ref_clear, &
     !$ACC   ref_dir, ref_dir_clear, reflectance, ssa_total, tmp_work_inv_denominator, tmp_work_albedo, &
     !$ACC   tmp_work_source, trans_clear, trans_dir_diff, trans_dir_diff_clear, &
@@ -329,6 +330,7 @@ contains
                  &  trans_dir_dir_clear(:,jlev) )
           end do
         end if
+        ! print *,'adding_ica_sw',jcol
 
         ! Use adding method to compute fluxes
         call adding_ica_sw(ng, nlev, incoming_sw(:,jcol), &
@@ -357,6 +359,8 @@ contains
           flux%sw_dn_direct_surf_clear_g(jg,jcol)  = flux_dn_direct(jg,nlev+1,jcol)
         end do
 
+        ! print *,'sw cloud_generator_acc',jcol
+
         ! Do cloudy-sky calculation
         call cloud_generator_acc(ng, nlev, &
              &  single_level%iseed(jcol) + 0, & ! Workaround for nvhpc-24.1
@@ -370,6 +374,14 @@ contains
              &  ibegin(jcol), iend(jcol), &
              &  cum_cloud_cover=cum_cloud_cover(:,jcol), &
              &  pair_cloud_cover=pair_cloud_cover(:,jcol))
+!      !$ACC LOOP SEQ
+!      do jlev=1,nlev
+!        !$ACC LOOP WORKER VECTOR
+!        do jg=1,ng
+!          od_scaling(jg, jlev) = 0.5
+!        end do
+!      end do
+      ! print *,'sw total sky calc',jcol
 
         if (flux%cloud_cover_sw(jcol) >= config%cloud_fraction_threshold) then
           ! Total-sky calculation
@@ -470,8 +482,15 @@ contains
 
       end if ! Sun above horizon
 
+      ! print *,'sw done',jcol
+
     end do ! Loop over columns
     !$ACC END PARALLEL
+
+
+    !$ACC WAIT(1)
+    write(0,'(a)') 'start second loop'
+    flush(0)
 
     ! Loop through columns
     !$ACC PARALLEL DEFAULT(NONE) ASYNC(1) PRIVATE(sum_dn_diffuse, sum_dn_direct, sum_up) &
@@ -523,6 +542,11 @@ contains
       end do ! Loop over columns
     end do
     !$ACC END PARALLEL
+
+
+    !$ACC WAIT(1)
+    write(0,'(a)') 'start third loop'
+    flush(0)
 
     ! Loop through columns
     !$ACC PARALLEL DEFAULT(NONE) ASYNC(1)

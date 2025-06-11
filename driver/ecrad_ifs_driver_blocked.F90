@@ -458,7 +458,8 @@ program ecrad_ifs_driver
              &  zrgp(:,ifs_config%iuvdf,ib), zrgp(:,ifs_config%iparf,ib), &
              &  zrgp(:,ifs_config%iparcf,ib),zrgp(:,ifs_config%itincf,ib), &
              &  zrgp(:,ifs_config%iemit,ib) ,zrgp(:,ifs_config%ilwderivative,ib), &
-             &  zrgp(:,ifs_config%iswdiffuseband,ib), zrgp(:,ifs_config%iswdirectband,ib)&
+             &  zrgp(:,ifs_config%iswdiffuseband,ib), zrgp(:,ifs_config%iswdirectband,ib), &
+             &  lacc=.true. &
 #ifdef BITIDENTITY_TESTING
             ! To validate results against standalone ecrad, we overwrite effective
             ! radii, cloud overlap and seed with input values

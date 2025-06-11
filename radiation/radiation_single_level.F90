@@ -246,13 +246,13 @@ contains
     ! The longwave albedo of the surface in each longwave g-point;
     ! note that these are weighted averages of the values from
     ! individual tiles
-    real(jprb), intent(out), optional &
+    real(jprb), intent(inout), optional &
          &  :: lw_albedo(config%n_g_lw, istartcol:iendcol)
 
     ! Direct and diffuse shortwave surface albedo in each shortwave
     ! g-point; note that these are weighted averages of the values
     ! from individual tiles
-    real(jprb), intent(out), dimension(config%n_g_sw, istartcol:iendcol) &
+    real(jprb), intent(inout), dimension(config%n_g_sw, istartcol:iendcol) &
          &  :: sw_albedo_direct, sw_albedo_diffuse
 
     ! Temporary storage of albedo in ecRad bands
@@ -453,6 +453,8 @@ contains
         lw_albedo = 1.0_jprb - transpose(this%lw_emissivity(istartcol:iendcol, &
              &  config%i_emiss_from_band_lw(config%i_band_from_reordered_g_lw)))
 #else
+        !!$ACC UPDATE HOST(this%lw_emissivity,config%i_emiss_from_band_lw,config%i_band_from_reordered_g_lw)
+        !!$ACC   PRESENT(config, config%i_emiss_from_band_lw, config%i_band_From_reordered_g_Lw, this, this%lw_emissivity, lw_albedo)
         !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
         !$ACC LOOP GANG VECTOR COLLAPSE(2)
         do jcol = istartcol,iendcol
@@ -462,6 +464,7 @@ contains
           end do
         end do
         !$ACC END PARALLEL
+        !!$ACC UPDATE DEVICE(lw_albedo)
 #endif
       end if
     end if
@@ -522,20 +525,22 @@ contains
 
     class(single_level_type), intent(inout) :: this
 
-    !$ACC ENTER DATA CREATE(this%cos_sza) ASYNC(1) &
-    !$ACC   IF(allocated(this%cos_sza))
+!    !$ACC ENTER DATA COPYIN(this) ASYNC(1)
+
+    !$ACC ENTER DATA CREATE(this%cos_sza) ASYNC(1)
+!    !$ACC   IF(allocated(this%cos_sza))
 
     !$ACC ENTER DATA CREATE(this%skin_temperature) ASYNC(1) &
     !$ACC   IF(allocated(this%skin_temperature))
 
-    !$ACC ENTER DATA CREATE(this%sw_albedo) ASYNC(1) &
-    !$ACC   IF(allocated(this%sw_albedo))
+    !$ACC ENTER DATA CREATE(this%sw_albedo) ASYNC(1)
+!    !$ACC   IF(allocated(this%sw_albedo))
 
     !$ACC ENTER DATA CREATE(this%sw_albedo_direct) ASYNC(1) &
     !$ACC   IF(allocated(this%sw_albedo_direct))
 
-    !$ACC ENTER DATA CREATE(this%lw_emissivity) ASYNC(1) &
-    !$ACC   IF(allocated(this%lw_emissivity))
+    !$ACC ENTER DATA CREATE(this%lw_emissivity) ASYNC(1)
+!    !$ACC   IF(allocated(this%lw_emissivity))
 
     !$ACC ENTER DATA CREATE(this%lw_emission) ASYNC(1) &
     !$ACC   IF(allocated(this%lw_emission))
@@ -543,8 +548,8 @@ contains
     !$ACC ENTER DATA CREATE(this%spectral_solar_scaling) ASYNC(1) &
     !$ACC   IF(allocated(this%spectral_solar_scaling))
 
-    !$ACC ENTER DATA CREATE(this%iseed) ASYNC(1) &
-    !$ACC   IF(allocated(this%iseed))
+    !$ACC ENTER DATA CREATE(this%iseed) ASYNC(1)
+!    !$ACC   IF(allocated(this%iseed))
 
   end subroutine create_device
 
@@ -553,6 +558,10 @@ contains
   subroutine update_host(this)
 
     class(single_level_type), intent(inout) :: this
+
+    !$ACC UPDATE HOST(this%solar_irradiance, &
+    !$ACC     this%spectral_solar_cycle_multiplier, this%is_simple_surface) &
+    !$ACC   ASYNC(1)
 
     !$ACC UPDATE HOST(this%cos_sza) ASYNC(1) &
     !$ACC   IF(allocated(this%cos_sza))
@@ -585,6 +594,10 @@ contains
   subroutine update_device(this)
 
     class(single_level_type), intent(inout) :: this
+
+    !$ACC UPDATE DEVICE(this%solar_irradiance, &
+    !$ACC     this%spectral_solar_cycle_multiplier, this%is_simple_surface) &
+    !$ACC   ASYNC(1)
 
     !$ACC UPDATE DEVICE(this%cos_sza) ASYNC(1) &
     !$ACC   IF(allocated(this%cos_sza))
@@ -641,6 +654,8 @@ contains
 
     !$ACC EXIT DATA DELETE(this%iseed) ASYNC(1) &
     !$ACC   IF(allocated(this%iseed))
+
+    !!$ACC EXIT DATA DELETE(this) ASYNC(1)
 
   end subroutine delete_device
 #endif

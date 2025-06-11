@@ -121,17 +121,19 @@ contains
   subroutine create_device(this)
     class(cloud_optics_type), intent(inout) :: this
 
-    !$ACC ENTER DATA COPYIN(this%liq_coeff_lw) IF(allocated(this%liq_coeff_lw)) ASYNC(1)
-    !$ACC ENTER DATA COPYIN(this%liq_coeff_sw) IF(allocated(this%liq_coeff_sw)) ASYNC(1)
-    !$ACC ENTER DATA COPYIN(this%ice_coeff_lw) IF(allocated(this%ice_coeff_lw)) ASYNC(1)
-    !$ACC ENTER DATA COPYIN(this%ice_coeff_sw) IF(allocated(this%ice_coeff_sw)) ASYNC(1)
-    !$ACC ENTER DATA COPYIN(this%liq_coeff_gen) IF(allocated(this%liq_coeff_gen)) ASYNC(1)
-    !$ACC ENTER DATA COPYIN(this%ice_coeff_gen) IF(allocated(this%ice_coeff_gen)) ASYNC(1)
+    !!$ACC ENTER DATA COPYIN(this) ASYNC(1)
+    !$ACC ENTER DATA CREATE(this%liq_coeff_lw) IF(allocated(this%liq_coeff_lw)) ASYNC(1)
+    !$ACC ENTER DATA CREATE(this%liq_coeff_sw) IF(allocated(this%liq_coeff_sw)) ASYNC(1)
+    !$ACC ENTER DATA CREATE(this%ice_coeff_lw) IF(allocated(this%ice_coeff_lw)) ASYNC(1)
+    !$ACC ENTER DATA CREATE(this%ice_coeff_sw) IF(allocated(this%ice_coeff_sw)) ASYNC(1)
+    !$ACC ENTER DATA CREATE(this%liq_coeff_gen) IF(allocated(this%liq_coeff_gen)) ASYNC(1)
+    !$ACC ENTER DATA CREATE(this%ice_coeff_gen) IF(allocated(this%ice_coeff_gen)) ASYNC(1)
   end subroutine create_device
 
   subroutine update_host(this)
     class(cloud_optics_type), intent(inout) :: this
 
+    !!$ACC UPDATE HOST(this) ASYNC(1)
     !$ACC UPDATE HOST(this%liq_coeff_lw) IF(allocated(this%liq_coeff_lw)) ASYNC(1)
     !$ACC UPDATE HOST(this%liq_coeff_sw) IF(allocated(this%liq_coeff_sw)) ASYNC(1)
     !$ACC UPDATE HOST(this%ice_coeff_lw) IF(allocated(this%ice_coeff_lw)) ASYNC(1)
@@ -143,6 +145,7 @@ contains
   subroutine update_device(this)
     class(cloud_optics_type), intent(inout) :: this
 
+    !!$ACC UPDATE DEVICE(this) ASYNC(1)
     !$ACC UPDATE DEVICE(this%liq_coeff_lw) IF(allocated(this%liq_coeff_lw)) ASYNC(1)
     !$ACC UPDATE DEVICE(this%liq_coeff_sw) IF(allocated(this%liq_coeff_sw)) ASYNC(1)
     !$ACC UPDATE DEVICE(this%ice_coeff_lw) IF(allocated(this%ice_coeff_lw)) ASYNC(1)
@@ -160,6 +163,7 @@ contains
     !$ACC EXIT DATA DELETE(this%ice_coeff_sw) IF(allocated(this%ice_coeff_sw)) ASYNC(1)
     !$ACC EXIT DATA DELETE(this%liq_coeff_gen) IF(allocated(this%liq_coeff_gen)) ASYNC(1)
     !$ACC EXIT DATA DELETE(this%ice_coeff_gen) IF(allocated(this%ice_coeff_gen)) ASYNC(1)
+    !!$ACC EXIT DATA DELETE(this) ASYNC(1)
   end subroutine delete_device
 #endif
 

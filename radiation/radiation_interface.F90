@@ -317,7 +317,7 @@ contains
     !$ACC DATA CREATE(od_lw, ssa_lw, g_lw, od_lw_cloud, ssa_lw_cloud, g_lw_cloud, &
     !$ACC             od_sw, ssa_sw, g_sw, od_sw_cloud, ssa_sw_cloud, g_sw_cloud, &
     !$ACC             planck_hl, lw_emission, lw_albedo, sw_albedo_direct, &
-    !$ACC             sw_albedo_diffuse, incoming_sw)
+    !$ACC             sw_albedo_diffuse, incoming_sw) ASYNC(1)
 
     if (thermodynamics%pressure_hl(istartcol,2) &
          &  < thermodynamics%pressure_hl(istartcol,1)) then
@@ -388,11 +388,17 @@ contains
                &  od_lw_cloud, ssa_lw_cloud, g_lw_cloud, &
                &  od_sw_cloud, ssa_sw_cloud, g_sw_cloud)
         else
+          !$ACC WAIT(1)
+    write(0,'(a)') 'cloud optics start'
+    flush(0)
           call cloud_optics(nlev, istartcol, iendcol, &
                &  config, thermodynamics, cloud, &
                &  od_lw_cloud, ssa_lw_cloud, g_lw_cloud, &
                &  od_sw_cloud, ssa_sw_cloud, g_sw_cloud)
         end if
+          !$ACC WAIT(1)
+    write(0,'(a)') 'cloud optics done'
+    flush(0)
       end if ! do_clouds
 
       if (config%use_aerosols) then
@@ -405,6 +411,10 @@ contains
                &  config, thermodynamics, gas, aerosol, &
                &  od_lw, ssa_lw, g_lw, od_sw, ssa_sw, g_sw)
         end if
+          !$ACC WAIT(1)
+
+    write(0,'(a)') 'aerosol optics done'
+    flush(0)
       else
         !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
         !$ACC LOOP GANG VECTOR COLLAPSE(2)
@@ -438,9 +448,10 @@ contains
 #ifdef _OPENACC
           !$ACC UPDATE HOST(od_lw, ssa_lw, g_lw, od_lw_cloud, ssa_lw_cloud, g_lw_cloud, &
           !$ACC             planck_hl, lw_emission, lw_albedo, sw_albedo_direct, sw_albedo_diffuse, &
-          !$ACC             incoming_sw, od_sw, ssa_sw, g_sw, od_sw_cloud, ssa_sw_cloud, g_sw_cloud)
+          !$ACC             incoming_sw, od_sw, ssa_sw, g_sw, od_sw_cloud, ssa_sw_cloud, g_sw_cloud) ASYNC(1)
           call cloud%update_host()
           call flux%update_host()
+          !$ACC WAIT(1)
 #endif
         call save_radiative_properties(trim(rad_prop_file_name), &
              &  nlev, istartcol, iendcol, &
@@ -457,11 +468,10 @@ contains
           write(nulout,'(a)') 'Computing longwave fluxes'
         end if
 
-        !$ACC WAIT
+        !!$ACC WAIT
         if (config%i_solver_lw == ISolverMcICA) then
 #ifdef _OPENACC
-          !$ACC UPDATE HOST(od_lw, ssa_lw, g_lw, od_lw_cloud, ssa_lw_cloud, g_lw_cloud, planck_hl, lw_emission, lw_albedo)
-          !$ACC WAIT(1)
+          !$ACC UPDATE HOST(od_lw, ssa_lw, g_lw, od_lw_cloud, ssa_lw_cloud, g_lw_cloud, planck_hl, lw_emission, lw_albedo) ASYNC(1)
           call cloud%update_host()
           call flux%update_host()
           !$ACC WAIT(1)
@@ -472,16 +482,21 @@ contains
                &  od_lw, ssa_lw, g_lw, od_lw_cloud, ssa_lw_cloud, &
                &  g_lw_cloud, planck_hl, lw_emission, lw_albedo, flux)
 #ifdef _OPENACC
-          !$ACC WAIT(1)
           call flux%update_device()
           !$ACC WAIT(1)
 #endif
         else if (config%i_solver_lw == ISolverMcICAACC) then
+          !$ACC WAIT(1)
+    write(0,'(a)') 'lw start'
+    flush(0)
           ! Compute fluxes using the McICA ACC longwave solver
           call solver_mcica_acc_lw(nlev,istartcol,iendcol, &
                &  config, single_level, cloud, &
                &  od_lw, ssa_lw, g_lw, od_lw_cloud, ssa_lw_cloud, &
                &  g_lw_cloud, planck_hl, lw_emission, lw_albedo, flux)
+          !$ACC WAIT(1)
+    write(0,'(a)') 'lw done'
+    flush(0)
         else if (config%i_solver_lw == ISolverSPARTACUS) then
           ! Compute fluxes using the SPARTACUS longwave solver
           call solver_spartacus_lw(nlev,istartcol,iendcol, &
@@ -513,11 +528,10 @@ contains
           write(nulout,'(a)') 'Computing shortwave fluxes'
         end if
 
-        !$ACC WAIT
+        !!$ACC WAIT
         if (config%i_solver_sw == ISolverMcICA) then
 #ifdef _OPENACC
-          !$ACC UPDATE HOST(od_sw, ssa_sw, g_sw, od_sw_cloud, ssa_sw_cloud, g_sw_cloud, sw_albedo_direct, sw_albedo_diffuse, incoming_sw)
-          !$ACC WAIT(1)
+          !$ACC UPDATE HOST(od_sw, ssa_sw, g_sw, od_sw_cloud, ssa_sw_cloud, g_sw_cloud, sw_albedo_direct, sw_albedo_diffuse, incoming_sw) ASYNC(1)
           call cloud%update_host()
           call flux%update_host()
           !$ACC WAIT(1)
@@ -529,17 +543,22 @@ contains
                &  g_sw_cloud, sw_albedo_direct, sw_albedo_diffuse, &
                &  incoming_sw, flux)
 #ifdef _OPENACC
-          !$ACC WAIT(1)
           call flux%update_device()
           !$ACC WAIT(1)
 #endif
         else if (config%i_solver_sw == ISolverMcICAACC) then
+          !$ACC WAIT(1)
+    write(0,'(a)') 'sw start'
+    flush(0)
           ! Compute fluxes using the McICA ACC shortwave solver
           call solver_mcica_acc_sw(nlev,istartcol,iendcol, &
                &  config, single_level, cloud, &
                &  od_sw, ssa_sw, g_sw, od_sw_cloud, ssa_sw_cloud, &
                &  g_sw_cloud, sw_albedo_direct, sw_albedo_diffuse, &
                &  incoming_sw, flux)
+          !$ACC WAIT(1)
+    write(0,'(a)') 'sw done'
+    flush(0)
         else if (config%i_solver_sw == ISolverSPARTACUS) then
           ! Compute fluxes using the SPARTACUS shortwave solver
           call solver_spartacus_sw(nlev,istartcol,iendcol, &
@@ -577,7 +596,7 @@ contains
 
     end if
 
-    !$ACC WAIT
+    !!$ACC WAIT
     !$ACC END DATA
 
     if (lhook) call dr_hook('radiation_interface:radiation',1,hook_handle)

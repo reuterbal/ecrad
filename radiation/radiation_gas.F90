@@ -68,7 +68,9 @@ module radiation_gas
      procedure :: put        => put_gas
      procedure :: put_well_mixed => put_well_mixed_gas
      procedure :: scale      => scale_gas
-     procedure :: set_units  => set_units_gas
+     procedure :: set_units_gas  => set_units_gas
+     procedure :: set_units_gas_igas => set_units_gas_igas
+     generic :: set_units => set_units_gas, set_units_gas_igas
      procedure :: assert_units => assert_units_gas
      procedure :: get        => get_gas
      procedure :: get_scaling
@@ -108,17 +110,7 @@ contains
     endif
 
     allocate(this%mixing_ratio(ncol, nlev, NMaxGases))
-
-    ! for openacc, this is done during create_device
-#ifndef _OPENACC
-    do jgas = 1,NMaxGases
-      do jlev = 1, nlev
-        do jcol = 1,ncol
-          this%mixing_ratio(jcol,jlev,jgas) = 0.0_jprb
-        end do
-      end do
-    end do
-#endif
+    this%mixing_ratio(:,:,:) = 0.0_jprb
 
     this%ncol = ncol
     this%nlev = nlev
@@ -232,14 +224,14 @@ contains
       ! Gas not present until now
       this%ntype = this%ntype + 1
       this%icode(this%ntype) = igas
-      !$ACC UPDATE DEVICE(this%icode(this%ntype:this%ntype)) ASYNC(1) IF(LLACC)
+      !$ACC UPDATE DEVICE(this%ntype,this%icode(this%ntype:this%ntype)) ASYNC(1) IF(llacc)
     end if
     this%is_present(igas) = .true.
     this%iunits(igas) = iunits
     this%is_well_mixed(igas) = .false.
     !$ACC UPDATE DEVICE(this%is_present(igas:igas), this%iunits(igas:igas), this%is_well_mixed(igas:igas)) ASYNC(1) IF(llacc)
 
-    !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1) IF(LLACC)
+    !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1) IF(llacc)
     !$ACC LOOP GANG VECTOR COLLAPSE(2)
     do jk = 1,this%nlev
       do jc = i1,i2
@@ -399,10 +391,45 @@ contains
   ! scale_factor=1.0e-6. If the gas concentrations were currently
   ! dimensionless volume mixing ratios, then the values would be
   ! internally divided by 1.0e-6.
-  recursive subroutine set_units_gas(this, iunits, igas, scale_factor, lacc)
+  subroutine set_units_gas(this, iunits, scale_factor, lacc)
     class(gas_type),      intent(inout) :: this
     integer,              intent(in)    :: iunits
-    integer,    optional, intent(in)    :: igas
+    real(jprb), optional, intent(in)    :: scale_factor
+    logical,    optional, intent(in)    :: lacc
+
+    integer :: jg, jcol, jlev
+
+    ! Scaling factor to convert from old to new
+    real(jprb) :: sf
+    logical :: llacc
+
+    if (present(lacc)) then
+      llacc = lacc
+    else
+      llacc = .false.
+    endif
+
+    if (present(scale_factor)) then
+      ! "sf" is the scaling to be applied now to the numbers (and may
+      ! be modified below), "new_sf" is the value to be stored along
+      ! with the numbers, informing subsequent routines how much you
+      ! would need to multiply the numbers by to get a dimensionless
+      ! result.
+      sf = scale_factor
+    else
+      sf = 1.0_jprb
+    end if
+
+    do jg = 1,this%ntype
+      call set_units_gas_igas(this, iunits, igas=this%icode(jg), scale_factor=sf, lacc=llacc)
+    end do
+
+  end subroutine set_units_gas
+
+  subroutine set_units_gas_igas(this, iunits, igas, scale_factor, lacc)
+    class(gas_type),      intent(inout) :: this
+    integer,              intent(in)    :: iunits
+    integer,              intent(in)    :: igas
     real(jprb), optional, intent(in)    :: scale_factor
     logical,    optional, intent(in)    :: lacc
 
@@ -434,42 +461,52 @@ contains
       new_sf = 1.0_jprb
     end if
 
-    if (present(igas)) then
-      if (this%is_present(igas)) then
-        if (iunits == IMassMixingRatio &
-             &   .and. this%iunits(igas) == IVolumeMixingRatio) then
-          sf = sf * GasMolarMass(igas) / AirMolarMass
-        else if (iunits == IVolumeMixingRatio &
-             &   .and. this%iunits(igas) == IMassMixingRatio) then
-          sf = sf * AirMolarMass / GasMolarMass(igas)
-        end if
-        sf = sf * this%scale_factor(igas)
-
-        if (sf /= 1.0_jprb) then
-          !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1) IF(LLACC)
-          !$ACC LOOP GANG VECTOR COLLAPSE(2)
-          do jlev = 1,this%nlev
-            do jcol = 1,this%ncol
-              this%mixing_ratio(jcol,jlev,igas) = this%mixing_ratio(jcol,jlev,igas) * sf
-            enddo
-          enddo
-          !$ACC END PARALLEL
-        end if
-        ! Store the new units and scale factor for this gas inside the
-        ! gas object
-        if (iunits /= this%iunits(igas) .or. new_sf /= this%scale_factor(igas)) then
-          this%iunits(igas) = iunits
-          this%scale_factor(igas) = new_sf
-          !$ACC UPDATE DEVICE(this%iunits(igas:igas),this%scale_factor(igas:igas)) ASYNC(1) IF(llacc)
-        endif
+    if (this%is_present(igas)) then
+      if (iunits == IMassMixingRatio &
+            &   .and. this%iunits(igas) == IVolumeMixingRatio) then
+        sf = sf * GasMolarMass(igas) / AirMolarMass
+      else if (iunits == IVolumeMixingRatio &
+            &   .and. this%iunits(igas) == IMassMixingRatio) then
+        sf = sf * AirMolarMass / GasMolarMass(igas)
       end if
-    else
-      do jg = 1,this%ntype
-        call this%set_units(iunits, igas=this%icode(jg), scale_factor=new_sf, lacc=llacc)
-      end do
+      sf = sf * this%scale_factor(igas)
+
+      if (sf /= 1.0_jprb) then
+!        print *,'host: nlev=',this%nlev,'ncol=',this%ncol,'igas=',igas,'sf=',sf
+!        print *,'host; lbound(1)=',lbound(this%mixing_ratio,1),'ubound(1)=',ubound(this%mixing_ratio,1),&
+!          & 'lbound(2)=',lbound(this%mixing_ratio,2),'ubound(2)=',ubound(this%mixing_ratio,2),&
+!          & 'lbound(3)=',lbound(this%mixing_ratio,3),'ubound(3)=',ubound(this%mixing_ratio,3)
+!        !$ACC SERIAL WAIT(1)
+!        print *,'device: nlev=',this%nlev,'ncol=',this%ncol,'igas=',igas,'sf=',sf
+!        print *,'device; lbound(1)=',lbound(this%mixing_ratio,1),'ubound(1)=',ubound(this%mixing_ratio,1),&
+!          & 'lbound(2)=',lbound(this%mixing_ratio,2),'ubound(2)=',ubound(this%mixing_ratio,2),&
+!          & 'lbound(3)=',lbound(this%mixing_ratio,3),'ubound(3)=',ubound(this%mixing_ratio,3)
+!        !$ACC END SERIAL
+
+
+!!$ACC UPDATE HOST(this%mixing_ratio(:,:,igas)) WAIT(1)
+        !$ACC PARALLEL DEFAULT(NONE) &
+        !$ACC   PRESENT(this,this%mixing_ratio) &
+        !$ACC   ASYNC(1) IF(LLACC)
+        !$ACC LOOP GANG VECTOR COLLAPSE(2)
+        do jlev = 1,this%nlev
+          do jcol = 1,this%ncol
+            this%mixing_ratio(jcol,jlev,igas) = this%mixing_ratio(jcol,jlev,igas) * sf
+          enddo
+        enddo
+        !$ACC END PARALLEL
+!!$ACC UPDATE DEVICE(this%mixing_ratio(:,:,igas))
+      end if
+      ! Store the new units and scale factor for this gas inside the
+      ! gas object
+      if (iunits /= this%iunits(igas) .or. new_sf /= this%scale_factor(igas)) then
+        this%iunits(igas) = iunits
+        this%scale_factor(igas) = new_sf
+        !$ACC UPDATE DEVICE(this%iunits(igas:igas),this%scale_factor(igas:igas)) ASYNC(1) IF(llacc)
+      endif
     end if
 
-  end subroutine set_units_gas
+  end subroutine set_units_gas_igas
 
 
   !---------------------------------------------------------------------
@@ -561,7 +598,7 @@ contains
   ! "iunits" and return as a 2D array of dimensions (ncol,nlev).  The
   ! array will contain zeros if the gas is not stored.
   subroutine get_gas(this, igas, iunits, mixing_ratio, scale_factor, &
-       &   istartcol)
+       &   istartcol, lacc)
 
     use yomhook,        only : lhook, dr_hook, jphook
     use radiation_io,   only : nulerr, radiation_abort
@@ -572,16 +609,21 @@ contains
     real(jprb),           intent(out) :: mixing_ratio(:,:)
     real(jprb), optional, intent(in)  :: scale_factor
     integer,    optional, intent(in)  :: istartcol
+    logical,    optional, intent(in)  :: lacc
 
     real(jprb)                        :: sf
     integer                           :: i1, i2, nlev
     integer                           :: jcol, jlev
+    logical                           :: llacc
 
 #ifndef _OPENACC
     real(jphook) :: hook_handle
 
     if (lhook) call dr_hook('radiation_gas:get',0,hook_handle)
 #endif
+
+    llacc = .false.
+    if (present(lacc)) llacc = lacc
 
     nlev = size(this%mixing_ratio, 2)
 
@@ -614,14 +656,15 @@ contains
     end if
 #endif
 
-    !$ACC PARALLEL
     if (.not. this%is_present(igas)) then
+      !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1) IF(LLACC)
       !$ACC LOOP GANG VECTOR COLLAPSE(2)
       do jcol = 1,size(mixing_ratio,1)
         do jlev = 1,nlev
           mixing_ratio(jcol,jlev) = 0.0_jprb
         end do
       end do
+      !$ACC END PARALLEL
     else
       if (iunits == IMassMixingRatio &
            &   .and. this%iunits(igas) == IVolumeMixingRatio) then
@@ -633,22 +676,30 @@ contains
       sf = sf * this%scale_factor(igas)
 
       if (sf /= 1.0_jprb) then
+        !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1) IF(LLACC)
         !$ACC LOOP GANG VECTOR COLLAPSE(2)
         do jcol = i1,i2
           do jlev = 1,nlev
             mixing_ratio(jcol-i1+1,jlev) = this%mixing_ratio(jcol,jlev,igas) * sf
           end do
         end do
+        !$ACC END PARALLEL
       else
+        print *,'host: i1=',i1,'i2=',i2,'nlev=',nlev,'sf=',sf,'igas=',igas,',iunits(igas)',this%iunits(igas)
+        !$ACC SERIAL WAIT(1)
+        print *,'device: i1=',i1,'i2=',i2,'nlev=',nlev,'sf=',sf,'igas=',igas,',iunits(igas)',this%iunits(igas)
+        !$ACC END SERIAL
+
+        !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1) IF(LLACC)
         !$ACC LOOP GANG VECTOR COLLAPSE(2)
         do jcol = i1,i2
           do jlev = 1,nlev
             mixing_ratio(jcol-i1+1,jlev) = this%mixing_ratio(jcol,jlev,igas)
           end do
         end do
+        !$ACC END PARALLEL
       end if
     end if
-    !$ACC END PARALLEL
 
 #ifndef _OPENACC
     if (lhook) call dr_hook('radiation_gas:get',1,hook_handle)
@@ -723,13 +774,27 @@ contains
   subroutine create_device(this)
 
     class(gas_type), intent(inout) :: this
+    integer :: jgas, jlev, jcol
 
+!    !$ACC ENTER DATA COPYIN(this) ASYNC(1)
     !$ACC ENTER DATA CREATE(this%mixing_ratio) &
     !$ACC   IF(allocated(this%mixing_ratio)) ASYNC(1)
+    !$ACC ENTER DATA CREATE(this%iunits) ASYNC(1)
+    !$ACC ENTER DATA CREATE(this%is_present) ASYNC(1)
+    !$ACC ENTER DATA CREATE(this%is_well_mixed) ASYNC(1)
+    !$ACC ENTER DATA CREATE(this%scale_factor) ASYNC(1)
+    !$ACC ENTER DATA CREATE(this%icode) ASYNC(1)
 
-    !$ACC KERNELS DEFAULT(PRESENT) ASYNC(1)
-    this%mixing_ratio(:,:,:) = 0.0_jprb
-    !$ACC END KERNELS
+    !$ACC PARALLEL DEFAULT(NONE) PRESENT(this,this%mixing_ratio) ASYNC(1)
+    !$ACC LOOP GANG VECTOR COLLAPSE(3)
+    do jgas = 1,NMaxGases
+      do jlev = 1, this%nlev
+        do jcol = 1, this%ncol
+          this%mixing_ratio(jcol,jlev,jgas) = 0.0_jprb
+        end do
+      end do
+    end do
+    !$ACC END PARALLEL
 
   end subroutine create_device
 
@@ -739,8 +804,14 @@ contains
 
     class(gas_type), intent(inout) :: this
 
+    !$ACC UPDATE HOST(this%ntype, this%ncol, this%nlev) ASYNC(1)
     !$ACC UPDATE HOST(this%mixing_ratio) &
     !$ACC   IF(allocated(this%mixing_ratio)) ASYNC(1)
+    !$ACC UPDATE HOST(this%iunits) ASYNC(1)
+    !$ACC UPDATE HOST(this%is_present) ASYNC(1)
+    !$ACC UPDATE HOST(this%is_well_mixed) ASYNC(1)
+    !$ACC UPDATE HOST(this%scale_factor) ASYNC(1)
+    !$ACC UPDATE HOST(this%icode) ASYNC(1)
 
   end subroutine update_host
 
@@ -750,8 +821,14 @@ contains
 
     class(gas_type), intent(inout) :: this
 
+    !$ACC UPDATE DEVICE(this%ntype, this%ncol, this%nlev) ASYNC(1)
     !$ACC UPDATE DEVICE(this%mixing_ratio) &
     !$ACC   IF(allocated(this%mixing_ratio)) ASYNC(1)
+    !$ACC UPDATE DEVICE(this%iunits) ASYNC(1)
+    !$ACC UPDATE DEVICE(this%is_present) ASYNC(1)
+    !$ACC UPDATE DEVICE(this%is_well_mixed) ASYNC(1)
+    !$ACC UPDATE DEVICE(this%scale_factor) ASYNC(1)
+    !$ACC UPDATE DEVICE(this%icode) ASYNC(1)
 
   end subroutine update_device
 
@@ -763,6 +840,12 @@ contains
 
     !$ACC EXIT DATA DELETE(this%mixing_ratio) &
     !$ACC   IF(allocated(this%mixing_ratio)) ASYNC(1)
+    !$ACC EXIT DATA DELETE(this%iunits) ASYNC(1)
+    !$ACC EXIT DATA DELETE(this%is_present) ASYNC(1)
+    !$ACC EXIT DATA DELETE(this%is_well_mixed) ASYNC(1)
+    !$ACC EXIT DATA DELETE(this%scale_factor) ASYNC(1)
+    !$ACC EXIT DATA DELETE(this%icode) ASYNC(1)
+    !!$ACC EXIT DATA DELETE(this) ASYNC(1)
 
   end subroutine delete_device
 #endif

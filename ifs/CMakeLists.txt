@@ -48,6 +48,8 @@ ecbuild_add_library(
     SOURCES ${ifs_SOURCES}
     PUBLIC_INCLUDES
         "$<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/module_ifs>"
+    PUBLIC_DEFINITIONS
+        $<${HAVE_ACC}:WITH_ECRAD_GPU>
     PRIVATE_LIBS
         ecrad.${PREC}
         ecrad_base.${PREC}

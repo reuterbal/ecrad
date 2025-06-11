@@ -332,18 +332,21 @@ contains
   subroutine create_device(this)
     class(pdf_sampler_type), intent(inout) :: this
 
+    !!$ACC ENTER DATA COPYIN(this) ASYNC(1)
     !$ACC ENTER DATA COPYIN(this%val) IF(allocated(this%val)) ASYNC(1)
   end subroutine create_device
 
   subroutine update_host(this)
     class(pdf_sampler_type), intent(inout) :: this
 
+    !$ACC UPDATE HOST(this%ncdf, this%nfsd, this%fsd1, this%inv_fsd_interval) ASYNC(1)
     !$ACC UPDATE HOST(this%val) IF(allocated(this%val)) ASYNC(1)
   end subroutine update_host
 
   subroutine update_device(this)
     class(pdf_sampler_type), intent(inout) :: this
 
+    !$ACC UPDATE DEVICE(this%ncdf, this%nfsd, this%fsd1, this%inv_fsd_interval) ASYNC(1)
     !$ACC UPDATE DEVICE(this%val) IF(allocated(this%val)) ASYNC(1)
   end subroutine update_device
 
@@ -351,6 +354,7 @@ contains
     class(pdf_sampler_type), intent(inout) :: this
 
     !$ACC EXIT DATA DELETE(this%val) IF(allocated(this%val)) ASYNC(1)
+    !!$ACC EXIT DATA DELETE(this) ASYNC(1)
   end subroutine delete_device
 #endif
 

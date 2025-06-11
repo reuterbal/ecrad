@@ -115,7 +115,7 @@ contains
 
     ! Cloud cover of a pair of layers, and amount by which cloud at
     ! next level increases total cloud cover as seen from above
-    real(jprb), intent(inout), dimension(nlev-1) :: pair_cloud_cover
+    real(jprb), intent(in), dimension(nlev-1) :: pair_cloud_cover
     real(jprb) :: overhang
 
     integer          :: jcloud
@@ -142,7 +142,7 @@ contains
       !$ACC LOOP WORKER VECTOR PRIVATE(istate, rand_top, trigger, itrigger, n_layers_to_scale)
       do jg = 1,ng
 
-        !$ACC LOOP SEQ 
+        !$ACC LOOP SEQ
         do jlev = 1,nlev
           od_scaling(jg,jlev) = 0.0_jprb
         end do
