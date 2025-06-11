@@ -20,6 +20,7 @@ ecbuild_add_library(
         ecrad.${PREC}
         ecrad_base.${PREC}
         $<${HAVE_OMP}:OpenMP::OpenMP_Fortran>
+        $<${HAVE_ACC}:OpenACC::OpenACC_Fortran>
 )
 
 ecbuild_add_executable(

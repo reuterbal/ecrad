@@ -49,11 +49,11 @@ ecbuild_add_library(
     PUBLIC_INCLUDES
         "$<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/module_ifs>"
     PUBLIC_DEFINITIONS
-        $<${HAVE_ACC}:WITH_ECRAD_GPU>
     PRIVATE_LIBS
         ecrad.${PREC}
         ecrad_base.${PREC}
     PUBLIC_LIBS
+        $<${HAVE_ACC}:OpenACC::OpenACC_Fortran>
         $<${HAVE_NVTX}:${NVTX_TARGET}>
 )
 set_target_properties( ifs.${PREC}
@@ -80,6 +80,7 @@ if( HAVE_FIELD_API )
         PUBLIC_LIBS
             field_api_${PREC}
             $<${HAVE_OMP}:OpenMP::OpenMP_Fortran>
+            $<${HAVE_ACC}:OpenACC::OpenACC_Fortran>
             $<${HAVE_NVTX}:${NVTX_TARGET}>
     )
     set_target_properties( ifs_field_api.${PREC}

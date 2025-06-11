@@ -104,6 +104,7 @@ if( HAVE_ACC )
         ecbuild_warn( "OpenACC enabled: Switching to static linking" )
     endif()
     set( BUILD_SHARED_LIBS OFF CACHE BOOL "Build using shared libraries" FORCE )
+    list( APPEND ECRAD_COMPILE_DEFINITIONS WITH_ECRAD_GPU )
 endif()
 
 if( CMAKE_VERSION VERSION_LESS 3.25 )

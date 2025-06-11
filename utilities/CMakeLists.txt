@@ -14,7 +14,7 @@ set(
         radiation_random_numbers_mix.F90
 )
 
-if( HAVE_FIAT )
+if( HAVE_FIAT AND fiat_HAVE_MPI )
     list( APPEND utilities_SOURCES easy_netcdf_read_mpi.F90 )
     install(
         FILES "${CMAKE_Fortran_MODULE_DIRECTORY}/easy_netcdf_read_mpi.mod"

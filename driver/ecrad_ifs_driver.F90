@@ -383,15 +383,13 @@ program ecrad_ifs_driver
 #endif
 
 #ifdef _OPENACC
-  !$ACC DATA COPYIN(yradiation, yradiation%rad_config, single_level, thermodynamics, &
-  !$ACC&            gas, aerosol, cloud, ccn_land, ccn_sea, longitude_rad, sin_latitude, &
-  !$ACC&            land_frac, pressure_fl, temperature_fl, cloud_fraction, cloud_q_liq, &
-  !$ACC&            cloud_q_ice, zeros, tegen_aerosol) &
-  !$ACC&     CREATE(flux) &
-  !$ACC&     COPYOUT(flux_sw_direct_normal, flux_uv, flux_par, flux_par_clear, emissivity_out, &
-  !$ACC&            flux_diffuse_band, flux_direct_band) &
-  !$ACC&     ASYNC(1)
-  call yradiation%rad_config%create_device()
+  !$ACC DATA COPYIN(single_level, thermodynamics, gas, aerosol, cloud, flux, &
+  !$ACC             ccn_land, ccn_sea, longitude_rad, sin_latitude, land_frac, &
+  !$ACC             pressure_fl, temperature_fl, cloud_fraction, cloud_q_liq, cloud_q_ice, &
+  !$ACC             zeros, tegen_aerosol) &
+  !$ACC      COPYOUT(flux_sw_direct_normal, flux_uv, flux_par, flux_par_clear, emissivity_out, &
+  !$ACC             flux_diffuse_band, flux_direct_band)&
+  !$ACC      ASYNC(1)
   call single_level%create_device()
   call thermodynamics%create_device()
   call gas%create_device()
@@ -404,7 +402,6 @@ program ecrad_ifs_driver
   call gas%update_device()
   call aerosol%update_device()
   call cloud%update_device()
-  call flux%update_device()
 #endif
 
 #ifdef HAVE_NVTX
@@ -470,7 +467,7 @@ program ecrad_ifs_driver
              &  flux%sw_dn_direct(:,nlev+1), flux%sw_dn_direct_clear(:,nlev+1), flux_sw_direct_normal, &
              &  flux_uv, flux_par, &
              &  flux_par_clear, flux%sw_dn(:,1), emissivity_out, flux%lw_derivatives, flux_diffuse_band, &
-             &  flux_direct_band &
+             &  flux_direct_band, lacc=.true. &
 #ifdef BITIDENTITY_TESTING
             ! To validate results against standalone ecrad, we overwrite effective
             ! radii, cloud overlap and seed with input values
