@@ -16,6 +16,15 @@ SUBROUTINE RADIATION_SCHEME &
      &  PFLUX_UV, PFLUX_PAR, PFLUX_PAR_CLEAR, &
      &  PFLUX_SW_DN_TOA, PEMIS_OUT, PLWDERIVATIVE, &
      &  PSWDIFFUSEBAND, PSWDIRECTBAND, &
+     ! If FIELD API is used the ecrad derived types are passed as arguments
+#ifdef HAVE_FIELD_API
+      &  SINGLE_LEVEL, &
+      &  THERMODYNAMICS, &
+      &  GAS, &
+      &  YLCLOUD, &
+      &  AEROSOL, &
+      &  FLUX, &
+#endif
      ! OPTIONAL ARGUMENTS for bit-identical results in tests
      &  PRE_LIQ, PRE_ICE, ISEED, PCLOUD_OVERLAP)
 
@@ -194,6 +203,16 @@ REAL(KIND=JPRB),  INTENT(OUT) :: PLWDERIVATIVE(KLON,KLEV+1)
 REAL(KIND=JPRB),  INTENT(OUT) :: PSWDIFFUSEBAND(KLON,YRADIATION%YRERAD%NSW)
 REAL(KIND=JPRB),  INTENT(OUT) :: PSWDIRECTBAND (KLON,YRADIATION%YRERAD%NSW)
 
+! ecrad derived types initialised outside kernel
+#ifdef HAVE_FIELD_API
+TYPE(SINGLE_LEVEL_TYPE),    INTENT(INOUT) :: SINGLE_LEVEL
+TYPE(THERMODYNAMICS_TYPE),  INTENT(INOUT) :: THERMODYNAMICS
+TYPE(GAS_TYPE),             INTENT(INOUT) :: GAS
+TYPE(CLOUD_TYPE),           INTENT(INOUT) :: YLCLOUD
+TYPE(AEROSOL_TYPE),         INTENT(INOUT) :: AEROSOL
+TYPE(FLUX_TYPE),         INTENT(INOUT) :: FLUX
+#endif
+
 ! Optional input arguments (Added for validating against ecrad standalone!)
 REAL(KIND=JPRB), INTENT(IN), OPTIONAL :: PRE_LIQ(KLON, KLEV)
 REAL(KIND=JPRB), INTENT(IN), OPTIONAL :: PRE_ICE(KLON, KLEV)
@@ -201,12 +220,14 @@ INTEGER,         INTENT(IN), OPTIONAL :: ISEED(KLON)
 REAL(KIND=JPRB), INTENT(IN), OPTIONAL :: PCLOUD_OVERLAP(KLON, KLEV-1)
 
 ! LOCAL VARIABLES
+#ifndef HAVE_FIELD_API
 TYPE(SINGLE_LEVEL_TYPE)   :: SINGLE_LEVEL
 TYPE(THERMODYNAMICS_TYPE) :: THERMODYNAMICS
 TYPE(GAS_TYPE)            :: GAS
 TYPE(CLOUD_TYPE)          :: YLCLOUD
 TYPE(AEROSOL_TYPE)        :: AEROSOL
 TYPE(FLUX_TYPE)           :: FLUX
+#endif HAVE_FIELD_API
 
 ! Cloud effective radii in microns
 REAL(KIND=JPRB)           :: ZRE_LIQUID_UM(KLON,KLEV)
@@ -275,17 +296,25 @@ ASSOCIATE(YRERAD    =>YRADIATION%YRERAD, &
      &    STRAT_BG_AER_MASS_EXT=>YRADIATION%STRAT_BG_AER_MASS_EXT)
 ! Allocate memory in radiation objects
 ! hoist to driver
+
+#ifndef HAVE_FIELD_API
 CALL SINGLE_LEVEL%ALLOCATE(KLON, YRERAD%NSW, YRERAD%NLWEMISS, &
      &                     USE_SW_ALBEDO_DIRECT=.TRUE.)
 CALL THERMODYNAMICS%ALLOCATE(KLON, KLEV, USE_H2O_SAT=.TRUE.)
 CALL GAS%ALLOCATE(KLON, KLEV)
-CALL YLCLOUD%ALLOCATE(KLON, KLEV)
+IF (         RAD_CONFIG%I_SOLVER_LW == ISOLVERSPARTACUS &
+     &  .OR. RAD_CONFIG%I_SOLVER_SW == ISOLVERSPARTACUS) THEN
+  CALL YLCLOUD%ALLOCATE(KLON, KLEV, USE_INHOM_EFFECTIVE_SIZE=.TRUE.)
+ELSE
+  CALL YLCLOUD%ALLOCATE(KLON, KLEV)
+ENDIF
 IF (YRERAD%NAERMACC == 1) THEN
   CALL AEROSOL%ALLOCATE(KLON, 1, KLEV, KAEROSOL) ! MACC aerosols
 ELSE
   CALL AEROSOL%ALLOCATE(KLON, 1, KLEV, 6) ! Tegen climatology
 ENDIF
 CALL FLUX%ALLOCATE(RAD_CONFIG, 1, KLON, KLEV)
+#endif
 
 ! Set thermodynamic profiles: simply copy over the half-level
 ! pressure and temperature
@@ -366,35 +395,37 @@ if (present(iseed)) then
    single_level%iseed(kidia:kfdia) = iseed(kidia:kfdia)
 end if
 
+! TODO: Commented this out, doesn't seem to affect any test
 ! Set the solar spectrum scaling, if required
-IF (YRERAD%NSOLARSPECTRUM == 1) THEN
-  ALLOCATE(SINGLE_LEVEL%SPECTRAL_SOLAR_SCALING(RAD_CONFIG%N_BANDS_SW))
-  ! RRTMG uses the old Kurucz solar spectrum. The following scalings
-  ! adjust it to match more recent measured spectra.
-  IF (YRERAD%NSOLARSPECTRUM == 1) THEN
-    ! The Whole Heliosphere Interval (WHI) 2008 reference spectrum for
-    ! solar minimum conditions in 2008:
-    ! https://lasp.colorado.edu/lisird/data/whi_ref_spectra This
-    ! spectrum only extends to wavelengths of 2.4 microns, so a Kurucz
-    ! is assumed to be correct for longer wavelengths. (Note that in
-    ! previous cycles this was incorrectly labelled as the Coddington
-    ! spectrum, which is below.)
-  SINGLE_LEVEL%SPECTRAL_SOLAR_SCALING &
-         &  = [ 1.0000_JPRB,  1.0000_JPRB,  1.0000_JPRB,  1.0478_JPRB, &
-         &      1.0404_JPRB,  1.0317_JPRB,  1.0231_JPRB,  1.0054_JPRB, &
-         &      0.98413_JPRB, 0.99863_JPRB, 0.99907_JPRB, 0.90589_JPRB, &
-         &      0.92213_JPRB, 1.0000_JPRB ]
-  ELSE
-    ! The average of the last 33 years (3 solar cycles) of the
-    ! Coddington et al. (BAMS, 2016) climate data record, which covers
-    ! the entire spectrum
-    SINGLE_LEVEL%SPECTRAL_SOLAR_SCALING &
-         &  = [ 0.99892_JPRB, 0.99625_JPRB, 1.00822_JPRB, 1.01587_JPRB, &
-         &      1.01898_JPRB, 1.01044_JPRB, 1.08441_JPRB, 0.99398_JPRB, &
-         &      1.00553_JPRB, 0.99533_JPRB, 1.01509_JPRB, 0.92331_JPRB, &
-         &      0.92681_JPRB, 0.99749_JPRB ]
-  ENDIF
-ENDIF
+! IF (YRERAD%NSOLARSPECTRUM == 1) THEN
+!   ALLOCATE(SINGLE_LEVEL%SPECTRAL_SOLAR_SCALING(RAD_CONFIG%N_BANDS_SW))
+!   ! RRTMG uses the old Kurucz solar spectrum. The following scalings
+!   ! adjust it to match more recent measured spectra.
+! FIXME: Why is there a nested IF stmt equivalent to the outer IF stmt
+!   IF (YRERAD%NSOLARSPECTRUM == 1) THEN
+!     ! The Whole Heliosphere Interval (WHI) 2008 reference spectrum for
+!     ! solar minimum conditions in 2008:
+!     ! https://lasp.colorado.edu/lisird/data/whi_ref_spectra This
+!     ! spectrum only extends to wavelengths of 2.4 microns, so a Kurucz
+!     ! is assumed to be correct for longer wavelengths. (Note that in
+!     ! previous cycles this was incorrectly labelled as the Coddington
+!     ! spectrum, which is below.)
+!   SINGLE_LEVEL%SPECTRAL_SOLAR_SCALING &
+!          &  = [ 1.0000_JPRB,  1.0000_JPRB,  1.0000_JPRB,  1.0478_JPRB, &
+!          &      1.0404_JPRB,  1.0317_JPRB,  1.0231_JPRB,  1.0054_JPRB, &
+!          &      0.98413_JPRB, 0.99863_JPRB, 0.99907_JPRB, 0.90589_JPRB, &
+!          &      0.92213_JPRB, 1.0000_JPRB ]
+!   ELSE
+!     ! The average of the last 33 years (3 solar cycles) of the
+!     ! Coddington et al. (BAMS, 2016) climate data record, which covers
+!     ! the entire spectrum
+!     SINGLE_LEVEL%SPECTRAL_SOLAR_SCALING &
+!          &  = [ 0.99892_JPRB, 0.99625_JPRB, 1.00822_JPRB, 1.01587_JPRB, &
+!          &      1.01898_JPRB, 1.01044_JPRB, 1.08441_JPRB, 0.99398_JPRB, &
+!          &      1.00553_JPRB, 0.99533_JPRB, 1.01509_JPRB, 0.92331_JPRB, &
+!          &      0.92681_JPRB, 0.99749_JPRB ]
+!   ENDIF
+! ENDIF
 
 ! Set cloud fields
 YLCLOUD%Q_LIQ(KIDIA:KFDIA,:)    = PQ_LIQUID(KIDIA:KFDIA,:)
@@ -685,13 +716,15 @@ IF (RAD_CONFIG%DO_SW .AND. YRERAD%LAPPROXSWUPDATE) THEN
 ENDIF
 !$loki end remove
 
-! move to driver
+
+#ifndef HAVE_FIELD_API
 CALL SINGLE_LEVEL%DEALLOCATE
 CALL THERMODYNAMICS%DEALLOCATE
 CALL GAS%DEALLOCATE
 CALL YLCLOUD%DEALLOCATE
 CALL AEROSOL%DEALLOCATE
 CALL FLUX%DEALLOCATE
+#endif
 
 END ASSOCIATE
 

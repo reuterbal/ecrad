@@ -26,9 +26,9 @@ foreach( tgt IN LISTS target_list )
 endforeach()
 
 # Generate radintg with fypp (if enabled)
-ecrad_ifs_process_fypp( "${PROJECT_SOURCE_DIR}/ifs/radintg_zrgp_mod" )
+# ecrad_ifs_process_fypp( "${PROJECT_SOURCE_DIR}/ifs/radintg_zrgp_mod" )
 # Generate radiation_scheme_layer with fypp (if enabled)
-ecrad_ifs_process_fypp( "${PROJECT_SOURCE_DIR}/ifs/radiation_scheme_layer_mod" )
+# ecrad_ifs_process_fypp( "${PROJECT_SOURCE_DIR}/ifs/radiation_scheme_layer_mod" )
 
 ecbuild_add_library(
     TARGET
@@ -39,8 +39,9 @@ ecbuild_add_library(
         ${ifsrrtm_SOURCES}
         ${radiation_SOURCES}
         ${ifs_SOURCES}
-        "${CMAKE_CURRENT_BINARY_DIR}/radintg_zrgp_mod.F90"
-        "${CMAKE_CURRENT_BINARY_DIR}/radiation_scheme_layer_mod.F90"
+        "${PROJECT_SOURCE_DIR}/ifs/radintg_zrgp_mod.F90"
+        "${PROJECT_SOURCE_DIR}/ifs/radiation_scheme_layer_mod.F90"
+        "${PROJECT_SOURCE_DIR}/ifs/radiation_field_type_mod.F90"
     DEFINITIONS
         $<${HAVE_FIELD_API}:HAVE_FIELD_API>
     PRIVATE_INCLUDES

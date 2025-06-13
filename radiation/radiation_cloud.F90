@@ -217,6 +217,7 @@ contains
        &  istartcol, iendcol)
 
     use yomhook,                  only : lhook, dr_hook, jphook
+    use radiation_io,             only : nulerr, radiation_abort
     use radiation_thermodynamics, only : thermodynamics_type
     use radiation_constants,      only : GasConstantDryAir, AccelDueToGravity
 
@@ -258,11 +259,15 @@ contains
     end if
 
     if (.not. associated(this%overlap_param)) then
+      write(nulerr,'(a)') '*** Error: overlap_param not associated'
+      call radiation_abort()
+    else if (all(shape(this%overlap_param) /= [ncol,nlev-1])) then
       ! If pressure is of size (ncol,nlev+1) then overlap_param is of
       ! size (ncol,nlev-1), since overlap parameter is only defined here
       ! for interfaces between model layers, not for the interface to
       ! space or the surface
-      allocate(this%overlap_param(ncol, nlev-1))
+      write(nulerr,'(a)') '*** Error: overlap_param previously allocated shape differs from input arguments'
+      call radiation_abort()
     end if
 
     if (thermodynamics%pressure_hl(i1,2) > thermodynamics%pressure_hl(i1,1)) then
@@ -322,6 +327,7 @@ contains
        &                           istartcol, iendcol)
 
     use yomhook,                  only : lhook, dr_hook, jphook
+    use radiation_io,             only : nulerr, radiation_abort
     use radiation_thermodynamics, only : thermodynamics_type
     use radiation_constants,      only : GasConstantDryAir, AccelDueToGravity
 
@@ -347,11 +353,15 @@ contains
     nlev = size(thermodynamics%pressure_hl,dim=2)-1
 
     if (.not. associated(this%overlap_param)) then
+      write(nulerr,'(a)') '*** Error: overlap_param not associated'
+      call radiation_abort()
+    else if (all(shape(this%fractional_std) /= [ncol,nlev-1])) then
       ! If pressure is of size (ncol,nlev+1) then overlap_param is of
       ! size (ncol,nlev-1), since overlap parameter is only defined here
       ! for interfaces between model layers, not for the interface to
       ! space or the surface
-      allocate(this%overlap_param(ncol, nlev-1))
+      write(nulerr,'(a)') '*** Error: overlap_param previously allocated shape differs from input arguments'
+      call radiation_abort()
     end if
 
     if (thermodynamics%pressure_hl(istartcol,2) > thermodynamics%pressure_hl(istartcol,1)) then
@@ -413,6 +423,7 @@ contains
        &  istartcol, iendcol)
 
     use yomhook,                  only : lhook, dr_hook, jphook
+    use radiation_io,             only : nulerr, radiation_abort
     use radiation_thermodynamics, only : thermodynamics_type
 
     class(cloud_type),         intent(inout) :: this
@@ -455,11 +466,15 @@ contains
     end if
 
     if (.not. associated(this%overlap_param)) then
+      write(nulerr,'(a)') '*** Error: overlap_param not associated'
+      call radiation_abort()
+    else if (all(shape(this%fractional_std) /= [ncol,nlev-1])) then
       ! If pressure is of size (ncol,nlev+1) then overlap_param is of
       ! size (ncol,nlev-1), since overlap parameter is only defined here
       ! for interfaces between model layers, not for the interface to
       ! space or the surface
-      allocate(this%overlap_param(ncol, nlev-1))
+      write(nulerr,'(a)') '*** Error: overlap_param previously allocated shape differs from input arguments'
+      call radiation_abort()
     end if
 
     if (thermodynamics%pressure_hl(i1,2) > thermodynamics%pressure_hl(i1,1)) then
@@ -490,6 +505,7 @@ contains
   subroutine create_fractional_std(this, ncol, nlev, frac_std)
 
     use yomhook,                  only : lhook, dr_hook, jphook
+    use radiation_io,             only : nulerr, radiation_abort
 
     class(cloud_type), intent(inout) :: this
     integer,           intent(in)    :: ncol, nlev
@@ -499,11 +515,14 @@ contains
 
     if (lhook) call dr_hook('radiation_cloud:create_fractional_std',0,hook_handle)
 
-    if (associated(this%fractional_std)) then
-       deallocate(this%fractional_std)
+    if (.not. associated(this%fractional_std)) then
+      write(nulerr,'(a)') '*** Error: fractional_std not associated'
+      call radiation_abort()
+    else if (all(shape(this%fractional_std) /= [ncol,nlev])) then
+      write(nulerr,'(a)') '*** Error: fractional_std previously allocated shape differs from input arguments'
+      call radiation_abort()
     end if
-    
-    allocate(this%fractional_std(ncol, nlev))
+
 
     this%fractional_std = frac_std
 
@@ -517,6 +536,7 @@ contains
   subroutine create_inv_cloud_effective_size(this, ncol, nlev, inv_eff_size)
 
     use yomhook,                  only : lhook, dr_hook, jphook
+    use radiation_io,             only : nulerr, radiation_abort
 
     class(cloud_type), intent(inout) :: this
     integer,           intent(in)    :: ncol, nlev
@@ -526,11 +546,14 @@ contains
 
     if (lhook) call dr_hook('radiation_cloud:create_inv_cloud_effective_size',0,hook_handle)
 
-    if (associated(this%inv_cloud_effective_size)) then
-       deallocate(this%inv_cloud_effective_size)
+    if (.not. associated(this%inv_cloud_effective_size)) then
+      write(nulerr,'(a)') '*** Error: inv_cloud_effective_size not associated'
+      call radiation_abort()
+    else if (all(shape(this%inv_cloud_effective_size) /= [ncol,nlev])) then
+      write(nulerr,'(a)') '*** Error: inv_cloud_effective_size previously allocated shape differs from input arguments'
+      call radiation_abort()
     end if
-    
-    allocate(this%inv_cloud_effective_size(ncol, nlev))
+
 
     this%inv_cloud_effective_size = inv_eff_size
 
@@ -547,6 +570,7 @@ contains
        &  eta_low_mid, eta_mid_high, istartcol, iendcol)
 
     use yomhook,                  only : lhook, dr_hook, jphook
+    use radiation_io,             only : nulerr, radiation_abort
 
     class(cloud_type), intent(inout) :: this
     integer,           intent(in)    :: ncol, nlev
@@ -573,11 +597,14 @@ contains
 
     if (lhook) call dr_hook('radiation_cloud:create_inv_cloud_effective_size_eta',0,hook_handle)
 
-    if (associated(this%inv_cloud_effective_size)) then
-      deallocate(this%inv_cloud_effective_size)
+    if (.not. associated(this%inv_cloud_effective_size)) then
+      write(nulerr,'(a)') '*** Error: inv_cloud_effective_size not associated'
+      call radiation_abort()
+    else if (all(shape(this%inv_cloud_effective_size) /= [ncol,nlev])) then
+      write(nulerr,'(a)') '*** Error: inv_cloud_effective_size previously allocated shape differs from input arguments'
+      call radiation_abort()
     end if
-    
-    allocate(this%inv_cloud_effective_size(ncol, nlev))
+
 
     if (present(istartcol)) then
       i1 = istartcol
@@ -625,6 +652,7 @@ contains
        &  inhom_separation_factor, istartcol, iendcol)
 
     use yomhook,                  only : lhook, dr_hook, jphook
+    use radiation_io,             only : nulerr, radiation_abort
 
     class(cloud_type), intent(inout) :: this
     integer,           intent(in)    :: ncol, nlev
@@ -667,15 +695,22 @@ contains
     coeff_b = (separation_toa - separation_surf) / coeff_e
     coeff_a = separation_toa - coeff_b
 
-    if (associated(this%inv_cloud_effective_size)) then
-      deallocate(this%inv_cloud_effective_size)
+    if (.not. associated(this%inv_cloud_effective_size)) then
+      write(nulerr,'(a)') '*** Error: inv_cloud_effective_size not associated'
+      call radiation_abort()
+    else if (all(shape(this%inv_cloud_effective_size) /= [ncol,nlev])) then
+      write(nulerr,'(a)') '*** Error: inv_cloud_effective_size previously allocated shape differs from input arguments'
+      call radiation_abort()
     end if
-     if (associated(this%inv_inhom_effective_size)) then
-      deallocate(this%inv_inhom_effective_size)
+
+    if (.not. associated(this%inv_inhom_effective_size)) then
+      write(nulerr,'(a)') '*** Error: inv_inhom_effective_size not associated'
+      call radiation_abort()
+    else if (all(shape(this%inv_inhom_effective_size) /= [ncol,nlev])) then
+      write(nulerr,'(a)') '*** Error: inv_inhom_effective_size previously allocated shape differs from input arguments'
+      call radiation_abort()
     end if
-   
-    allocate(this%inv_cloud_effective_size(ncol, nlev))
-    allocate(this%inv_inhom_effective_size(ncol, nlev))
+
 
     if (present(istartcol)) then
       i1 = istartcol

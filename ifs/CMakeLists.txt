@@ -61,6 +61,7 @@ if( HAVE_FIELD_API )
             ${ifs_SOURCES}
             radintg_zrgp_mod.F90
             radiation_scheme_layer_mod.F90
+            radiation_field_type_mod.F90
         PUBLIC_DEFINITIONS
             HAVE_FIELD_API
         PUBLIC_INCLUDES
