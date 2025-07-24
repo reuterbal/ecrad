@@ -304,24 +304,24 @@ contains
 
     if (present(is_simple_surface)) this%is_simple_surface = is_simple_surface
 
-    call field_new(this%f_cos_sza, ubounds=[ncol, nblocks], persistent=.true.)
+    call field_new(this%f_cos_sza, ubounds=(/ncol, nblocks/), persistent=.true.)
 
     if (this%is_simple_surface) then
-      call field_new(this%f_skin_temperature, ubounds=[ncol, nblocks], persistent=.true.)
+      call field_new(this%f_skin_temperature, ubounds=(/ncol, nblocks/), persistent=.true.)
     else
-      call field_new(this%f_lw_emission, ubounds=[ncol, nemisbands, nblocks], persistent=.true.)
+      call field_new(this%f_lw_emission, ubounds=(/ncol, nemisbands, nblocks/), persistent=.true.)
     end if
-    call field_new(this%f_lw_emissivity, ubounds=[ncol, nemisbands, nblocks], persistent=.true.)
+    call field_new(this%f_lw_emissivity, ubounds=(/ncol, nemisbands, nblocks/), persistent=.true.)
 
-    call field_new(this%f_sw_albedo, ubounds=[ncol, nalbedobands, nblocks], persistent=.true.)
+    call field_new(this%f_sw_albedo, ubounds=(/ncol, nalbedobands, nblocks/), persistent=.true.)
 
     if (present(use_sw_albedo_direct)) then
       if (use_sw_albedo_direct) then
-        call field_new(this%f_sw_albedo_direct, ubounds=[ncol, nalbedobands, nblocks], persistent=.true.)
+        call field_new(this%f_sw_albedo_direct, ubounds=(/ncol, nalbedobands, nblocks/), persistent=.true.)
       end if
     end if
 
-    call field_new(this%f_iseed, ubounds=[ncol, nblocks], persistent=.true.)
+    call field_new(this%f_iseed, ubounds=(/ncol, nblocks/), persistent=.true.)
 
     if (lhook) call dr_hook('radiation_field_type_module:single_level_field_init',1,hook_handle)
   end subroutine single_level_field_init
@@ -512,8 +512,8 @@ contains
 
     if (lhook) call dr_hook('radiation_field_type:thermodynamics_field_init',0,hook_handle)
 
-    call field_new(this%f_pressure_hl, ubounds=[ncol,nlev+1, nblocks], persistent=.true.)
-    call field_new(this%f_temperature_hl, ubounds=[ncol,nlev+1, nblocks], persistent=.true.)
+    call field_new(this%f_pressure_hl, ubounds=(/ncol,nlev+1, nblocks/), persistent=.true.)
+    call field_new(this%f_temperature_hl, ubounds=(/ncol,nlev+1, nblocks/), persistent=.true.)
 
     use_h2o_sat_local = .false.
     if (present(use_h2o_sat)) then
@@ -521,7 +521,7 @@ contains
     end if
 
     if (use_h2o_sat_local) then
-      call field_new(this%f_h2o_sat_liq, ubounds=[ncol,nlev, nblocks], persistent=.true.)
+      call field_new(this%f_h2o_sat_liq, ubounds=(/ncol,nlev, nblocks/), persistent=.true.)
     end if
 
     if (lhook) call dr_hook('radiation_field_type:thermodynamics_field_init',1,hook_handle)
@@ -631,7 +631,7 @@ contains
 
     if (lhook) call dr_hook('radiation_field_type:gas_field_init',0,hook_handle)
 
-    call field_new(this%f_mixing_ratio, ubounds=[ncol, nlev, NMaxGases, nblocks], persistent=.true., init_value=0.0_jprb)
+    call field_new(this%f_mixing_ratio, ubounds=(/ncol, nlev, NMaxGases, nblocks/), persistent=.true., init_value=0.0_jprb)
 
     this%ncol = ncol
     this%nlev = nlev
@@ -736,14 +736,14 @@ contains
 
     if (present(frac_std)) frac_std_local = frac_std
 
-    call field_new(this%f_mixing_ratio, ubounds=[ncol,nlev,this%ntype, nblocks], persistent=.true.)
-    call field_new(this%f_effective_radius, ubounds=[ncol,nlev,this%ntype, nblocks], persistent=.true.)
+    call field_new(this%f_mixing_ratio, ubounds=(/ncol,nlev,this%ntype, nblocks/), persistent=.true.)
+    call field_new(this%f_effective_radius, ubounds=(/ncol,nlev,this%ntype, nblocks/), persistent=.true.)
 
-    call field_new(this%f_fraction, ubounds=[ncol,nlev, nblocks], persistent=.true.)
-    call field_new(this%f_overlap_param, ubounds=[ncol,nlev-1, nblocks], persistent=.true.)
-    call field_new(this%f_fractional_std, ubounds=[ncol,nlev, nblocks], persistent=.true., init_value=frac_std_local)
-    call field_new(this%f_inv_cloud_effective_size, ubounds=[ncol,nlev, nblocks], persistent=.true.)
-    call field_new(this%f_inv_inhom_effective_size, ubounds=[ncol,nlev, nblocks], persistent=.true.)
+    call field_new(this%f_fraction, ubounds=(/ncol,nlev, nblocks/), persistent=.true.)
+    call field_new(this%f_overlap_param, ubounds=(/ncol,nlev-1, nblocks/), persistent=.true.)
+    call field_new(this%f_fractional_std, ubounds=(/ncol,nlev, nblocks/), persistent=.true., init_value=frac_std_local)
+    call field_new(this%f_inv_cloud_effective_size, ubounds=(/ncol,nlev, nblocks/), persistent=.true.)
+    call field_new(this%f_inv_inhom_effective_size, ubounds=(/ncol,nlev, nblocks/), persistent=.true.)
 
     if (lhook) call dr_hook('radiation_radiation_field_type:cloud_field_init',1,hook_handle)
 
@@ -948,8 +948,8 @@ contains
     this%istartlev = istartlev
     this%iendlev   = iendlev
 
-    call field_new(this%f_mixing_ratio, lbounds=[1,istartlev,1,1], &
-                   &                    ubounds=[ncol,iendlev,ntype,nblocks], persistent=.true.)
+    call field_new(this%f_mixing_ratio, lbounds=(/1,istartlev,1,1/), &
+                   &                    ubounds=(/ncol,iendlev,ntype,nblocks/), persistent=.true.)
 
     if (lhook) call dr_hook('radiation_radiation_field_type:aerosol_field_init',1,hook_handle)
 
@@ -1045,13 +1045,13 @@ contains
 
     ! Allocate longwave arrays
     if (config%do_lw) then
-      call field_new(this%f_lw_up,lbounds=[istartcol,1,1], ubounds=[iendcol,nlev+1,nblocks], persistent=.true.)
-      call field_new(this%f_lw_dn,lbounds=[istartcol,1,1], ubounds=[iendcol,nlev+1,nblocks], persistent=.true.)
+      call field_new(this%f_lw_up,lbounds=(/istartcol,1,1/), ubounds=(/iendcol,nlev+1,nblocks/), persistent=.true.)
+      call field_new(this%f_lw_dn,lbounds=(/istartcol,1,1/), ubounds=(/iendcol,nlev+1,nblocks/), persistent=.true.)
       if (config%do_clear) then
-        call field_new(this%f_lw_up_clear,lbounds=[istartcol,1,1], &
-            &                             ubounds=[iendcol,nlev+1,nblocks], persistent=.true.)
-        call field_new(this%f_lw_dn_clear,lbounds=[istartcol,1,1], &
-            &                             ubounds=[iendcol,nlev+1,nblocks], persistent=.true.)
+        call field_new(this%f_lw_up_clear,lbounds=(/istartcol,1,1/), &
+            &                             ubounds=(/iendcol,nlev+1,nblocks/), persistent=.true.)
+        call field_new(this%f_lw_dn_clear,lbounds=(/istartcol,1,1/), &
+            &                             ubounds=(/iendcol,nlev+1,nblocks/), persistent=.true.)
       end if
 
       if (config%do_save_spectral_flux) then
@@ -1061,21 +1061,21 @@ contains
           call radiation_abort()
         end if
 
-        call field_new(this%f_lw_up_band,lbounds=[1,istartcol,1,1], &
-            &                            ubounds=[config%n_spec_lw,iendcol,nlev+1,nblocks], persistent=.true.)
-        call field_new(this%f_lw_dn_band,lbounds=[1,istartcol,1,1], &
-            &                            ubounds=[config%n_spec_lw,iendcol,nlev+1,nblocks], persistent=.true.)
+        call field_new(this%f_lw_up_band,lbounds=(/1,istartcol,1,1/), &
+            &                            ubounds=(/config%n_spec_lw,iendcol,nlev+1,nblocks/), persistent=.true.)
+        call field_new(this%f_lw_dn_band,lbounds=(/1,istartcol,1,1/), &
+            &                            ubounds=(/config%n_spec_lw,iendcol,nlev+1,nblocks/), persistent=.true.)
         if (config%do_clear) then
-          call field_new(this%f_lw_up_clear_band,lbounds=[1,istartcol,1,1], &
-              & ubounds=[config%n_spec_lw,iendcol,nlev+1,nblocks], persistent=.true.)
-          call field_new(this%f_lw_dn_clear_band,lbounds=[1,istartcol,1,1], &
-              & ubounds=[config%n_spec_lw,iendcol,nlev+1,nblocks], persistent=.true.)
+          call field_new(this%f_lw_up_clear_band,lbounds=(/1,istartcol,1,1/), &
+              & ubounds=(/config%n_spec_lw,iendcol,nlev+1,nblocks/), persistent=.true.)
+          call field_new(this%f_lw_dn_clear_band,lbounds=(/1,istartcol,1,1/), &
+              & ubounds=(/config%n_spec_lw,iendcol,nlev+1,nblocks/), persistent=.true.)
         end if
       end if
 
       if (config%do_lw_derivatives) then
-        call field_new(this%f_lw_derivatives,lbounds=[istartcol,1,1], &
-            &                                ubounds=[iendcol,nlev+1,nblocks], persistent=.true.)
+        call field_new(this%f_lw_derivatives,lbounds=(/istartcol,1,1/), &
+            &                                ubounds=(/iendcol,nlev+1,nblocks/), persistent=.true.)
       end if
 
       if (config%do_toa_spectral_flux) then
@@ -1084,50 +1084,50 @@ contains
                & // 'so cannot allocate TOA spectral flux arrays'
           call radiation_abort()
         end if
-        call field_new(this%f_lw_up_toa_band,lbounds=[1,istartcol,1], &
-            & ubounds=[config%n_bands_lw, iendcol,nblocks], persistent=.true.)
+        call field_new(this%f_lw_up_toa_band,lbounds=(/1,istartcol,1/), &
+            & ubounds=(/config%n_bands_lw, iendcol,nblocks/), persistent=.true.)
         if (config%do_clear) then
-          call field_new(this%f_lw_up_toa_clear_band,lbounds=[1,istartcol,1], &
-            & ubounds=[config%n_bands_lw, iendcol,nblocks], persistent=.true.)
+          call field_new(this%f_lw_up_toa_clear_band,lbounds=(/1,istartcol,1/), &
+            & ubounds=(/config%n_bands_lw, iendcol,nblocks/), persistent=.true.)
         end if
       end if
 
       ! Allocate g-point downwelling fluxes at surface, and TOA fluxes
-      call field_new(this%f_lw_dn_surf_g,lbounds=[1,istartcol,1], &
-          & ubounds=[config%n_g_lw,iendcol,nblocks], persistent=.true.)
-      call field_new(this%f_lw_up_toa_g ,lbounds=[1,istartcol,1], &
-          & ubounds=[config%n_g_lw,iendcol,nblocks], persistent=.true.)
+      call field_new(this%f_lw_dn_surf_g,lbounds=(/1,istartcol,1/), &
+          & ubounds=(/config%n_g_lw,iendcol,nblocks/), persistent=.true.)
+      call field_new(this%f_lw_up_toa_g ,lbounds=(/1,istartcol,1/), &
+          & ubounds=(/config%n_g_lw,iendcol,nblocks/), persistent=.true.)
       if (config%do_clear) then
-        call field_new(this%f_lw_dn_surf_clear_g,lbounds=[1,istartcol,1], &
-            & ubounds=[config%n_g_lw,iendcol,nblocks], persistent=.true.)
-        call field_new(this%f_lw_up_toa_clear_g ,lbounds=[1,istartcol,1], &
-            & ubounds=[config%n_g_lw,iendcol,nblocks], persistent=.true.)
+        call field_new(this%f_lw_dn_surf_clear_g,lbounds=(/1,istartcol,1/), &
+            & ubounds=(/config%n_g_lw,iendcol,nblocks/), persistent=.true.)
+        call field_new(this%f_lw_up_toa_clear_g ,lbounds=(/1,istartcol,1/), &
+            & ubounds=(/config%n_g_lw,iendcol,nblocks/), persistent=.true.)
       end if
 
       if (config%do_canopy_fluxes_lw) then
         ! Downward fluxes at top of canopy at the spectral resolution
         ! used in the canopy radiative transfer scheme
-        call field_new(this%f_lw_dn_surf_canopy,lbounds=[1,istartcol,1], &
-            & ubounds=[config%n_canopy_bands_lw,iendcol,nblocks], persistent=.true.)
+        call field_new(this%f_lw_dn_surf_canopy,lbounds=(/1,istartcol,1/), &
+            & ubounds=(/config%n_canopy_bands_lw,iendcol,nblocks/), persistent=.true.)
       end if
     end if
 
     ! Allocate shortwave arrays
     if (config%do_sw) then
-      call field_new(this%f_sw_up,lbounds=[istartcol,1,1], ubounds=[iendcol,nlev+1,nblocks], persistent=.true.)
-      call field_new(this%f_sw_dn,lbounds=[istartcol,1,1], ubounds=[iendcol,nlev+1,nblocks], persistent=.true.)
+      call field_new(this%f_sw_up,lbounds=(/istartcol,1,1/), ubounds=(/iendcol,nlev+1,nblocks/), persistent=.true.)
+      call field_new(this%f_sw_dn,lbounds=(/istartcol,1,1/), ubounds=(/iendcol,nlev+1,nblocks/), persistent=.true.)
       if (config%do_sw_direct) then
-        call field_new(this%f_sw_dn_direct,lbounds=[istartcol,1,1], &
-            & ubounds=[iendcol,nlev+1,nblocks], persistent=.true.)
+        call field_new(this%f_sw_dn_direct,lbounds=(/istartcol,1,1/), &
+            & ubounds=(/iendcol,nlev+1,nblocks/), persistent=.true.)
       end if
       if (config%do_clear) then
-        call field_new(this%f_sw_up_clear,lbounds=[istartcol,1,1], &
-            & ubounds=[iendcol,nlev+1,nblocks], persistent=.true.)
-        call field_new(this%f_sw_dn_clear,lbounds=[istartcol,1,1], &
-            & ubounds=[iendcol,nlev+1,nblocks], persistent=.true.)
+        call field_new(this%f_sw_up_clear,lbounds=(/istartcol,1,1/), &
+            & ubounds=(/iendcol,nlev+1,nblocks/), persistent=.true.)
+        call field_new(this%f_sw_dn_clear,lbounds=(/istartcol,1,1/), &
+            & ubounds=(/iendcol,nlev+1,nblocks/), persistent=.true.)
         if (config%do_sw_direct) then
-          call field_new(this%f_sw_dn_direct_clear,lbounds=[istartcol,1,1], &
-              & ubounds=[iendcol,nlev+1,nblocks], persistent=.true.)
+          call field_new(this%f_sw_dn_direct_clear,lbounds=(/istartcol,1,1/), &
+              & ubounds=(/iendcol,nlev+1,nblocks/), persistent=.true.)
         end if
       end if
 
@@ -1138,23 +1138,23 @@ contains
           call radiation_abort()
         end if
 
-        call field_new(this%f_sw_up_band,lbounds=[1,istartcol,1,1], &
-            & ubounds=[config%n_spec_sw,iendcol,nlev+1,nblocks], persistent=.true.)
-        call field_new(this%f_sw_dn_band,lbounds=[1,istartcol,1,1], &
-            & ubounds=[config%n_spec_sw,iendcol,nlev+1,nblocks], persistent=.true.)
+        call field_new(this%f_sw_up_band,lbounds=(/1,istartcol,1,1/), &
+            & ubounds=(/config%n_spec_sw,iendcol,nlev+1,nblocks/), persistent=.true.)
+        call field_new(this%f_sw_dn_band,lbounds=(/1,istartcol,1,1/), &
+            & ubounds=(/config%n_spec_sw,iendcol,nlev+1,nblocks/), persistent=.true.)
 
         if (config%do_sw_direct) then
-          call field_new(this%f_sw_dn_direct_band,lbounds=[1,istartcol,1,1], &
-                & ubounds=[config%n_spec_sw,iendcol,nlev+1,nblocks], persistent=.true.)
+          call field_new(this%f_sw_dn_direct_band,lbounds=(/1,istartcol,1,1/), &
+                & ubounds=(/config%n_spec_sw,iendcol,nlev+1,nblocks/), persistent=.true.)
         end if
         if (config%do_clear) then
-          call field_new(this%f_sw_up_clear_band,lbounds=[1,istartcol,1,1], &
-                & ubounds=[config%n_spec_sw,iendcol,nlev+1,nblocks], persistent=.true.)
-          call field_new(this%f_sw_dn_clear_band,lbounds=[1,istartcol,1,1], &
-                & ubounds=[config%n_spec_sw,iendcol,nlev+1,nblocks], persistent=.true.)
+          call field_new(this%f_sw_up_clear_band,lbounds=(/1,istartcol,1,1/), &
+                & ubounds=(/config%n_spec_sw,iendcol,nlev+1,nblocks/), persistent=.true.)
+          call field_new(this%f_sw_dn_clear_band,lbounds=(/1,istartcol,1,1/), &
+                & ubounds=(/config%n_spec_sw,iendcol,nlev+1,nblocks/), persistent=.true.)
           if (config%do_sw_direct) then
-            call field_new(this%f_sw_dn_direct_clear_band,lbounds=[1,istartcol,1,1], &
-                & ubounds=[config%n_spec_sw,iendcol, nlev+1,nblocks], persistent=.true.)
+            call field_new(this%f_sw_dn_direct_clear_band,lbounds=(/1,istartcol,1,1/), &
+                & ubounds=(/config%n_spec_sw,iendcol, nlev+1,nblocks/), persistent=.true.)
           end if
         end if
       end if
@@ -1165,15 +1165,15 @@ contains
                & // 'so cannot allocate TOA spectral flux arrays'
           call radiation_abort()
         end if
-        call field_new(this%f_sw_dn_surf_band,lbounds=[1,istartcol,1], &
-                & ubounds=[config%n_bands_sw,iendcol,nblocks], persistent=.true.)
-        call field_new(this%f_sw_dn_direct_surf_band,lbounds=[1,istartcol,1], &
-                & ubounds=[config%n_bands_sw,iendcol,nblocks], persistent=.true.)
+        call field_new(this%f_sw_dn_surf_band,lbounds=(/1,istartcol,1/), &
+                & ubounds=(/config%n_bands_sw,iendcol,nblocks/), persistent=.true.)
+        call field_new(this%f_sw_dn_direct_surf_band,lbounds=(/1,istartcol,1/), &
+                & ubounds=(/config%n_bands_sw,iendcol,nblocks/), persistent=.true.)
         if (config%do_clear) then
-          call field_new(this%f_sw_dn_surf_clear_band,lbounds=[1,istartcol,1], &
-                  & ubounds=[config%n_bands_sw,iendcol,nblocks], persistent=.true.)
-          call field_new(this%f_sw_dn_direct_surf_clear_band,lbounds=[1,istartcol,1], &
-                  & ubounds=[config%n_bands_sw,iendcol,nblocks], persistent=.true.)
+          call field_new(this%f_sw_dn_surf_clear_band,lbounds=(/1,istartcol,1/), &
+                  & ubounds=(/config%n_bands_sw,iendcol,nblocks/), persistent=.true.)
+          call field_new(this%f_sw_dn_direct_surf_clear_band,lbounds=(/1,istartcol,1/), &
+                  & ubounds=(/config%n_bands_sw,iendcol,nblocks/), persistent=.true.)
         end if
       end if
 
@@ -1183,49 +1183,49 @@ contains
                & // 'so cannot allocate surface spectral flux arrays'
           call radiation_abort()
         end if
-        call field_new(this%f_sw_dn_toa_band,lbounds=[1,istartcol,1], &
-            & ubounds=[config%n_bands_sw, iendcol,nblocks], persistent=.true.)
-        call field_new(this%f_sw_up_toa_band,lbounds=[1,istartcol,1], &
-            & ubounds=[config%n_bands_sw, iendcol,nblocks], persistent=.true.)
+        call field_new(this%f_sw_dn_toa_band,lbounds=(/1,istartcol,1/), &
+            & ubounds=(/config%n_bands_sw, iendcol,nblocks/), persistent=.true.)
+        call field_new(this%f_sw_up_toa_band,lbounds=(/1,istartcol,1/), &
+            & ubounds=(/config%n_bands_sw, iendcol,nblocks/), persistent=.true.)
         if (config%do_clear) then
-          call field_new(this%f_sw_up_toa_clear_band,lbounds=[1,istartcol,1], &
-              & ubounds=[config%n_bands_sw, iendcol,nblocks], persistent=.true.)
+          call field_new(this%f_sw_up_toa_clear_band,lbounds=(/1,istartcol,1/), &
+              & ubounds=(/config%n_bands_sw, iendcol,nblocks/), persistent=.true.)
         end if
       end if
 
       ! Allocate g-point downwelling fluxes at surface, and TOA fluxes
-      call field_new(this%f_sw_dn_diffuse_surf_g,lbounds=[1,istartcol,1], &
-          & ubounds=[config%n_g_sw,iendcol,nblocks], persistent=.true.)
-      call field_new(this%f_sw_dn_direct_surf_g ,lbounds=[1,istartcol,1], &
-          & ubounds=[config%n_g_sw,iendcol,nblocks], persistent=.true.)
-      call field_new(this%f_sw_dn_toa_g         ,lbounds=[1,istartcol,1], &
-          & ubounds=[config%n_g_sw,iendcol,nblocks], persistent=.true.)
-      call field_new(this%f_sw_up_toa_g         ,lbounds=[1,istartcol,1], &
-          & ubounds=[config%n_g_sw,iendcol,nblocks], persistent=.true.)
+      call field_new(this%f_sw_dn_diffuse_surf_g,lbounds=(/1,istartcol,1/), &
+          & ubounds=(/config%n_g_sw,iendcol,nblocks/), persistent=.true.)
+      call field_new(this%f_sw_dn_direct_surf_g ,lbounds=(/1,istartcol,1/), &
+          & ubounds=(/config%n_g_sw,iendcol,nblocks/), persistent=.true.)
+      call field_new(this%f_sw_dn_toa_g         ,lbounds=(/1,istartcol,1/), &
+          & ubounds=(/config%n_g_sw,iendcol,nblocks/), persistent=.true.)
+      call field_new(this%f_sw_up_toa_g         ,lbounds=(/1,istartcol,1/), &
+          & ubounds=(/config%n_g_sw,iendcol,nblocks/), persistent=.true.)
       if (config%do_clear) then
-        call field_new(this%f_sw_dn_diffuse_surf_clear_g,lbounds=[1,istartcol,1], &
-            & ubounds=[config%n_g_sw,iendcol,nblocks], persistent=.true.)
-        call field_new(this%f_sw_dn_direct_surf_clear_g ,lbounds=[1,istartcol,1], &
-            & ubounds=[config%n_g_sw,iendcol,nblocks], persistent=.true.)
-        call field_new(this%f_sw_up_toa_clear_g         ,lbounds=[1,istartcol,1], &
-            & ubounds=[config%n_g_sw,iendcol,nblocks], persistent=.true.)
+        call field_new(this%f_sw_dn_diffuse_surf_clear_g,lbounds=(/1,istartcol,1/), &
+            & ubounds=(/config%n_g_sw,iendcol,nblocks/), persistent=.true.)
+        call field_new(this%f_sw_dn_direct_surf_clear_g ,lbounds=(/1,istartcol,1/), &
+            & ubounds=(/config%n_g_sw,iendcol,nblocks/), persistent=.true.)
+        call field_new(this%f_sw_up_toa_clear_g         ,lbounds=(/1,istartcol,1/), &
+            & ubounds=(/config%n_g_sw,iendcol,nblocks/), persistent=.true.)
       end if
 
       if (config%do_canopy_fluxes_sw) then
         ! Downward fluxes at top of canopy at the spectral resolution
         ! used in the canopy radiative transfer scheme
-        call field_new(this%f_sw_dn_diffuse_surf_canopy,lbounds=[1,istartcol,1], &
-            & ubounds=[config%n_canopy_bands_sw,iendcol,nblocks], persistent=.true.)
-        call field_new(this%f_sw_dn_direct_surf_canopy ,lbounds=[1,istartcol,1], &
-            & ubounds=[config%n_canopy_bands_sw,iendcol,nblocks], persistent=.true.)
+        call field_new(this%f_sw_dn_diffuse_surf_canopy,lbounds=(/1,istartcol,1/), &
+            & ubounds=(/config%n_canopy_bands_sw,iendcol,nblocks/), persistent=.true.)
+        call field_new(this%f_sw_dn_direct_surf_canopy ,lbounds=(/1,istartcol,1/), &
+            & ubounds=(/config%n_canopy_bands_sw,iendcol,nblocks/), persistent=.true.)
       end if
     end if
 
     ! Allocate cloud cover arrays
-    call field_new(this%f_cloud_cover_lw,lbounds=[istartcol,1], &
-          & ubounds=[iendcol,nblocks], persistent=.true., init_value=-1.0_jprb)
-    call field_new(this%f_cloud_cover_sw,lbounds=[istartcol,1], &
-          & ubounds=[iendcol,nblocks], persistent=.true., init_value=-1.0_jprb)
+    call field_new(this%f_cloud_cover_lw,lbounds=(/istartcol,1/), &
+          & ubounds=(/iendcol,nblocks/), persistent=.true., init_value=-1.0_jprb)
+    call field_new(this%f_cloud_cover_sw,lbounds=(/istartcol,1/), &
+          & ubounds=(/iendcol,nblocks/), persistent=.true., init_value=-1.0_jprb)
 
     if (lhook) call dr_hook('radiation_flux:allocate',1,hook_handle)
 
