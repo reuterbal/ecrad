@@ -326,19 +326,17 @@ subroutine ifs_copy_fluxes_from_blocked(&
       flux_par(ibeg:iend) = zrgp(1:il,ifs_config%iparf,ib)
       flux_par_clear(ibeg:iend) = zrgp(1:il,ifs_config%iparcf,ib)
       emissivity_out(ibeg:iend) = zrgp(1:il,ifs_config%iemit,ib)
-      !$loki remove
       if (yradiation%rad_config%do_sw .and. yradiation%yrerad%lapproxswupdate) then
+      !$loki remove
         do jg=1,yradiation%yrerad%nsw
           flux_diffuse_band(ibeg:iend,jg) = zrgp(1:il,ifs_config%iswdiffuseband+jg-1,ib)
           flux_direct_band(ibeg:iend,jg) = zrgp(1:il,ifs_config%iswdirectband+jg-1,ib)
         end do
-      else
       !$loki end remove
+      else
         flux_diffuse_band(ibeg:iend,:) = 0.0_jprb
         flux_direct_band(ibeg:iend,:) = 0.0_jprb
-      !$loki remove
       endif
-      !$loki end remove
     end do
 
     deallocate(zrgp)

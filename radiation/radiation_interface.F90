@@ -173,24 +173,23 @@ contains
     type(gas_type),    intent(inout) :: gas
     integer :: kidia, kfdia
 
-    !$loki remove
     if (config%i_gas_model_sw == IGasModelMonochromatic) then
+    !$loki remove
       call set_gas_units_mono(gas)
+    !$loki end remove
     elseif (config%i_gas_model_sw == IGasModelIFSRRTMG &
          &  .or. config%i_gas_model_lw == IGasModelIFSRRTMG) then
       ! Convert to mass-mixing ratio for RRTMG; note that ecCKD can
       ! work with this but performs an internal scaling
-      call set_gas_units_ifs(gas)
-    else
-    !$loki end remove
-      ! Use volume mixing ratio preferred by ecCKD
-      !$loki inline
-      call set_gas_units_ecckd(gas)
-      !$loki end inline
-
     !$loki remove
-    end if
+      call set_gas_units_ifs(gas)
     !$loki end remove
+    else
+    ! Use volume mixing ratio preferred by ecCKD
+    !$loki inline
+    call set_gas_units_ecckd(gas)
+    !$loki end inline
+    end if
 
   end subroutine set_gas_units
 
@@ -222,10 +221,13 @@ contains
     use radiation_cloud,          only : cloud_type
     use radiation_aerosol,        only : aerosol_type
     use radiation_flux,           only : flux_type
+    !$loki remove
     use radiation_spartacus_sw,   only : solver_spartacus_sw
     use radiation_spartacus_lw,   only : solver_spartacus_lw
+    !$loki end remove
     use radiation_tripleclouds_sw,only : solver_tripleclouds_sw
     use radiation_tripleclouds_lw,only : solver_tripleclouds_lw
+    !$loki remove
     use radiation_mcica_sw,       only : solver_mcica_sw
     use radiation_mcica_lw,       only : solver_mcica_lw
     use radiation_cloudless_sw,   only : solver_cloudless_sw
@@ -233,6 +235,7 @@ contains
     use radiation_homogeneous_sw, only : solver_homogeneous_sw
     use radiation_homogeneous_lw, only : solver_homogeneous_lw
     use radiation_save,           only : save_radiative_properties
+    !$loki end remove
 
     ! Treatment of gas and hydrometeor optics 
     use radiation_monochromatic,  only : &
@@ -433,19 +436,22 @@ contains
         if (config%iverbose >= 2) then
           write(nulout,'(a)') 'Computing longwave fluxes'
         end if
-
         if (config%i_solver_lw == ISolverMcICA) then
+        !$loki remove
           ! Compute fluxes using the McICA longwave solver
           call solver_mcica_lw(nlev,istartcol,iendcol, &
                &  config, single_level, cloud, & 
                &  od_lw, ssa_lw, g_lw, od_lw_cloud, ssa_lw_cloud, &
                &  g_lw_cloud, planck_hl, lw_emission, lw_albedo, flux)
+        !$loki end remove
         else if (config%i_solver_lw == ISolverSPARTACUS) then
+        !$loki remove
           ! Compute fluxes using the SPARTACUS longwave solver
           call solver_spartacus_lw(nlev,istartcol,iendcol, &
                &  config, thermodynamics, cloud, & 
                &  od_lw, ssa_lw, g_lw, od_lw_cloud, ssa_lw_cloud, g_lw_cloud, &
                &  planck_hl, lw_emission, lw_albedo, flux)
+        !$loki end remove
         else if (config%i_solver_lw == ISolverTripleclouds) then
           ! Compute fluxes using the Tripleclouds longwave solver
           call solver_tripleclouds_lw(nlev,istartcol,iendcol, &
@@ -453,16 +459,20 @@ contains
                &  od_lw, ssa_lw, g_lw, od_lw_cloud, ssa_lw_cloud, g_lw_cloud, &
                &  planck_hl, lw_emission, lw_albedo, flux)
         elseif (config%i_solver_lw == ISolverHomogeneous) then
+        !$loki remove
           ! Compute fluxes using the homogeneous solver
           call solver_homogeneous_lw(nlev,istartcol,iendcol, &
                &  config, cloud, & 
                &  od_lw, ssa_lw, g_lw, od_lw_cloud, ssa_lw_cloud, &
                &  g_lw_cloud, planck_hl, lw_emission, lw_albedo, flux)
+        !$loki end remove
         else
+        !$loki remove
           ! Compute fluxes using the cloudless solver
           call solver_cloudless_lw(nlev,istartcol,iendcol, &
                &  config, od_lw, ssa_lw, g_lw, &
                &  planck_hl, lw_emission, lw_albedo, flux)
+        !$loki end remove
         end if
       end if
 
@@ -472,19 +482,23 @@ contains
         end if
 
         if (config%i_solver_sw == ISolverMcICA) then
+        !$loki remove
           ! Compute fluxes using the McICA shortwave solver
           call solver_mcica_sw(nlev,istartcol,iendcol, &
                &  config, single_level, cloud, & 
                &  od_sw, ssa_sw, g_sw, od_sw_cloud, ssa_sw_cloud, &
                &  g_sw_cloud, sw_albedo_direct, sw_albedo_diffuse, &
                &  incoming_sw, flux)
+        !$loki end remove
         else if (config%i_solver_sw == ISolverSPARTACUS) then
+        !$loki remove
           ! Compute fluxes using the SPARTACUS shortwave solver
           call solver_spartacus_sw(nlev,istartcol,iendcol, &
                &  config, single_level, thermodynamics, cloud, & 
                &  od_sw, ssa_sw, g_sw, od_sw_cloud, ssa_sw_cloud, &
                &  g_sw_cloud, sw_albedo_direct, sw_albedo_diffuse, &
                &  incoming_sw, flux)
+        !$loki end remove
         else if (config%i_solver_sw == ISolverTripleclouds) then
           ! Compute fluxes using the Tripleclouds shortwave solver
           call solver_tripleclouds_sw(nlev,istartcol,iendcol, &
@@ -493,18 +507,22 @@ contains
                &  g_sw_cloud, sw_albedo_direct, sw_albedo_diffuse, &
                &  incoming_sw, flux)
         elseif (config%i_solver_sw == ISolverHomogeneous) then
+        !$loki remove
           ! Compute fluxes using the homogeneous solver
           call solver_homogeneous_sw(nlev,istartcol,iendcol, &
                &  config, single_level, cloud, & 
                &  od_sw, ssa_sw, g_sw, od_sw_cloud, ssa_sw_cloud, &
                &  g_sw_cloud, sw_albedo_direct, sw_albedo_diffuse, &
                &  incoming_sw, flux)
+        !$loki end remove
         else
+        !$loki remove
           ! Compute fluxes using the cloudless solver
           call solver_cloudless_sw(nlev,istartcol,iendcol, &
                &  config, single_level, od_sw, ssa_sw, g_sw, &
                &  sw_albedo_direct, sw_albedo_diffuse, &
                &  incoming_sw, flux)
+        !$loki end remove
         end if
       end if
 
