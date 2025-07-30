@@ -638,6 +638,7 @@ contains
   ! hydrophilic types are present. This function does so little that
   ! it is best to remove the Dr Hook call.
   function calc_rh_index(this, rh)
+  !$loki routine seq
 
     !use yomhook,     only : lhook, dr_hook, jphook
 

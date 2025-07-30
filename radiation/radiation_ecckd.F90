@@ -899,6 +899,7 @@ contains
   ! temperature, where Planck function is defined as the flux emitted
   ! by a black body (rather than radiance)
   subroutine calc_planck_function(this, nt, temperature, planck)
+  !$loki routine seq
 
     class(ckd_model_type), intent(in)  :: this
     integer,    intent(in)  :: nt
@@ -936,6 +937,7 @@ contains
   subroutine calc_incoming_sw(this, total_solar_irradiance, &
        &                      spectral_solar_irradiance, &
        &                      solar_spectral_multiplier)
+  !$loki routine seq
 
     use radiation_io, only : nulerr, radiation_abort
 

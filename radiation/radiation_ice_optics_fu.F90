@@ -41,7 +41,7 @@ contains
   ! optical depth and then division by zero.
   subroutine calc_ice_optics_fu_sw(nb, coeff, ice_wp, &
        &  re, od, scat_od, g)
-
+  !$loki routine seq
     !use yomhook,  only : lhook, dr_hook, jphook
 
     ! Number of bands
@@ -91,7 +91,7 @@ contains
   ! al. (1998) parameterization
   subroutine calc_ice_optics_fu_lw(nb, coeff, ice_wp, &
        &  re, od, scat_od, g)
-
+  !$loki routine seq
     !use yomhook,  only : lhook, dr_hook, jphook
 
     ! Number of bands

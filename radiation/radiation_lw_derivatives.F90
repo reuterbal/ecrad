@@ -199,6 +199,7 @@ contains
   ! has one fewer dimensions
   subroutine calc_lw_derivatives_region(ng, nlev, nreg, icol, transmittance, &
        &                                u_matrix, flux_up_surf, lw_derivatives)
+  !$loki routine seq
 
     use parkind1, only           : jprb
     use yomhook,  only           : lhook, dr_hook, jphook

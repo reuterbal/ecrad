@@ -50,6 +50,7 @@ contains
   ! longwave
   subroutine calc_two_stream_gammas_lw(ng, ssa, g, &
        &                               gamma1, gamma2)
+  !$loki routine seq
 
 #ifdef DO_DR_HOOK_TWO_STREAM
     use yomhook, only : lhook, dr_hook, jphook
@@ -95,6 +96,7 @@ contains
   ! shortwave
   subroutine calc_two_stream_gammas_sw(ng, mu0, ssa, g, &
        &                               gamma1, gamma2, gamma3)
+  !$loki routine seq
 
 #ifdef DO_DR_HOOK_TWO_STREAM
     use yomhook, only : lhook, dr_hook, jphook
@@ -148,6 +150,7 @@ contains
   subroutine calc_reflectance_transmittance_lw(ng, &
        &    od, gamma1, gamma2, planck_top, planck_bot, &
        &    reflectance, transmittance, source_up, source_dn)
+  !$loki routine seq
 
 #ifdef DO_DR_HOOK_TWO_STREAM
     use yomhook, only : lhook, dr_hook, jphook
@@ -246,6 +249,7 @@ contains
   subroutine calc_ref_trans_lw(ng, &
        &    od, ssa, asymmetry, planck_top, planck_bot, &
        &    reflectance, transmittance, source_up, source_dn)
+  !$loki routine seq
 
 #ifdef DO_DR_HOOK_TWO_STREAM
     use yomhook, only : lhook, dr_hook, jphook
@@ -341,6 +345,7 @@ contains
   ! the layer.
   subroutine calc_no_scattering_transmittance_lw(ng, &
        &    od, planck_top, planck_bot, transmittance, source_up, source_dn)
+  !$loki routine seq
 
 #ifdef DO_DR_HOOK_TWO_STREAM
     use yomhook, only : lhook, dr_hook, jphook
@@ -421,6 +426,7 @@ contains
   subroutine calc_reflectance_transmittance_sw(ng, mu0, od, ssa, &
        &      gamma1, gamma2, gamma3, ref_diff, trans_diff, &
        &      ref_dir, trans_dir_diff, trans_dir_dir)
+  !$loki routine seq
 
 #ifdef DO_DR_HOOK_TWO_STREAM
     use yomhook, only : lhook, dr_hook, jphook
@@ -563,6 +569,7 @@ contains
   subroutine calc_ref_trans_sw(ng, mu0, od, ssa, &
        &      asymmetry, ref_diff, trans_diff, &
        &      ref_dir, trans_dir_diff, trans_dir_dir)
+  !$loki routine seq
 
 #ifdef DO_DR_HOOK_TWO_STREAM
     use yomhook, only : lhook, dr_hook, jphook
@@ -777,6 +784,7 @@ contains
   ! entrapment in SPARTACUS
   subroutine calc_frac_scattered_diffuse_sw(ng, od, &
        &      gamma1, gamma2, frac_scat_diffuse)
+  !$loki routine seq
 
 #ifdef DO_DR_HOOK_TWO_STREAM
     use yomhook, only : lhook, dr_hook, jphook

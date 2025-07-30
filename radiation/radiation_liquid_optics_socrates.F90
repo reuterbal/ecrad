@@ -38,6 +38,7 @@ contains
   ! parameterization consisting of Pade approximants from the
   ! SOCRATES (Edwards-Slingo) code
   subroutine calc_liq_optics_socrates(nb, coeff, lwp, re_in, od, scat_od, g)
+  !$loki routine seq
 
     use parkind1, only : jprb
     !use yomhook,  only : lhook, dr_hook, jphook

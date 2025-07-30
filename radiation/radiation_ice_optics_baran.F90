@@ -30,6 +30,7 @@ contains
   ! parameterization as a function of ice water mixing ratio only
   subroutine calc_ice_optics_baran(nb, coeff, ice_wp, &
        &  qi, od, scat_od, g)
+  !$loki routine seq
 
     use parkind1, only : jprb
     !use yomhook,  only : lhook, dr_hook, jphook
@@ -68,6 +69,7 @@ contains
   ! temperature
   subroutine calc_ice_optics_baran2016(nb, coeff, ice_wp, &
        &  qi, temperature, od, scat_od, g)
+  !$loki routine seq
 
     use parkind1, only : jprb
     !use yomhook,  only : lhook, dr_hook, jphook

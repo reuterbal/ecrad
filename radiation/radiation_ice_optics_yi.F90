@@ -37,7 +37,7 @@ contains
   ! al. (2013) parameterization
   subroutine calc_ice_optics_yi_sw(nb, coeff, ice_wp, &
        &  re, od, scat_od, g)
-
+  !$loki routine seq
     use parkind1, only : jprb, jpim
     !use yomhook,  only : lhook, dr_hook, jphook
 
@@ -94,6 +94,7 @@ contains
   ! al. (2013) parameterization
   subroutine calc_ice_optics_yi_lw(nb, coeff, ice_wp, &
        &  re, od, scat_od, g)
+  !$loki routine seq
 
     use parkind1, only : jprb, jpim
     !use yomhook,  only : lhook, dr_hook, jphook

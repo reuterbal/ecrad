@@ -28,6 +28,7 @@ contains
   ! Slingo (1989). WARNING: this parameterization is known not to be
   ! very accurate: see Nielsen et al. (GMD 2014).
   subroutine calc_liq_optics_slingo(nb, coeff, lwp, re, od, scat_od, g)
+  !$loki routine seq
 
     use parkind1, only : jprb
     !use yomhook,  only : lhook, dr_hook, jphook
@@ -68,6 +69,7 @@ contains
   ! Compute liquid-droplet scattering properties in the longwave from
   ! Lindner & Li (2000)
   subroutine calc_liq_optics_lindner_li(nb, coeff, lwp, re, od, scat_od, g)
+  !$loki routine seq
 
     use parkind1, only : jprb
     use yomhook,  only : lhook, dr_hook, jphook

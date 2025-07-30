@@ -273,7 +273,7 @@ contains
     real(jprb) :: re_index, weight1, weight2
     integer :: ire
 
-    integer :: jcol, jlev, jg
+    integer :: jcol, jlev, jg, nlev, kidia, kfdia
 
     real(jphook) :: hook_handle
 

@@ -108,6 +108,7 @@ contains
   ! (with the n dimension varying fastest), and perform matrix-vector
   ! multiplications on first iend pairs
   function singlemat_x_vec(n,iend,m,A,b)
+  !$loki routine seq
 
 !    use yomhook, only : lhook, dr_hook, jphook
 

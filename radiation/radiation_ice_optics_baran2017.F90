@@ -31,6 +31,7 @@ contains
   ! temperature
   subroutine calc_ice_optics_baran2017(nb, coeff_gen, coeff, ice_wp, &
        &  qi, temperature, od, scat_od, g)
+  !$loki routine seq
 
     use parkind1, only : jprb
     !use yomhook,  only : lhook, dr_hook, jphook

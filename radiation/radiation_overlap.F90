@@ -63,6 +63,7 @@ contains
   ! "beta" overlap parameter
   pure function calc_beta_overlap_matrix(nreg, op, frac_upper, frac_lower, &
        &  frac_threshold) result(overlap_matrix)
+  !$loki routine seq
 
     use parkind1, only : jprb
     
@@ -129,6 +130,7 @@ contains
   ! Tripleclouds assumption to have different areas
   pure function calc_alpha_overlap_matrix(nreg, op, op_inhom, &
        &  frac_upper, frac_lower) result(overlap_matrix)
+  !$loki routine seq
 
     use parkind1, only : jprb
     
