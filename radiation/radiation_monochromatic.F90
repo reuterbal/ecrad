@@ -277,14 +277,18 @@ contains
 
     ! Geometric optics approximation: particles treated as much larger
     ! than the wavelength in both shortwave and longwave
-    od_sw_cloud(1,:,:) &
-         &   = (3.0_jprb/(2.0_jprb*DensityLiquidWater)) &
-         &   * lwp_kg_m2 / transpose(cloud%re_liq(istartcol:iendcol,:)) &
-         &   + (3.0_jprb / (2.0_jprb * DensitySolidIce)) &
-         &   * iwp_kg_m2 / transpose(cloud%re_ice(istartcol:iendcol,:))
-    od_lw_cloud(1,:,:) = lwp_kg_m2 * 137.22_jprb &
-         &   + (3.0_jprb / (2.0_jprb * DensitySolidIce)) &
-         &   * iwp_kg_m2 / transpose(cloud%re_ice(istartcol:iendcol,:))
+    do jlev=1, nlev
+      do jcol=istartcol, iendcol
+        od_sw_cloud(1,jlev,jcol) &
+             &   = (3.0_jprb/(2.0_jprb*DensityLiquidWater)) &
+             &   * lwp_kg_m2(jcol,jlev) / cloud%re_liq(jcol,jlev) &
+             &   + (3.0_jprb / (2.0_jprb * DensitySolidIce)) &
+             &   * iwp_kg_m2(jcol,jlev) / cloud%re_ice(jcol,jlev)
+        od_lw_cloud(1,jlev,jcol) = lwp_kg_m2(jcol,jlev) * 137.22_jprb &
+             &   + (3.0_jprb / (2.0_jprb * DensitySolidIce)) &
+             &   * iwp_kg_m2(jcol,jlev) / cloud%re_ice(jcol,jlev)
+      end do
+    end do
 
     if (config%iverbose >= 4) then
       do jcol = istartcol,iendcol

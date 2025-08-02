@@ -360,7 +360,7 @@ contains
 
     logical :: do_sw, do_lw
     
-    integer :: jlev, jgreorder, jg, ig, iband, jcol
+    integer :: jlev, jgreorder, jg, ig, iband, jcol, ig_reordered, iemissband
 
     real(jphook) :: hook_handle
 
@@ -467,10 +467,19 @@ contains
         else
           ! Longwave emission has already been computed
           if (config%use_canopy_full_spectrum_lw) then
-            lw_emission = transpose(single_level%lw_emission(istartcol:iendcol,:))
+            do ig = 1, config%n_g_lw
+              do jcol = istartcol,iendcol
+                lw_emission(ig, jcol) = single_level%lw_emission(jcol,ig)
+              end do
+            end do
           else
-            lw_emission = transpose(single_level%lw_emission(istartcol:iendcol, &
-                 & config%i_emiss_from_band_lw(config%i_band_from_reordered_g_lw)))
+            do jgreorder = lbound(config%i_band_from_reordered_g_lw, 1), &
+                         & ubound(config%i_band_from_reordered_g_lw, 1)
+              iemissband = config%i_emiss_from_band_lw(config%i_band_from_reordered_g_lw(jgreorder))
+              do jcol = istartcol,iendcol
+                lw_emission(jgreorder, jcol) = single_level%lw_emission(jcol, iemissband)
+              end do
+            end do
           end if
         end if
 

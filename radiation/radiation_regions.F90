@@ -105,7 +105,11 @@ contains
     if (nreg == 2) then
       ! Only one clear-sky and one cloudy region: cloudy region is
       ! homogeneous
-      reg_fracs(2,1:nlev,istartcol:iendcol)  = transpose(cloud_fraction(istartcol:iendcol,1:nlev))
+      do jlev=1,nlev
+        do jcol=istartcol,iendcol
+          reg_fracs(2,jlev,jcol)  = cloud_fraction(jcol,jlev)
+        end do
+      end do
       reg_fracs(1,1:nlev,istartcol:iendcol)  = 1.0_jprb - reg_fracs(2,1:nlev,istartcol:iendcol)
       od_scaling(2,1:nlev,istartcol:iendcol) = 1.0_jprb
 
