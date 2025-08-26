@@ -193,12 +193,12 @@ contains
     do jtype = 1,config%n_cloud_types
       ! Compute in-cloud water path
       if (config%is_homogeneous) then
-        water_path = cloud%mixing_ratio(istartcol:iendcol,:,jtype) &
+        water_path(istartcol:iendcol,1:nlev) = cloud%mixing_ratio(istartcol:iendcol,1:nlev,jtype) &
              &  *  (thermodynamics%pressure_hl(istartcol:iendcol, 2:nlev+1) &
              &     -thermodynamics%pressure_hl(istartcol:iendcol, 1:nlev)) &
              &  * (1.0_jprb / AccelDueToGravity)
       else
-        water_path = cloud%mixing_ratio(istartcol:iendcol,:,jtype) &
+        water_path(istartcol:iendcol,1:nlev) = cloud%mixing_ratio(istartcol:iendcol,1:nlev,jtype) &
              &  *  (thermodynamics%pressure_hl(istartcol:iendcol, 2:nlev+1) &
              &     -thermodynamics%pressure_hl(istartcol:iendcol, 1:nlev)) &
              &  * (1.0_jprb / (AccelDueToGravity &
