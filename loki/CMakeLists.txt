@@ -7,6 +7,8 @@
 # granted to it by virtue of its status as an intergovernmental organisation
 # nor does it submit to any jurisdiction.
 
+include(ecrad_fypp_macros)
+
 set( CMAKE_Fortran_MODULE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}" )
 
 set( ecrad_loki_SOURCE_DIRS "" )
@@ -23,6 +25,11 @@ foreach( tgt IN LISTS target_list )
     list( APPEND ecrad_loki_SOURCE_DIRS "${${tgt}_SOURCE_DIR}" )
 endforeach()
 
+# Generate radintg with fypp (if enabled)
+ecrad_ifs_process_fypp( "${PROJECT_SOURCE_DIR}/ifs/radintg_zrgp_mod" )
+# Generate radiation_scheme_layer with fypp (if enabled)
+ecrad_ifs_process_fypp( "${PROJECT_SOURCE_DIR}/ifs/radiation_scheme_layer_mod" )
+
 ecbuild_add_library(
     TARGET
         ecrad_loki.${PREC}
@@ -32,6 +39,8 @@ ecbuild_add_library(
         ${ifsrrtm_SOURCES}
         ${radiation_SOURCES}
         ${ifs_SOURCES}
+        "${CMAKE_CURRENT_BINARY_DIR}/radintg_zrgp_mod.F90"
+        "${CMAKE_CURRENT_BINARY_DIR}/radiation_scheme_layer_mod.F90"
     DEFINITIONS
         $<${HAVE_FIELD_API}:HAVE_FIELD_API>
     PRIVATE_INCLUDES

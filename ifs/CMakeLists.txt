@@ -28,14 +28,15 @@ set( ifs_SOURCES
 list( TRANSFORM ifs_SOURCES PREPEND "${CMAKE_CURRENT_SOURCE_DIR}/" )
 set( ifs_SOURCES ${ifs_SOURCES} PARENT_SCOPE )
 
-# fypp radintg and add it to the source list
+# Generate radintg with fypp (if enabled)
 ecrad_ifs_process_fypp( radintg_zrgp_mod )
-list( APPEND ifs_SOURCES ${CMAKE_CURRENT_BINARY_DIR}/radintg_zrgp_mod.F90)
 
 ecbuild_add_library(
     TARGET ifs.${PREC}
     TYPE OBJECT
-    SOURCES ${ifs_SOURCES}
+    SOURCES
+        ${ifs_SOURCES}
+        radintg_zrgp_mod.F90
     PUBLIC_INCLUDES
         "$<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/module_ifs>"
     PRIVATE_LIBS
@@ -52,12 +53,14 @@ if( HAVE_FIELD_API )
 
     # fypp radintg and add it to the source list
     ecrad_ifs_process_fypp( radiation_scheme_layer_mod )
-    list( APPEND ifs_SOURCES ${CMAKE_CURRENT_BINARY_DIR}/radiation_scheme_layer_mod.F90)
 
     ecbuild_add_library(
         TARGET ifs_field_api.${PREC}
         TYPE OBJECT
-        SOURCES ${ifs_SOURCES}
+        SOURCES
+            ${ifs_SOURCES}
+            radintg_zrgp_mod.F90
+            radiation_scheme_layer_mod.F90
         PUBLIC_DEFINITIONS
             HAVE_FIELD_API
         PUBLIC_INCLUDES
