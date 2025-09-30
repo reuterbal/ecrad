@@ -830,6 +830,7 @@ contains
   ! element of "ind" should refer outside the bounds of "dest".  This
   ! version increments existing contents of "dest".
   pure subroutine add_indexed_sum(source, ind, dest)
+!$loki routine seq
 
     real(jprb), intent(in)    :: source(:)
     integer,    intent(in)    :: ind(:)
@@ -852,6 +853,7 @@ contains
   ! As "add_indexed_sum" but this version overwrites existing contents
   ! of "dest"
   pure subroutine indexed_sum(source, ind, dest)
+!$loki routine seq
 
     real(jprb), intent(in)  :: source(:)
     integer,    intent(in)  :: ind(:)
@@ -874,6 +876,7 @@ contains
   !---------------------------------------------------------------------
   ! Vectorized version of "add_indexed_sum"
   subroutine indexed_sum_vec(source, ind, dest, ist, iend)
+!$loki routine seq
 
     real(jprb), intent(in)  :: source(:,:)
     integer,    intent(in)  :: ind(:)
@@ -896,6 +899,7 @@ contains
   !---------------------------------------------------------------------
   ! As "add_indexed_sum" but a whole vertical profiles
   pure subroutine add_indexed_sum_profile(source, ind, dest)
+!$loki routine seq
 
     real(jprb), intent(in)  :: source(:,:)
     integer,    intent(in)  :: ind(:)
@@ -920,6 +924,7 @@ contains
   !---------------------------------------------------------------------
   ! As "indexed_sum" but a whole vertical profiles
   pure subroutine indexed_sum_profile(source, ind, dest)
+!$loki routine seq
 
     real(jprb), intent(in)  :: source(:,:)
     integer,    intent(in)  :: ind(:)

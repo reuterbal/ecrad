@@ -196,6 +196,7 @@ contains
   ! Calculate the dry mass of each layer, neglecting humidity effects.
   ! The second version is for one column, the one numbered "icol".
   subroutine get_layer_mass_column(this, icol, layer_mass)
+  !$loki routine seq
 
     use yomhook,              only : lhook, dr_hook, jphook
     use radiation_constants,  only : AccelDueToGravity
@@ -230,6 +231,7 @@ contains
   ! overlap decorrelation lengths and hence cloud cover outside the
   ! radiation scheme.
   subroutine get_layer_separation(pressure_hl, temperature_hl, layer_separation)
+  !$loki routine seq
 
     use yomhook,              only : lhook, dr_hook, jphook
     use radiation_constants,  only : GasConstantDryAir, AccelDueToGravity
