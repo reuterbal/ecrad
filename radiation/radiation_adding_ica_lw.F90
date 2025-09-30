@@ -32,7 +32,7 @@ contains
   subroutine adding_ica_lw(ncol, nlev, &
        &  reflectance, transmittance, source_up, source_dn, emission_surf, albedo_surf, &
        &  flux_up, flux_dn)
-
+  !$loki routine seq
     use parkind1, only           : jprb
     use yomhook,  only           : lhook, dr_hook, jphook
 
@@ -138,6 +138,7 @@ contains
        &  reflectance, transmittance, source_up, source_dn, emission_surf, albedo_surf, &
        &  is_clear_sky_layer, i_cloud_top, flux_dn_clear, &
        &  flux_up, flux_dn)
+  !$loki routine seq
 
     use parkind1, only           : jprb
     use yomhook,  only           : lhook, dr_hook, jphook
@@ -271,7 +272,7 @@ contains
   ! fluxes in the same way.
   subroutine calc_fluxes_no_scattering_lw(ncol, nlev, &
        &  transmittance, source_up, source_dn, emission_surf, albedo_surf, flux_up, flux_dn)
-
+  !$loki routine seq
     use parkind1, only           : jprb
     use yomhook,  only           : lhook, dr_hook, jphook
 
