@@ -327,7 +327,6 @@ program ecrad_ifs_driver
   call flux%allocate(yradiation%rad_config, 1, ncol, nlev)
 
   ! set relevant fluxes to zero
-  !$loki remove
   if (yradiation%rad_config%do_sw) then
     flux%sw_up(:,:) = 0._jprb
     flux%sw_dn(:,:) = 0._jprb
@@ -338,7 +337,6 @@ program ecrad_ifs_driver
     flux%sw_dn_diffuse_surf_canopy(:,:) = 0._jprb
     flux%sw_dn_direct_surf_canopy(:,:) = 0._jprb
   end if
-  !$loki end remove
   if (yradiation%rad_config%do_lw) then
     flux%lw_up(:,:) = 0._jprb
     flux%lw_dn(:,:) = 0._jprb
@@ -434,7 +432,6 @@ program ecrad_ifs_driver
   ! "up" fluxes are actually net fluxes at this point - we modify the
   ! upwelling flux so that net=dn-up, while the TOA and surface
   ! downwelling fluxes are correct.
-  !$loki remove
   if (yradiation%rad_config%do_sw) then
     flux%sw_up = -flux%sw_up
     flux%sw_up(:,1) = flux%sw_up(:,1)+flux%sw_dn(:,1)
@@ -443,7 +440,6 @@ program ecrad_ifs_driver
     flux%sw_up_clear(:,1) = flux%sw_up_clear(:,1)+flux%sw_dn_clear(:,1)
     flux%sw_up_clear(:,nlev+1) = flux%sw_up_clear(:,nlev+1)+flux%sw_dn_clear(:,nlev+1)
   end if
-  !$loki end remove
   if (yradiation%rad_config%do_lw) then
     flux%lw_up = -flux%lw_up
     flux%lw_up(:,1) = flux%lw_up(:,1)+flux%lw_dn(:,1)

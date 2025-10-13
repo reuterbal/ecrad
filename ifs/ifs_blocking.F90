@@ -292,12 +292,10 @@ subroutine ifs_copy_fluxes_from_blocked(&
       ib=(jrl-1)/nproma+1
 
       do jlev=1,nlev+1
-        !$loki remove
         if (yradiation%rad_config%do_sw) then
           flux%sw_up(ibeg:iend,jlev) = zrgp(1:il,ifs_config%ifrso+jlev-1,ib)
           flux%sw_up_clear(ibeg:iend,jlev) = zrgp(1:il,ifs_config%iswfc+jlev-1,ib)
         end if
-        !$loki end remove
         if (yradiation%rad_config%do_lw) then
           flux%lw_up(ibeg:iend,jlev) = zrgp(1:il,ifs_config%ifrth+jlev-1,ib)
           flux%lw_up_clear(ibeg:iend,jlev) = zrgp(1:il,ifs_config%ilwfc+jlev-1,ib)
@@ -308,7 +306,6 @@ subroutine ifs_copy_fluxes_from_blocked(&
           endif
         end if
       end do
-      !$loki remove
       if (yradiation%rad_config%do_sw) then
         flux%sw_dn(ibeg:iend,nlev+1) = zrgp(1:il,ifs_config%ifrsod,ib)
         flux%sw_dn_clear(ibeg:iend,nlev+1) = zrgp(1:il,ifs_config%ifrsodc,ib)
@@ -317,7 +314,6 @@ subroutine ifs_copy_fluxes_from_blocked(&
         flux_sw_direct_normal(ibeg:iend) = zrgp(1:il,ifs_config%isudu,ib)
         flux%sw_dn(ibeg:iend,1) = zrgp(1:il,ifs_config%itincf,ib)
       end if
-      !$loki end remove
       if (yradiation%rad_config%do_lw) then
         flux%lw_dn(ibeg:iend,nlev+1) = zrgp(1:il,ifs_config%ifrted,ib)
         flux%lw_dn_clear(ibeg:iend,nlev+1) = zrgp(1:il,ifs_config%ifrtedc,ib)
@@ -327,12 +323,10 @@ subroutine ifs_copy_fluxes_from_blocked(&
       flux_par_clear(ibeg:iend) = zrgp(1:il,ifs_config%iparcf,ib)
       emissivity_out(ibeg:iend) = zrgp(1:il,ifs_config%iemit,ib)
       if (yradiation%rad_config%do_sw .and. yradiation%yrerad%lapproxswupdate) then
-      !$loki remove
         do jg=1,yradiation%yrerad%nsw
           flux_diffuse_band(ibeg:iend,jg) = zrgp(1:il,ifs_config%iswdiffuseband+jg-1,ib)
           flux_direct_band(ibeg:iend,jg) = zrgp(1:il,ifs_config%iswdirectband+jg-1,ib)
         end do
-      !$loki end remove
       else
         flux_diffuse_band(ibeg:iend,:) = 0.0_jprb
         flux_direct_band(ibeg:iend,:) = 0.0_jprb

@@ -532,7 +532,6 @@ CONTAINS
     ENDIF
 
     ! Get spectral weightings for UV and PAR
-    !$loki remove
     IF (RAD_CONFIG%DO_SW) THEN
       CALL RAD_CONFIG%GET_SW_WEIGHTS(0.2E-6_JPRB, 0.4415E-6_JPRB,&
           &  PRADIATION%NWEIGHT_UV, PRADIATION%IBAND_UV, PRADIATION%WEIGHT_UV,&
@@ -541,7 +540,6 @@ CONTAINS
           &  PRADIATION%NWEIGHT_PAR, PRADIATION%IBAND_PAR, PRADIATION%WEIGHT_PAR,&
           &  'photosynthetically active radiation, PAR')
     ENDIF
-    !$loki end remove
     PRADIATION%TROP_BG_AER_MASS_EXT  = 0.0_JPRB
     PRADIATION%STRAT_BG_AER_MASS_EXT = 0.0_JPRB
     ! IF (YDERAD%NAERMACC > 0) THEN
