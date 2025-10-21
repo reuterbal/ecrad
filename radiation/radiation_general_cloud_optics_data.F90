@@ -19,6 +19,7 @@
 module radiation_general_cloud_optics_data
 
   use parkind1, only : jprb
+  use radiation_delta_eddington_mod, only: delta_eddington, revert_delta_eddington
 
   implicit none
 
@@ -62,9 +63,6 @@ module radiation_general_cloud_optics_data
   end type general_cloud_optics_type
 
 contains
-
-  ! Provides elemental function "delta_eddington"
-#include "radiation_delta_eddington.h"
 
   !---------------------------------------------------------------------
   ! Setup cloud optics coefficients by reading them from a file

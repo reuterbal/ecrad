@@ -24,6 +24,7 @@ set( radiation_SOURCES
         radiation_cloudless_sw.F90
         radiation_config.F90
         radiation_constants.F90
+        radiation_delta_eddington_mod.F90
         radiation_delta_eddington.h
         radiation_ecckd_gas.F90
         radiation_ecckd_interface.F90

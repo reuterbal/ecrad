@@ -16,15 +16,13 @@
 
 module radiation_general_cloud_optics
 
+  use radiation_delta_eddington_mod, only: delta_eddington_extensive
+
   implicit none
 
   public
   
 contains
-
-  ! Provides elemental function "delta_eddington_scat_od"
-#include "radiation_delta_eddington.h"
-
 
   !---------------------------------------------------------------------
   ! Load cloud scattering data; this subroutine delegates to one

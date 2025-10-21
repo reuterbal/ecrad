@@ -23,11 +23,11 @@
 
 module radiation_tripleclouds_sw
 
+  use radiation_delta_eddington_mod, only: delta_eddington
+
   public
 
 contains
-  ! Provides elemental function "delta_eddington"
-#include "radiation_delta_eddington.h"
 
   ! Small routine for scaling cloud optical depth in the cloudy
   ! regions

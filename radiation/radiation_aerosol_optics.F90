@@ -22,13 +22,12 @@
 
 module radiation_aerosol_optics
 
+  use radiation_delta_eddington_mod, only: delta_eddington_extensive, delta_eddington_extensive_vec
+
   implicit none
   public
 
 contains
-
-  ! Provides the elemental function "delta_eddington_extensive"
-#include "radiation_delta_eddington.h"
 
   !---------------------------------------------------------------------
   ! Load aerosol scattering data; this subroutine delegates to one

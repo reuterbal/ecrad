@@ -19,6 +19,8 @@
 
 module radiation_monochromatic
 
+  use radiation_delta_eddington_mod, only: delta_eddington
+
   implicit none
 
   public  :: setup_gas_optics, gas_optics, set_gas_units, &
@@ -26,9 +28,6 @@ module radiation_monochromatic
        &     setup_aerosol_optics, add_aerosol_optics
 
 contains
-
-  ! Provides elemental function "delta_eddington"
-#include "radiation_delta_eddington.h"
 
   !---------------------------------------------------------------------
   ! Setup the arrays in the config object corresponding to the
