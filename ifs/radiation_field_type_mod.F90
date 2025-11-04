@@ -54,6 +54,21 @@ module radiation_field_type_module
          &   spectral_solar_scaling=>null() ! (n_bands_sw)
     integer, pointer, dimension(:) :: iseed=>null() ! (ncol)
 
+    ! single level type device pointers
+    real(jprb), pointer, dimension(:,:) :: &
+         &   cos_sza_d=>null(), &
+         &   skin_temperature_d=>null()
+    real(jprb), pointer, dimension(:,:,:) :: &
+         &   sw_albedo_d=>null(), &
+         &   sw_albedo_direct_d=>null()
+    real(jprb), pointer, dimension(:,:,:) :: &
+         &   lw_emissivity_d=>null()
+    real(jprb), pointer, dimension(:,:,:) :: &
+         &   lw_emission_d=>null()
+    real(jprb), pointer, dimension(:,:) :: &
+         &   spectral_solar_scaling_d=>null()
+    integer, pointer, dimension(:,:) :: iseed_d=>null()
+
     ! single level type fields
     class(field_2rb), pointer :: &
          &   f_cos_sza=>null(), &          ! (ncol,nblocks) Cosine of solar zenith angle
@@ -82,18 +97,28 @@ module radiation_field_type_module
 
   type thermodynamics_field_type
 
-     real(jprb), pointer, dimension(:,:) :: &
-          &  pressure_hl=>null(), &   ! (ncol,nlev+1) pressure (Pa)
-          &  temperature_hl=>null()   ! (ncol,nlev+1) temperature (K)
-     real(jprb), pointer, dimension(:,:) :: &
-          &  h2o_sat_liq=>null() ! (ncol,nlev) specific humidity at liquid
-                         ! saturation (kg/kg)
-     class(field_3rb), pointer :: &
-          &  f_pressure_hl=>null(), &   ! (ncol,nlev+1,nblocks) pressure (Pa)
-          &  f_temperature_hl=>null()   ! (ncol,nlev+1,nblocks) temperature (K)
-     class(field_3rb), pointer :: &
-          &  f_h2o_sat_liq=>null() ! (ncol,nlev,nblocks) specific humidity at liquid
-                         ! saturation (kg/kg)
+    ! thermodynamics type access pointers
+    real(jprb), pointer, dimension(:,:) :: &
+         &  pressure_hl=>null(), &   ! (ncol,nlev+1) pressure (Pa)
+         &  temperature_hl=>null()   ! (ncol,nlev+1) temperature (K)
+    real(jprb), pointer, dimension(:,:) :: &
+         &  h2o_sat_liq=>null() ! (ncol,nlev) specific humidity at liquid
+                                ! saturation (kg/kg)
+
+    ! thermodynamics type device pointers
+    real(jprb), pointer, dimension(:,:,:) :: &
+         &  pressure_hl_d=>null(), &
+         &  temperature_hl_d=>null()
+    real(jprb), pointer, dimension(:,:,:) :: &
+         &  h2o_sat_liq_d=>null()
+
+    ! thermodynamics type field pointers
+    class(field_3rb), pointer :: &
+         &  f_pressure_hl=>null(), &   ! (ncol,nlev+1,nblocks) pressure (Pa)
+         &  f_temperature_hl=>null()   ! (ncol,nlev+1,nblocks) temperature (K)
+    class(field_3rb), pointer :: &
+         &  f_h2o_sat_liq=>null() ! (ncol,nlev,nblocks) specific humidity at liquid
+                                  ! saturation (kg/kg)
 
    contains
 
@@ -108,8 +133,11 @@ module radiation_field_type_module
     integer :: ncol           = 0 ! Number of columns in mixing_ratio
     integer :: nlev           = 0 ! Number of levels  in mixing_ratio
 
+    ! gas type mixing ratio access pointer
     real(jprb), pointer, dimension(:,:,:) :: mixing_ratio=>null()
-
+    ! gas type mixing ratio device pointer
+    real(jprb), pointer, dimension(:,:,:,:) :: mixing_ratio_d=>null()
+    ! gas type mixing ratio field pointer
     class(field_4rb), pointer :: f_mixing_ratio=>null() ! (ncol, nlev, NMaxGases, nblks)
 
   contains
@@ -124,10 +152,11 @@ module radiation_field_type_module
   type cloud_field_type
     integer                                   :: ntype = 0
     logical                                   :: ntype_present = .false.
+
+    ! cloud type access pointers
     real(jprb), pointer, dimension(:,:,:) :: & ! (ncol,nlev,ntype)
          &  mixing_ratio=>null(), &
          &  effective_radius=>null()
-
     real(jprb), pointer, dimension(:,:) :: & ! (ncol,nlev)
          &  q_liq=>null(),  q_ice=>null(),  &
          &  re_liq=>null(), re_ice=>null()
@@ -139,10 +168,25 @@ module radiation_field_type_module
          &  inv_inhom_effective_size=>null()
     real(jprb), pointer, dimension(:,:) :: overlap_param=>null() ! (ncol,nlev-1)
 
+    ! cloud type access pointers
+    real(jprb), pointer, dimension(:,:,:,:) :: &
+         &  mixing_ratio_d=>null(), &
+         &  effective_radius_d=>null()
+    real(jprb), pointer, dimension(:,:,:) :: &
+         &  q_liq_d=>null(),  q_ice_d=>null(),  &
+         &  re_liq_d=>null(), re_ice_d=>null()
+    real(jprb), pointer, dimension(:,:,:) :: fraction_d=>null()
+    real(jprb), pointer, dimension(:,:,:) :: fractional_std_d=>null()
+    real(jprb), pointer, dimension(:,:,:) :: &
+         &  inv_cloud_effective_size_d=>null()
+    real(jprb), pointer, dimension(:,:,:) :: &
+         &  inv_inhom_effective_size_d=>null()
+    real(jprb), pointer, dimension(:,:,:) :: overlap_param_d=>null()
+
+    ! cloud type field pointers
     class(field_4rb), pointer :: & ! (ncol,nlev,ntype,nblocks)
          &  f_mixing_ratio=>null(), &
          &  f_effective_radius=>null()
-
     class(field_3rb), pointer :: f_fraction=>null()
     class(field_3rb), pointer :: f_fractional_std=>null() ! (ncol,nlev,nblocks)
     class(field_3rb), pointer :: & ! (ncol,nlev,nblocks).
@@ -161,10 +205,15 @@ module radiation_field_type_module
   end type cloud_field_type
 
   type aerosol_field_type
-    class(field_4rb), pointer :: & ! (ncol,istartlev:iendlev,config%n_aerosol_types, nblocks)
-          &  f_mixing_ratio=>null()
+    ! aerosol type mixing ratio access pointer
     real(jprb), pointer, dimension(:,:,:) :: & ! (ncol,istartlev:iendlev,config%n_aerosol_types)
           &  mixing_ratio=>null()
+    ! aerosol type mixing ratio device pointer
+    real(jprb), pointer, dimension(:,:,:,:) :: &
+          &  mixing_ratio_d=>null()
+    ! aerosol type mixing ratio field pointer
+    class(field_4rb), pointer :: & ! (ncol,istartlev:iendlev,config%n_aerosol_types, nblocks)
+          &  f_mixing_ratio=>null()
 
      integer :: istartlev, iendlev
      logical :: is_direct = .false.
@@ -178,6 +227,8 @@ module radiation_field_type_module
 
 
   type flux_field_type
+
+    ! flux type access pointers
     real(jprb), pointer, dimension(:,:) :: &  ! (ncol,nlev+1)
          &  lw_up=>null(), lw_dn=>null(), &
          &  sw_up=>null(), sw_dn=>null(), &
@@ -186,15 +237,6 @@ module radiation_field_type_module
          &  sw_up_clear=>null(), sw_dn_clear=>null(), &
          &  sw_dn_direct_clear=>null()
 
-    class(field_3rb), pointer :: &  ! (ncol,nlev+1,nblocks)
-         &  f_lw_up=>null(), f_lw_dn=>null(), &
-         &  f_sw_up=>null(), f_sw_dn=>null(), &
-         &  f_sw_dn_direct=>null(), &
-         &  f_lw_up_clear=>null(), f_lw_dn_clear=>null(), &
-         &  f_sw_up_clear=>null(), f_sw_dn_clear=>null(), &
-         &  f_sw_dn_direct_clear=>null()
-
-    
     real(jprb), pointer, dimension(:,:,:) :: & ! (nband,ncol,nlev+1)
          &  lw_up_band=>null(), lw_dn_band=>null(), &
          &  sw_up_band=>null(), sw_dn_band=>null(), &
@@ -202,6 +244,86 @@ module radiation_field_type_module
          &  lw_up_clear_band=>null(), lw_dn_clear_band=>null(), &
          &  sw_up_clear_band=>null(), sw_dn_clear_band=>null(), &
          &  sw_dn_direct_clear_band=>null()
+
+    real(jprb), pointer, dimension(:,:) :: &  ! (ng,ncol)
+         &  lw_dn_surf_g=>null(), lw_dn_surf_clear_g=>null(), &
+         &  sw_dn_diffuse_surf_g=>null(), sw_dn_direct_surf_g=>null(), &
+         &  sw_dn_diffuse_surf_clear_g=>null(), sw_dn_direct_surf_clear_g=>null()
+
+    real(jprb), pointer, dimension(:,:) :: &  !(ng,ncol)
+         &  lw_up_toa_g=>null(), lw_up_toa_clear_g=>null(), &
+         &  sw_dn_toa_g=>null(), sw_up_toa_g=>null(), sw_up_toa_clear_g=>null()
+
+    real(jprb), pointer, dimension(:,:) :: &  ! (nband,ncol)
+         &  sw_dn_surf_band=>null(), sw_dn_direct_surf_band=>null(), &
+         &  sw_dn_surf_clear_band=>null(), sw_dn_direct_surf_clear_band=>null()
+
+    real(jprb), pointer, dimension(:,:) :: &  ! (nband,ncol)
+         &  lw_up_toa_band=>null(), lw_up_toa_clear_band=>null(), &
+         &  sw_dn_toa_band=>null(), sw_up_toa_band=>null(), sw_up_toa_clear_band=>null()
+
+    real(jprb), pointer, dimension(:,:) :: &
+         &  lw_dn_surf_canopy=>null(), &
+         &  sw_dn_diffuse_surf_canopy=>null(), sw_dn_direct_surf_canopy=>null()
+
+    real(jprb), pointer, dimension(:) :: &
+         &  cloud_cover_lw=>null(), cloud_cover_sw=>null()
+
+    real(jprb), pointer, dimension(:,:) :: &  ! (ncol,nlev+1)
+          &  lw_derivatives=>null()
+
+    ! flux type device pointers
+    real(jprb), pointer, dimension(:,:,:) :: &  ! (ncol,nlev+1)
+         &  lw_up_d=>null(), lw_dn_d=>null(), &
+         &  sw_up_d=>null(), sw_dn_d=>null(), &
+         &  sw_dn_direct_d=>null(), &
+         &  lw_up_clear_d=>null(), lw_dn_clear_d=>null(), &
+         &  sw_up_clear_d=>null(), sw_dn_clear_d=>null(), &
+         &  sw_dn_direct_clear_d=>null()
+
+    real(jprb), pointer, dimension(:,:,:,:) :: & ! (nband,ncol,nlev+1)
+         &  lw_up_band_d=>null(), lw_dn_band_d=>null(), &
+         &  sw_up_band_d=>null(), sw_dn_band_d=>null(), &
+         &  sw_dn_direct_band_d=>null(), &
+         &  lw_up_clear_band_d=>null(), lw_dn_clear_band_d=>null(), &
+         &  sw_up_clear_band_d=>null(), sw_dn_clear_band_d=>null(), &
+         &  sw_dn_direct_clear_band_d=>null()
+
+    real(jprb), pointer, dimension(:,:,:) :: &  ! (ng,ncol)
+         &  lw_dn_surf_g_d=>null(), lw_dn_surf_clear_g_d=>null(), &
+         &  sw_dn_diffuse_surf_g_d=>null(), sw_dn_direct_surf_g_d=>null(), &
+         &  sw_dn_diffuse_surf_clear_g_d=>null(), sw_dn_direct_surf_clear_g_d=>null()
+
+    real(jprb), pointer, dimension(:,:,:) :: &  !(ng,ncol)
+         &  lw_up_toa_g_d=>null(), lw_up_toa_clear_g_d=>null(), &
+         &  sw_dn_toa_g_d=>null(), sw_up_toa_g_d=>null(), sw_up_toa_clear_g_d=>null()
+
+    real(jprb), pointer, dimension(:,:,:) :: &  ! (nband,ncol)
+         &  sw_dn_surf_band_d=>null(), sw_dn_direct_surf_band_d=>null(), &
+         &  sw_dn_surf_clear_band_d=>null(), sw_dn_direct_surf_clear_band_d=>null()
+
+    real(jprb), pointer, dimension(:,:,:) :: &  ! (nband,ncol)
+         &  lw_up_toa_band_d=>null(), lw_up_toa_clear_band_d=>null(), &
+         &  sw_dn_toa_band_d=>null(), sw_up_toa_band_d=>null(), sw_up_toa_clear_band_d=>null()
+
+    real(jprb), pointer, dimension(:,:,:) :: &
+         &  lw_dn_surf_canopy_d=>null(), &
+         &  sw_dn_diffuse_surf_canopy_d=>null(), sw_dn_direct_surf_canopy_d=>null()
+
+    real(jprb), pointer, dimension(:,:) :: &
+         &  cloud_cover_lw_d=>null(), cloud_cover_sw_d=>null()
+
+    real(jprb), pointer, dimension(:,:,:) :: &  ! (ncol,nlev+1)
+          &  lw_derivatives_d=>null()
+
+    ! flux type field pointers
+    class(field_3rb), pointer :: &  ! (ncol,nlev+1,nblocks)
+         &  f_lw_up=>null(), f_lw_dn=>null(), &
+         &  f_sw_up=>null(), f_sw_dn=>null(), &
+         &  f_sw_dn_direct=>null(), &
+         &  f_lw_up_clear=>null(), f_lw_dn_clear=>null(), &
+         &  f_sw_up_clear=>null(), f_sw_dn_clear=>null(), &
+         &  f_sw_dn_direct_clear=>null()
 
     class(field_4rb), pointer :: & ! (nband,ncol,nlev+1,nblocks)
          &  f_lw_up_band=>null(), f_lw_dn_band=>null(), &
@@ -211,72 +333,41 @@ module radiation_field_type_module
          &  f_sw_up_clear_band=>null(), f_sw_dn_clear_band=>null(), &
          &  f_sw_dn_direct_clear_band=>null()
 
-
-    real(jprb), pointer, dimension(:,:) :: &  ! (ng,ncol)
-         &  lw_dn_surf_g=>null(), lw_dn_surf_clear_g=>null(), &
-         &  sw_dn_diffuse_surf_g=>null(), sw_dn_direct_surf_g=>null(), &
-         &  sw_dn_diffuse_surf_clear_g=>null(), sw_dn_direct_surf_clear_g=>null()
-
     class(field_3rb), pointer :: &  ! (ng,ncol,nblocks)
          &  f_lw_dn_surf_g=>null(), f_lw_dn_surf_clear_g=>null(), &
          &  f_sw_dn_diffuse_surf_g=>null(), f_sw_dn_direct_surf_g=>null(), &
          &  f_sw_dn_diffuse_surf_clear_g=>null(), f_sw_dn_direct_surf_clear_g=>null()
 
-    
-    real(jprb), pointer, dimension(:,:) :: &  !(ng,ncol)
-         &  lw_up_toa_g=>null(), lw_up_toa_clear_g=>null(), &
-         &  sw_dn_toa_g=>null(), sw_up_toa_g=>null(), sw_up_toa_clear_g=>null()
-    
     class(field_3rb), pointer :: &  !(ng,ncol,nblocks)
          &  f_lw_up_toa_g=>null(), f_lw_up_toa_clear_g=>null(), &
          &  f_sw_dn_toa_g=>null(), f_sw_up_toa_g=>null(), f_sw_up_toa_clear_g=>null()
 
-
-    real(jprb), pointer, dimension(:,:) :: &  ! (nband,ncol)
-         &  sw_dn_surf_band=>null(), sw_dn_direct_surf_band=>null(), &
-         &  sw_dn_surf_clear_band=>null(), sw_dn_direct_surf_clear_band=>null()
-    
     class(field_3rb), pointer :: &  ! (nband,ncol,nblocks)
          &  f_sw_dn_surf_band=>null(), f_sw_dn_direct_surf_band=>null(), &
          &  f_sw_dn_surf_clear_band=>null(), f_sw_dn_direct_surf_clear_band=>null()
 
-
-    real(jprb), pointer, dimension(:,:) :: &  ! (nband,ncol)
-         &  lw_up_toa_band=>null(), lw_up_toa_clear_band=>null(), &
-         &  sw_dn_toa_band=>null(), sw_up_toa_band=>null(), sw_up_toa_clear_band=>null()
-
     class(field_3rb), pointer :: &
          &  f_lw_up_toa_band=>null(), f_lw_up_toa_clear_band=>null(), &
          &  f_sw_dn_toa_band=>null(), f_sw_up_toa_band=>null(), f_sw_up_toa_clear_band=>null()
-
-
-    real(jprb), pointer, dimension(:,:) :: &
-         &  lw_dn_surf_canopy=>null(), &
-         &  sw_dn_diffuse_surf_canopy=>null(), sw_dn_direct_surf_canopy=>null()
 
     class(field_3rb), pointer :: &
          &  f_lw_dn_surf_canopy=>null(), &
          &  f_sw_dn_diffuse_surf_canopy=>null(), f_sw_dn_direct_surf_canopy=>null()
 
 
-    real(jprb), pointer, dimension(:) :: &
-         &  cloud_cover_lw=>null(), cloud_cover_sw=>null()
-
     class(field_2rb), pointer :: &
          &  f_cloud_cover_lw=>null(), f_cloud_cover_sw=>null()
 
 
-    real(jprb), pointer, dimension(:,:) :: &  ! (ncol,nlev+1)
-          &  lw_derivatives=>null()
     class(field_3rb), pointer :: &  ! (ncol,nlev+1,nblocks)
           &  f_lw_derivatives=>null()
-   
+
   contains
     procedure :: init           => flux_field_init
     procedure :: final          => flux_field_final
     procedure :: update_view    => flux_field_update_view
     procedure :: update_flux => flux_field_update_flux
- 
+
   end type flux_field_type
 
 
