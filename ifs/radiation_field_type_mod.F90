@@ -85,6 +85,7 @@ module radiation_field_type_module
     class(field_2im), pointer :: f_iseed=>null() ! (ncol,nblocks)
 
     logical                   :: is_simple_surface = .true.
+    logical                   :: on_gpu = .false.
 
   contains
 
@@ -92,7 +93,9 @@ module radiation_field_type_module
     procedure :: final => single_level_field_final
     procedure :: update_view => single_level_field_update_view
     procedure :: update_single_level => single_level_field_update_single_level
-
+    procedure :: get_device_data => single_level_field_get_device_data
+    procedure :: attach => single_level_field_attach
+    procedure :: detach => single_level_field_detach
   end type single_level_field_type
 
   type thermodynamics_field_type
@@ -120,18 +123,24 @@ module radiation_field_type_module
          &  f_h2o_sat_liq=>null() ! (ncol,nlev,nblocks) specific humidity at liquid
                                   ! saturation (kg/kg)
 
+    logical                   :: on_gpu = .false.
+
    contains
 
     procedure :: init => thermodynamics_field_init
     procedure :: final => thermodynamics_field_final
     procedure :: update_view => thermodynamics_field_update_view
     procedure :: update_thermodynamics => thermodynamics_field_update_thermodynamics
+    procedure :: get_device_data => thermodynamics_field_get_device_data
+    procedure :: attach => thermodynamics_field_attach
+    procedure :: detach => thermodynamics_field_detach
 
   end type thermodynamics_field_type
 
   type gas_field_type
     integer :: ncol           = 0 ! Number of columns in mixing_ratio
     integer :: nlev           = 0 ! Number of levels  in mixing_ratio
+    logical :: on_gpu         = .false.
 
     ! gas type mixing ratio access pointer
     real(jprb), pointer, dimension(:,:,:) :: mixing_ratio=>null()
@@ -146,12 +155,16 @@ module radiation_field_type_module
     procedure :: final => gas_field_final
     procedure :: update_view => gas_field_update_view
     procedure :: update_gas => gas_field_update_gas
+    procedure :: get_device_data => gas_field_get_device_data
+    procedure :: attach => gas_field_attach
+    procedure :: detach => gas_field_detach
 
   end type gas_field_type
 
   type cloud_field_type
     integer                                   :: ntype = 0
     logical                                   :: ntype_present = .false.
+    logical                                   :: on_gpu = .false.
 
     ! cloud type access pointers
     real(jprb), pointer, dimension(:,:,:) :: & ! (ncol,nlev,ntype)
@@ -201,6 +214,9 @@ module radiation_field_type_module
     procedure :: final => cloud_field_final
     procedure :: update_view => cloud_field_update_view
     procedure :: update_cloud => cloud_field_update_cloud
+    procedure :: get_device_data => cloud_field_get_device_data
+    procedure :: attach => cloud_field_attach
+    procedure :: detach => cloud_field_detach
 
   end type cloud_field_type
 
@@ -217,18 +233,26 @@ module radiation_field_type_module
 
      integer :: istartlev, iendlev
      logical :: is_direct = .false.
+     logical :: on_gpu = .false.
 
   contains
     procedure :: init           => aerosol_field_init
     procedure :: final          => aerosol_field_final
     procedure :: update_view    => aerosol_field_update_view
     procedure :: update_aerosol => aerosol_field_update_aerosol
+    procedure :: get_device_data => aerosol_field_get_device_data
+    procedure :: attach => aerosol_field_attach
+    procedure :: detach => aerosol_field_detach
   end type aerosol_field_type
 
 
   type flux_field_type
 
-    ! flux type access pointers
+     logical :: on_gpu = .false.
+
+  !-----------------------------------------------------------------------
+  ! flux type access pointers
+    ! longwave and shortwave up and down fluxes
     real(jprb), pointer, dimension(:,:) :: &  ! (ncol,nlev+1)
          &  lw_up=>null(), lw_dn=>null(), &
          &  sw_up=>null(), sw_dn=>null(), &
@@ -236,7 +260,7 @@ module radiation_field_type_module
          &  lw_up_clear=>null(), lw_dn_clear=>null(), &
          &  sw_up_clear=>null(), sw_dn_clear=>null(), &
          &  sw_dn_direct_clear=>null()
-
+    ! band fluxes
     real(jprb), pointer, dimension(:,:,:) :: & ! (nband,ncol,nlev+1)
          &  lw_up_band=>null(), lw_dn_band=>null(), &
          &  sw_up_band=>null(), sw_dn_band=>null(), &
@@ -244,35 +268,36 @@ module radiation_field_type_module
          &  lw_up_clear_band=>null(), lw_dn_clear_band=>null(), &
          &  sw_up_clear_band=>null(), sw_dn_clear_band=>null(), &
          &  sw_dn_direct_clear_band=>null()
-
+    ! g fluxes
     real(jprb), pointer, dimension(:,:) :: &  ! (ng,ncol)
          &  lw_dn_surf_g=>null(), lw_dn_surf_clear_g=>null(), &
          &  sw_dn_diffuse_surf_g=>null(), sw_dn_direct_surf_g=>null(), &
          &  sw_dn_diffuse_surf_clear_g=>null(), sw_dn_direct_surf_clear_g=>null()
-
+    ! TOA g fluxes
     real(jprb), pointer, dimension(:,:) :: &  !(ng,ncol)
          &  lw_up_toa_g=>null(), lw_up_toa_clear_g=>null(), &
          &  sw_dn_toa_g=>null(), sw_up_toa_g=>null(), sw_up_toa_clear_g=>null()
-
+    ! surface band fluxes
     real(jprb), pointer, dimension(:,:) :: &  ! (nband,ncol)
          &  sw_dn_surf_band=>null(), sw_dn_direct_surf_band=>null(), &
          &  sw_dn_surf_clear_band=>null(), sw_dn_direct_surf_clear_band=>null()
-
+    ! TOA band fluxes
     real(jprb), pointer, dimension(:,:) :: &  ! (nband,ncol)
          &  lw_up_toa_band=>null(), lw_up_toa_clear_band=>null(), &
          &  sw_dn_toa_band=>null(), sw_up_toa_band=>null(), sw_up_toa_clear_band=>null()
-
+    ! canpoy fluxes
     real(jprb), pointer, dimension(:,:) :: &
          &  lw_dn_surf_canopy=>null(), &
          &  sw_dn_diffuse_surf_canopy=>null(), sw_dn_direct_surf_canopy=>null()
-
+    ! cloud cover
     real(jprb), pointer, dimension(:) :: &
          &  cloud_cover_lw=>null(), cloud_cover_sw=>null()
-
+    ! lw derivatives
     real(jprb), pointer, dimension(:,:) :: &  ! (ncol,nlev+1)
           &  lw_derivatives=>null()
 
-    ! flux type device pointers
+  !-----------------------------------------------------------------------
+  ! flux type device pointers
     real(jprb), pointer, dimension(:,:,:) :: &  ! (ncol,nlev+1)
          &  lw_up_d=>null(), lw_dn_d=>null(), &
          &  sw_up_d=>null(), sw_dn_d=>null(), &
@@ -316,7 +341,9 @@ module radiation_field_type_module
     real(jprb), pointer, dimension(:,:,:) :: &  ! (ncol,nlev+1)
           &  lw_derivatives_d=>null()
 
-    ! flux type field pointers
+  !-----------------------------------------------------------------------
+  ! flux type field pointers
+
     class(field_3rb), pointer :: &  ! (ncol,nlev+1,nblocks)
          &  f_lw_up=>null(), f_lw_dn=>null(), &
          &  f_sw_up=>null(), f_sw_dn=>null(), &
@@ -367,6 +394,9 @@ module radiation_field_type_module
     procedure :: final          => flux_field_final
     procedure :: update_view    => flux_field_update_view
     procedure :: update_flux => flux_field_update_flux
+    procedure :: get_device_data => flux_field_get_device_data
+    procedure :: attach => flux_field_attach
+    procedure :: detach => flux_field_detach
 
   end type flux_field_type
 
@@ -380,7 +410,7 @@ contains
   !---------------------------------------------------------------------
   ! Initialise single_field_type
   subroutine single_level_field_init(this, nblocks, ncol, nalbedobands, nemisbands, &
-       &                           use_sw_albedo_direct, is_simple_surface)
+       &                           use_sw_albedo_direct, is_simple_surface, on_gpu)
 
     use yomhook, only : lhook, dr_hook, jphook
 
@@ -388,12 +418,15 @@ contains
     integer,                  intent(in)    :: nblocks, ncol, nalbedobands, nemisbands
     logical,        optional, intent(in)    :: use_sw_albedo_direct
     logical,        optional, intent(in)    :: is_simple_surface
+    logical,        optional, intent(in)    :: on_gpu
 
     real(jphook) :: hook_handle
 
     if (lhook) call dr_hook('radiation_field_type_module:single_level_field_init',0,hook_handle)
 
     if (present(is_simple_surface)) this%is_simple_surface = is_simple_surface
+
+    if (present(on_gpu)) this%on_gpu = on_gpu
 
     call field_new(this%f_cos_sza, ubounds=(/ncol, nblocks/), persistent=.true.)
 
@@ -413,6 +446,8 @@ contains
     end if
 
     call field_new(this%f_iseed, ubounds=(/ncol, nblocks/), persistent=.true.)
+
+    if (this%on_gpu) call this%get_device_data()
 
     if (lhook) call dr_hook('radiation_field_type_module:single_level_field_init',1,hook_handle)
   end subroutine single_level_field_init
@@ -581,13 +616,211 @@ contains
 
   end subroutine single_level_field_update_single_level
 
+  !---------------------------------------------------------------------
+  ! Allocate field api device buffers and update device pointers
+  subroutine single_level_field_get_device_data(this)
+
+    use yomhook, only : lhook, dr_hook, jphook
+
+    class(single_level_field_type), intent(inout) :: this
+    real(jphook) :: hook_handle
+
+    if (lhook) call dr_hook('radiation_field_type:single_level_field_get_device_data',0,hook_handle)
+
+    if (associated(this%f_cos_sza)) then
+      call this%f_cos_sza%get_device_data_wronly(this%cos_sza_d)
+    end if
+
+    if (associated(this%f_skin_temperature)) then
+      call this%f_skin_temperature%get_device_data_wronly(this%skin_temperature_d)
+    end if
+
+    if (associated(this%f_sw_albedo)) then
+      call this%f_sw_albedo%get_device_data_wronly(this%sw_albedo_d)
+    end if
+
+    if (associated(this%f_sw_albedo_direct)) then
+      call this%f_sw_albedo_direct%get_device_data_wronly(this%sw_albedo_direct_d)
+    end if
+
+    if (associated(this%f_lw_emissivity)) then
+      call this%f_lw_emissivity%get_device_data_wronly(this%lw_emissivity_d)
+    end if
+
+    if (associated(this%f_lw_emission)) then
+      call this%f_lw_emission%get_device_data_wronly(this%lw_emission_d)
+    end if
+
+    if (associated(this%f_spectral_solar_scaling)) then
+      call this%f_spectral_solar_scaling%get_device_data_wronly(this%spectral_solar_scaling_d)
+    end if
+
+    if (associated(this%f_iseed)) then
+      call this%f_iseed%get_device_data_wronly(this%iseed_d)
+    end if
+
+    if (lhook) call dr_hook('radiation_field_type:single_level_field_get_device_data',1,hook_handle)
+
+  end subroutine single_level_field_get_device_data
+
+  !---------------------------------------------------------------------
+  ! Copy single level field type to device and attach device pointers
+  ! using unstructured data regions
+  subroutine single_level_field_attach(this)
+
+    use yomhook, only : lhook, dr_hook, jphook
+
+    class(single_level_field_type), intent(inout) :: this
+    real(jphook) :: hook_handle
+
+    if (lhook) call dr_hook('radiation_field_type:single_level_field_attach',0,hook_handle)
+
+    !$acc enter data copyin(this)
+
+    if (associated(this%f_cos_sza)) then
+      !$acc enter data attach(this%cos_sza_d)
+    end if
+
+    if (associated(this%f_skin_temperature)) then
+      !$acc enter data attach(this%skin_temperature_d)
+    end if
+
+    if (associated(this%f_sw_albedo)) then
+      !$acc enter data attach(this%sw_albedo_d)
+    end if
+
+    if (associated(this%f_sw_albedo_direct)) then
+      !$acc enter data attach(this%sw_albedo_direct_d)
+    end if
+
+    if (associated(this%f_lw_emissivity)) then
+      !$acc enter data attach(this%lw_emissivity_d)
+    end if
+
+    if (associated(this%f_lw_emission)) then
+      !$acc enter data attach(this%lw_emission_d)
+    end if
+
+    if (associated(this%f_spectral_solar_scaling)) then
+      !$acc enter data attach(this%spectral_solar_scaling_d)
+    end if
+
+    if (associated(this%f_iseed)) then
+      !$acc enter data attach(this%iseed_d)
+    end if
+
+    if (lhook) call dr_hook('radiation_field_type:single_level_field_attach',1,hook_handle)
+
+  end subroutine single_level_field_attach
+
+  !---------------------------------------------------------------------
+  ! Delete single level field type from device and detach device
+  ! pointers using unstructured data regions
+  subroutine single_level_field_detach(this, block_index)
+
+    use yomhook, only : lhook, dr_hook, jphook
+
+    class(single_level_field_type), intent(inout) :: this
+    integer,                        intent(in)    :: block_index
+    real(jphook) :: hook_handle
+
+    if (lhook) call dr_hook('radiation_field_type:single_level_field_detach',0,hook_handle)
+
+    if (associated(this%f_cos_sza)) then
+      !$acc exit data detach(this%cos_sza_d)
+    end if
+
+    if (associated(this%f_skin_temperature)) then
+      !$acc exit data detach(this%skin_temperature_d)
+    end if
+
+    if (associated(this%f_sw_albedo)) then
+      !$acc exit data detach(this%sw_albedo_d)
+    end if
+
+    if (associated(this%f_sw_albedo_direct)) then
+      !$acc exit data detach(this%sw_albedo_direct_d)
+    end if
+
+    if (associated(this%f_lw_emissivity)) then
+      !$acc exit data detach(this%lw_emissivity_d)
+    end if
+
+    if (associated(this%f_lw_emission)) then
+      !$acc exit data detach(this%lw_emission_d)
+    end if
+
+    if (associated(this%f_spectral_solar_scaling)) then
+      !$acc exit data detach(this%spectral_solar_scaling_d)
+    end if
+
+    if (associated(this%f_iseed)) then
+      !$acc exit data detach(this%iseed_d)
+    end if
+
+    !$acc exit data delete(this)
+
+    if (lhook) call dr_hook('radiation_field_type:single_level_field_detach',1,hook_handle)
+
+  end subroutine single_level_field_detach
+
+  !---------------------------------------------------------------------
+  ! Update single_level_type with the view pointers of this object
+  subroutine single_level_associate_device_pointers(this, single_level, block_index)
+
+    use yomhook, only : lhook, dr_hook, jphook
+
+    class(single_level_field_type), intent(inout) :: this
+    class(single_level_type),       intent(inout) :: single_level
+    integer,                        intent(in)    :: block_index
+
+    real(jphook) :: hook_handle
+
+    if (lhook) call dr_hook('radiation_field_type:single_level_associate_device_pointers',0,hook_handle)
+
+    if (associated(this%cos_sza_d)) then
+      single_level%cos_sza => this%cos_sza_d(:,block_index)
+    end if
+
+    if (associated(this%skin_temperature_d)) then
+      single_level%skin_temperature => this%skin_temperature_d(:,block_index)
+    end if
+
+    if (associated(this%sw_albedo_d)) then
+      single_level%sw_albedo => this%sw_albedo_d(:,:,block_index)
+    end if
+
+    if (associated(this%sw_albedo_direct_d)) then
+      single_level%sw_albedo_direct => this%sw_albedo_direct_d(:,:,block_index)
+    end if
+
+    if (associated(this%lw_emissivity_d)) then
+      single_level%lw_emissivity => this%lw_emissivity_d(:,:,block_index)
+    end if
+
+    if (associated(this%lw_emission_d)) then
+      single_level%lw_emission => this%lw_emission_d(:,:,block_index)
+    end if
+
+    if (associated(this%spectral_solar_scaling_d)) then
+      single_level%spectral_solar_scaling => this%spectral_solar_scaling_d(:,block_index)
+    end if
+
+    if (associated(this%iseed_d)) then
+      single_level%iseed => this%iseed_d(:,block_index)
+    end if
+
+    if (lhook) call dr_hook('radiation_field_type:single_level_associate_device_pointers',1,hook_handle)
+
+  end subroutine single_level_associate_device_pointers
+
 
 !-----------------------------------------------------------------------
 ! thermodynamics_field_type procedures
 
   !---------------------------------------------------------------------
   ! Allocate variables with specified dimensions
-  subroutine thermodynamics_field_init(this, nblocks, ncol, nlev, use_h2o_sat)
+  subroutine thermodynamics_field_init(this, nblocks, ncol, nlev, use_h2o_sat, on_gpu)
 
     use yomhook,  only : lhook, dr_hook, jphook
 
@@ -596,12 +829,15 @@ contains
     integer, intent(in)           :: ncol  ! Number of columns
     integer, intent(in)           :: nlev  ! Number of levels
     logical, intent(in), optional :: use_h2o_sat ! Allocate h2o_sat_liq?
+    logical, intent(in), optional :: on_gpu
 
     logical :: use_h2o_sat_local
 
     real(jphook) :: hook_handle
 
     if (lhook) call dr_hook('radiation_field_type:thermodynamics_field_init',0,hook_handle)
+
+    if (present(on_gpu)) this%on_gpu = on_gpu
 
     call field_new(this%f_pressure_hl, ubounds=(/ncol,nlev+1, nblocks/), persistent=.true.)
     call field_new(this%f_temperature_hl, ubounds=(/ncol,nlev+1, nblocks/), persistent=.true.)
@@ -614,6 +850,8 @@ contains
     if (use_h2o_sat_local) then
       call field_new(this%f_h2o_sat_liq, ubounds=(/ncol,nlev, nblocks/), persistent=.true.)
     end if
+
+    if (this%on_gpu) call this%get_device_data()
 
     if (lhook) call dr_hook('radiation_field_type:thermodynamics_field_init',1,hook_handle)
 
@@ -705,27 +943,150 @@ contains
 
   end subroutine thermodynamics_field_update_thermodynamics
 
+!---------------------------------------------------------------------
+  ! Allocate field api device buffers and update device pointers
+  subroutine thermodynamics_field_get_device_data(this)
+
+    use yomhook, only : lhook, dr_hook, jphook
+
+    class(thermodynamics_field_type), intent(inout) :: this
+    real(jphook) :: hook_handle
+
+    if (lhook) call dr_hook('radiation_field_type:thermodynamics_field_get_device_data',0,hook_handle)
+
+    if (associated(this%f_pressure_hl)) then
+      call this%f_pressure_hl%get_device_data_wronly(this%pressure_hl_d)
+    end if
+
+    if (associated(this%f_temperature_hl)) then
+      call this%f_temperature_hl%get_device_data_wronly(this%temperature_hl_d)
+    end if
+
+    if (associated(this%f_h2o_sat_liq)) then
+      call this%f_h2o_sat_liq%get_device_data_wronly(this%h2o_sat_liq_d)
+    end if
+
+    if (lhook) call dr_hook('radiation_field_type:thermodynamics_field_get_device_data',1,hook_handle)
+
+  end subroutine thermodynamics_field_get_device_data
+
+  !---------------------------------------------------------------------
+  ! Copy thermodynamics field type to device and attach device pointers
+  ! using unstructured data regions
+  subroutine thermodynamics_field_attach(this)
+
+    use yomhook, only : lhook, dr_hook, jphook
+
+    class(thermodynamics_field_type), intent(inout) :: this
+    real(jphook) :: hook_handle
+
+    if (lhook) call dr_hook('radiation_field_type:thermodynamics_field_attach',0,hook_handle)
+
+    !$acc enter data copyin(this)
+
+    if (associated(this%f_pressure_hl)) then
+      !$acc enter data attach(this%pressure_hl_d)
+    end if
+
+    if (associated(this%f_temperature_hl)) then
+      !$acc enter data attach(this%temperature_hl_d)
+    end if
+
+    if (associated(this%f_h2o_sat_liq)) then
+      !$acc enter data attach(this%h2o_sat_liq_d)
+    end if
+
+    if (lhook) call dr_hook('radiation_field_type:thermodynamics_field_attach',1,hook_handle)
+
+  end subroutine thermodynamics_field_attach
+
+  !---------------------------------------------------------------------
+  ! Delete thermodynamics field type from device and detach device
+  ! pointers using unstructured data regions
+  subroutine thermodynamics_field_detach(this, block_index)
+
+    use yomhook, only : lhook, dr_hook, jphook
+
+    class(thermodynamics_field_type), intent(inout) :: this
+    integer,                          intent(in)    :: block_index
+    real(jphook) :: hook_handle
+
+    if (lhook) call dr_hook('radiation_field_type:thermodynamics_field_detach',0,hook_handle)
+
+    if (associated(this%f_pressure_hl)) then
+      !$acc exit data detach(this%pressure_hl_d)
+    end if
+
+    if (associated(this%f_temperature_hl)) then
+      !$acc exit data detach(this%temperature_hl_d)
+    end if
+
+    if (associated(this%f_h2o_sat_liq)) then
+      !$acc exit data detach(this%h2o_sat_liq_d)
+    end if
+
+    !$acc exit data delete(this)
+
+    if (lhook) call dr_hook('radiation_field_type:thermodynamics_field_detach',1,hook_handle)
+
+  end subroutine thermodynamics_field_detach
+
+  !---------------------------------------------------------------------
+  ! Associate thermodynamics_type with device pointers for a given block
+  subroutine thermodynamics_associate_device_pointers(this, thermodynamics, block_index)
+
+    use yomhook, only : lhook, dr_hook, jphook
+
+    class(thermodynamics_field_type), intent(inout) :: this
+    class(thermodynamics_type),       intent(inout) :: thermodynamics
+    integer,                          intent(in)    :: block_index
+
+    real(jphook) :: hook_handle
+
+    if (lhook) call dr_hook('radiation_field_type:thermodynamics_associate_device_pointers',0,hook_handle)
+
+    if (associated(this%pressure_hl_d)) then
+      thermodynamics%pressure_hl => this%pressure_hl_d(:,:,block_index)
+    end if
+
+    if (associated(this%temperature_hl_d)) then
+      thermodynamics%temperature_hl => this%temperature_hl_d(:,:,block_index)
+    end if
+
+    if (associated(this%h2o_sat_liq_d)) then
+      thermodynamics%h2o_sat_liq => this%h2o_sat_liq_d(:,:,block_index)
+    end if
+
+    if (lhook) call dr_hook('radiation_field_type:thermodynamics_associate_device_pointers',1,hook_handle)
+
+  end subroutine thermodynamics_associate_device_pointers
+
 
 !-----------------------------------------------------------------------
 ! Gas field type procedures
 
   !---------------------------------------------------------------------
   ! Initialise gas field type
-  subroutine gas_field_init(this, nblocks, ncol, nlev)
+  subroutine gas_field_init(this, nblocks, ncol, nlev, on_gpu)
 
     use yomhook, only : lhook, dr_hook, jphook
 
-    class(gas_field_type), intent(inout) :: this
-    integer,         intent(in)    :: nblocks, ncol, nlev
+    class(gas_field_type),  intent(inout)         :: this
+    integer,                intent(in)            :: nblocks, ncol, nlev
+    logical,                intent(in), optional  :: on_gpu
 
     real(jphook) :: hook_handle
 
     if (lhook) call dr_hook('radiation_field_type:gas_field_init',0,hook_handle)
 
+    if (present(on_gpu)) this%on_gpu = on_gpu
+
     call field_new(this%f_mixing_ratio, ubounds=(/ncol, nlev, NMaxGases, nblocks/), persistent=.true., init_value=0.0_jprb)
 
     this%ncol = ncol
     this%nlev = nlev
+
+    if (this%on_gpu) call this%get_device_data()
 
     if (lhook) call dr_hook('radiation_field_type:gas_field_init',1,hook_handle)
 
@@ -775,7 +1136,7 @@ contains
   end subroutine gas_field_update_view
 
   !---------------------------------------------------------------------
-  ! Update gas field type
+  ! Update gas type
   subroutine gas_field_update_gas(this, gas)
 
     use yomhook, only : lhook, dr_hook, jphook
@@ -794,13 +1155,102 @@ contains
 
   end subroutine gas_field_update_gas
 
+  !---------------------------------------------------------------------
+  ! Allocate field api device buffers and update device pointers
+  subroutine gas_field_get_device_data(this)
+
+    use yomhook, only : lhook, dr_hook, jphook
+
+    class(gas_field_type), intent(inout) :: this
+    real(jphook) :: hook_handle
+
+    if (lhook) call dr_hook('radiation_field_type:gas_field_get_device_data',0,hook_handle)
+
+    if (associated(this%f_mixing_ratio)) then
+      call this%f_mixing_ratio%get_device_data_wronly(this%mixing_ratio_d)
+    end if
+
+    if (lhook) call dr_hook('radiation_field_type:gas_field_get_device_data',1,hook_handle)
+
+  end subroutine gas_field_get_device_data
+
+  !---------------------------------------------------------------------
+  ! Copy gas field type to device and attach device pointers
+  ! using unstructured data regions
+  subroutine gas_field_attach(this)
+
+    use yomhook, only : lhook, dr_hook, jphook
+
+    class(gas_field_type), intent(inout) :: this
+    real(jphook) :: hook_handle
+
+    if (lhook) call dr_hook('radiation_field_type:gas_field_attach',0,hook_handle)
+
+    !$acc enter data copyin(this)
+
+    if (associated(this%f_mixing_ratio)) then
+      !$acc enter data attach(this%mixing_ratio_d)
+    end if
+
+    if (lhook) call dr_hook('radiation_field_type:gas_field_attach',1,hook_handle)
+
+  end subroutine gas_field_attach
+
+  !---------------------------------------------------------------------
+  ! Delete gas field type from device and detach device
+  ! pointers using unstructured data regions
+  subroutine gas_field_detach(this)
+
+    use yomhook, only : lhook, dr_hook, jphook
+
+    class(gas_field_type), intent(inout) :: this
+    real(jphook) :: hook_handle
+
+    if (lhook) call dr_hook('radiation_field_type:gas_field_detach',0,hook_handle)
+
+    if (associated(this%f_mixing_ratio)) then
+      !$acc exit data detach(this%mixing_ratio_d)
+    end if
+
+    !$acc exit data delete(this)
+
+    if (lhook) call dr_hook('radiation_field_type:gas_field_detach',1,hook_handle)
+
+  end subroutine gas_field_detach
+
+  !---------------------------------------------------------------------
+  ! Associate gas_type with device pointers for a given block
+  subroutine gas_associate_device_pointers(this, gas, block_index)
+
+    use yomhook, only : lhook, dr_hook, jphook
+
+    class(gas_field_type), intent(inout) :: this
+    class(gas_type),       intent(inout) :: gas
+    integer,               intent(in)    :: block_index
+
+    real(jphook) :: hook_handle
+
+    if (lhook) call dr_hook('radiation_field_type:gas_associate_device_pointers',0,hook_handle)
+
+    if (associated(this%mixing_ratio_d)) then
+      gas%mixing_ratio => this%mixing_ratio_d(:,:,:,block_index)
+    end if
+
+    gas%ncol = this%ncol
+    gas%nlev = this%nlev
+
+    if (lhook) call dr_hook('radiation_field_type:gas_associate_device_pointers',1,hook_handle)
+
+  end subroutine gas_associate_device_pointers
+
 
 !-----------------------------------------------------------------------
 ! cloud_field_type procedures
 
   !---------------------------------------------------------------------
   ! Initialise cloud_field_type
-  subroutine cloud_field_init(this, nblocks, ncol, nlev, ntype, use_inhom_effective_size, frac_std)
+  subroutine cloud_field_init(this, nblocks, ncol, nlev, ntype, use_inhom_effective_size, &
+                            & frac_std, on_gpu)
 
     use yomhook,     only : lhook, dr_hook, jphook
 
@@ -811,6 +1261,7 @@ contains
     integer, intent(in), optional    :: ntype
     logical, intent(in), optional    :: use_inhom_effective_size
     real(jprb), intent(in), optional :: frac_std ! Fractional std
+    logical, intent(in), optional    :: on_gpu
 
     real(jprb)   :: frac_std_local = 1.0_jprb
     real(jphook) :: hook_handle
@@ -827,6 +1278,8 @@ contains
 
     if (present(frac_std)) frac_std_local = frac_std
 
+    if (present(on_gpu)) this%on_gpu = on_gpu
+
     call field_new(this%f_mixing_ratio, ubounds=(/ncol,nlev,this%ntype, nblocks/), persistent=.true.)
     call field_new(this%f_effective_radius, ubounds=(/ncol,nlev,this%ntype, nblocks/), persistent=.true.)
 
@@ -836,7 +1289,9 @@ contains
     call field_new(this%f_inv_cloud_effective_size, ubounds=(/ncol,nlev, nblocks/), persistent=.true.)
     call field_new(this%f_inv_inhom_effective_size, ubounds=(/ncol,nlev, nblocks/), persistent=.true.)
 
-    if (lhook) call dr_hook('radiation_radiation_field_type:cloud_field_init',1,hook_handle)
+    if (this%on_gpu) call this%get_device_data()
+
+    if (lhook) call dr_hook('radiation_field_type:cloud_field_init',1,hook_handle)
 
   end subroutine cloud_field_init
 
@@ -922,13 +1377,9 @@ contains
     if (associated(this%f_mixing_ratio)) then
       this%mixing_ratio => this%f_mixing_ratio%get_view(block_index)
     end if
-    if (associated(this%f_mixing_ratio)) then
-      this%mixing_ratio => this%f_mixing_ratio%get_view(block_index)
-    end if
     if (associated(this%f_effective_radius)) then
       this%effective_radius => this%f_effective_radius%get_view(block_index)
     end if
-
     if (associated(this%f_fraction)) then
       this%fraction => this%f_fraction%get_view(block_index)
     end if
@@ -963,7 +1414,7 @@ contains
   end subroutine cloud_field_update_view
 
   !---------------------------------------------------------------------
-  ! Update cloud pointers of cloud_field_type
+  ! Update pointers of cloud type
   subroutine cloud_field_update_cloud(this, ylcloud)
 
     use yomhook,     only : lhook, dr_hook, jphook
@@ -1015,13 +1466,205 @@ contains
 
   end subroutine cloud_field_update_cloud
 
+  !---------------------------------------------------------------------
+  ! Allocate field api device buffers and update device pointers
+  subroutine cloud_field_get_device_data(this)
+
+    use yomhook, only : lhook, dr_hook, jphook
+
+    class(cloud_field_type), intent(inout) :: this
+    real(jphook) :: hook_handle
+
+    if (lhook) call dr_hook('radiation_field_type:cloud_field_get_device_data',0,hook_handle)
+
+    if (associated(this%f_mixing_ratio)) then
+      call this%f_mixing_ratio%get_device_data_rdwr(this%mixing_ratio_d)
+    end if
+
+    if (associated(this%f_effective_radius)) then
+      call this%f_effective_radius%get_device_data_wronly(this%effective_radius_d)
+    end if
+
+    if (associated(this%f_fraction)) then
+      call this%f_fraction%get_device_data_wronly(this%fraction_d)
+    end if
+
+    if (associated(this%f_overlap_param)) then
+      call this%f_overlap_param%get_device_data_wronly(this%overlap_param_d)
+    end if
+
+    if (associated(this%f_fractional_std)) then
+      call this%f_fractional_std%get_device_data_rdwr(this%fractional_std_d)
+    end if
+
+    if (associated(this%f_inv_cloud_effective_size)) then
+      call this%f_inv_cloud_effective_size%get_device_data_wronly(this%inv_cloud_effective_size_d)
+    end if
+
+    if (associated(this%f_inv_inhom_effective_size)) then
+      call this%f_inv_inhom_effective_size%get_device_data_wronly(this%inv_inhom_effective_size_d)
+    end if
+
+    if (lhook) call dr_hook('radiation_field_type:cloud_field_get_device_data',1,hook_handle)
+
+  end subroutine cloud_field_get_device_data
+
+  !---------------------------------------------------------------------
+  ! Copy cloud field type to device and attach device pointers
+  ! using unstructured data regions
+  subroutine cloud_field_attach(this)
+
+    use yomhook, only : lhook, dr_hook, jphook
+
+    class(cloud_field_type), intent(inout) :: this
+    real(jphook) :: hook_handle
+
+    if (lhook) call dr_hook('radiation_field_type:cloud_field_attach',0,hook_handle)
+
+    !$acc enter data copyin(this)
+
+    if (associated(this%f_mixing_ratio)) then
+      !$acc enter data attach(this%mixing_ratio_d)
+    end if
+
+    if (associated(this%f_effective_radius)) then
+      !$acc enter data attach(this%effective_radius_d)
+    end if
+
+    if (associated(this%f_fraction)) then
+      !$acc enter data attach(this%fraction_d)
+    end if
+
+    if (associated(this%f_overlap_param)) then
+      !$acc enter data attach(this%overlap_param_d)
+    end if
+
+    if (associated(this%f_fractional_std)) then
+      !$acc enter data attach(this%fractional_std_d)
+    end if
+
+    if (associated(this%f_inv_cloud_effective_size)) then
+      !$acc enter data attach(this%inv_cloud_effective_size_d)
+    end if
+
+    if (associated(this%f_inv_inhom_effective_size)) then
+      !$acc enter data attach(this%inv_inhom_effective_size_d)
+    end if
+
+    if (lhook) call dr_hook('radiation_field_type:cloud_field_attach',1,hook_handle)
+
+  end subroutine cloud_field_attach
+
+  !---------------------------------------------------------------------
+  ! Delete cloud field type from device and detach device
+  ! pointers using unstructured data regions
+  subroutine cloud_field_detach(this)
+
+    use yomhook, only : lhook, dr_hook, jphook
+
+    class(cloud_field_type), intent(inout) :: this
+    real(jphook) :: hook_handle
+
+    if (lhook) call dr_hook('radiation_field_type:cloud_field_detach',0,hook_handle)
+
+    if (associated(this%f_mixing_ratio)) then
+      !$acc exit data detach(this%mixing_ratio_d)
+    end if
+
+    if (associated(this%f_effective_radius)) then
+      !$acc exit data detach(this%effective_radius_d)
+    end if
+
+    if (associated(this%f_fraction)) then
+      !$acc exit data detach(this%fraction_d)
+    end if
+
+    if (associated(this%f_overlap_param)) then
+      !$acc exit data detach(this%overlap_param_d)
+    end if
+
+    if (associated(this%f_fractional_std)) then
+      !$acc exit data detach(this%fractional_std_d)
+    end if
+
+    if (associated(this%f_inv_cloud_effective_size)) then
+      !$acc exit data detach(this%inv_cloud_effective_size_d)
+    end if
+
+    if (associated(this%f_inv_inhom_effective_size)) then
+      !$acc exit data detach(this%inv_inhom_effective_size_d)
+    end if
+
+    !$acc exit data delete(this)
+
+    if (lhook) call dr_hook('radiation_field_type:cloud_field_detach',1,hook_handle)
+
+  end subroutine cloud_field_detach
+
+  !---------------------------------------------------------------------
+  ! Associate cloud_type with device pointers for a given block
+  subroutine cloud_associate_device_pointers(this, ylcloud, block_index)
+
+    use yomhook, only : lhook, dr_hook, jphook
+
+    class(cloud_field_type), intent(inout) :: this
+    class(cloud_type),       intent(inout) :: ylcloud
+    integer,                 intent(in)    :: block_index
+
+    real(jphook) :: hook_handle
+
+    if (lhook) call dr_hook('radiation_field_type:cloud_associate_device_pointers',0,hook_handle)
+
+    if (associated(this%mixing_ratio_d)) then
+      ylcloud%mixing_ratio => this%mixing_ratio_d(:,:,:,block_index)
+    end if
+
+    if (associated(this%effective_radius_d)) then
+      ylcloud%effective_radius => this%effective_radius_d(:,:,:,block_index)
+    end if
+
+    if (associated(this%fraction_d)) then
+      ylcloud%fraction => this%fraction_d(:,:,block_index)
+    end if
+
+    if (associated(this%overlap_param_d)) then
+      ylcloud%overlap_param => this%overlap_param_d(:,:,block_index)
+    end if
+
+    if (associated(this%fractional_std_d)) then
+      ylcloud%fractional_std => this%fractional_std_d(:,:,block_index)
+    end if
+
+    if (associated(this%inv_cloud_effective_size_d)) then
+      ylcloud%inv_cloud_effective_size => this%inv_cloud_effective_size_d(:,:,block_index)
+    end if
+
+    if (associated(this%inv_inhom_effective_size_d)) then
+      ylcloud%inv_inhom_effective_size => this%inv_inhom_effective_size_d(:,:,block_index)
+    end if
+
+    if (.not. this%ntype_present) then
+      if (associated(this%mixing_ratio_d)) then
+        ylcloud%q_liq => this%mixing_ratio_d(:,:,1,block_index)
+        ylcloud%q_ice => this%mixing_ratio_d(:,:,2,block_index)
+      end if
+      if (associated(this%effective_radius_d)) then
+        ylcloud%re_liq => this%effective_radius_d(:,:,1,block_index)
+        ylcloud%re_ice => this%effective_radius_d(:,:,2,block_index)
+      end if
+    end if
+
+    if (lhook) call dr_hook('radiation_field_type:cloud_associate_device_pointers',1,hook_handle)
+
+  end subroutine cloud_associate_device_pointers
+
 
 !-----------------------------------------------------------------------
 ! aerosol_field_type procedures
 
   !---------------------------------------------------------------------
   ! Initialise aerosol_field_type
-  subroutine aerosol_field_init(this, nblocks, ncol, istartlev, iendlev, ntype)
+  subroutine aerosol_field_init(this, nblocks, ncol, istartlev, iendlev, ntype, on_gpu)
 
     use yomhook,     only : lhook, dr_hook, jphook
 
@@ -1030,6 +1673,7 @@ contains
     integer, intent(in)                       :: ncol  ! Number of columns
     integer, intent(in)                       :: istartlev, iendlev ! Level range
     integer, intent(in)                       :: ntype ! Number of aerosol types
+    logical, intent(in), optional             :: on_gpu
 
     real(jphook) :: hook_handle
 
@@ -1039,8 +1683,12 @@ contains
     this%istartlev = istartlev
     this%iendlev   = iendlev
 
+    if (present(on_gpu)) this%on_gpu = on_gpu
+
     call field_new(this%f_mixing_ratio, lbounds=(/1,istartlev,1,1/), &
                    &                    ubounds=(/ncol,iendlev,ntype,nblocks/), persistent=.true.)
+
+    if (this%on_gpu) call this%get_device_data()
 
     if (lhook) call dr_hook('radiation_radiation_field_type:aerosol_field_init',1,hook_handle)
 
@@ -1113,13 +1761,100 @@ contains
 
   end subroutine aerosol_field_update_aerosol
 
+  !---------------------------------------------------------------------
+  ! Allocate field api device buffers and update device pointers
+  subroutine aerosol_field_get_device_data(this)
+
+    use yomhook, only : lhook, dr_hook, jphook
+
+    class(aerosol_field_type), intent(inout) :: this
+    real(jphook) :: hook_handle
+
+    if (lhook) call dr_hook('radiation_field_type:aerosol_field_get_device_data',0,hook_handle)
+
+    if (associated(this%f_mixing_ratio)) then
+      call this%f_mixing_ratio%get_device_data_wronly(this%mixing_ratio_d)
+    end if
+
+    if (lhook) call dr_hook('radiation_field_type:aerosol_field_get_device_data',1,hook_handle)
+
+  end subroutine aerosol_field_get_device_data
+
+  !---------------------------------------------------------------------
+  ! Copy aerosol field type to device and attach device pointers
+  ! using unstructured data regions
+  subroutine aerosol_field_attach(this, block_index)
+
+    use yomhook, only : lhook, dr_hook, jphook
+
+    class(aerosol_field_type), intent(inout) :: this
+    integer,                   intent(in)    :: block_index
+    real(jphook) :: hook_handle
+
+    if (lhook) call dr_hook('radiation_field_type:aerosol_field_attach',0,hook_handle)
+
+    !$acc enter data copyin(this)
+
+    if (associated(this%f_mixing_ratio)) then
+      !$acc enter data attach(this%mixing_ratio_d)
+    end if
+
+    if (lhook) call dr_hook('radiation_field_type:aerosol_field_attach',1,hook_handle)
+
+  end subroutine aerosol_field_attach
+
+  !---------------------------------------------------------------------
+  ! Delete aerosol field type from device and detach device
+  ! pointers using unstructured data regions
+  subroutine aerosol_field_detach(this, block_index)
+
+    use yomhook, only : lhook, dr_hook, jphook
+
+    class(aerosol_field_type), intent(inout) :: this
+    integer,                   intent(in)    :: block_index
+    real(jphook) :: hook_handle
+
+    if (lhook) call dr_hook('radiation_field_type:aerosol_field_detach',0,hook_handle)
+
+    if (associated(this%f_mixing_ratio)) then
+      !$acc exit data detach(this%mixing_ratio_d)
+    end if
+
+    !$acc exit data delete(this)
+
+    if (lhook) call dr_hook('radiation_field_type:aerosol_field_detach',1,hook_handle)
+
+  end subroutine aerosol_field_detach
+
+  !---------------------------------------------------------------------
+  ! Associate aerosol_type with device pointers for a given block
+  subroutine aerosol_associate_device_pointers(this, ylaerosol, block_index)
+
+    use yomhook, only : lhook, dr_hook, jphook
+
+    class(aerosol_field_type), intent(inout) :: this
+    class(aerosol_type),       intent(inout) :: ylaerosol
+    integer,                   intent(in)    :: block_index
+
+    real(jphook) :: hook_handle
+
+    if (lhook) call dr_hook('radiation_field_type:aerosol_associate_device_pointers',0,hook_handle)
+
+    if (associated(this%mixing_ratio_d)) then
+      ylaerosol%mixing_ratio => this%mixing_ratio_d(:,:,:,block_index)
+    end if
+
+    if (lhook) call dr_hook('radiation_field_type:aerosol_associate_device_pointers',1,hook_handle)
+
+  end subroutine aerosol_associate_device_pointers
+
 
 !-----------------------------------------------------------------------
 ! flux_field_type procedures
 
   !---------------------------------------------------------------------
   ! Initialise flux_field_type
-  subroutine flux_field_init(this, nblocks, config, istartcol, iendcol, nlev)
+  subroutine flux_field_init(this, nblocks, config, istartcol, iendcol, nlev, on_gpu)
 
     use yomhook,          only : lhook, dr_hook, jphook
     use radiation_io,     only : nulerr, radiation_abort
@@ -1129,10 +1864,13 @@ contains
     type(config_type), intent(in)         :: config
     integer, intent(in)                   :: nblocks  ! Total number of blocks
     integer, intent(in)                   :: istartcol, iendcol, nlev
+    logical, intent(in), optional         :: on_gpu
 
     real(jphook) :: hook_handle
 
     if (lhook) call dr_hook('radiation_field_type:flux_field_init',0,hook_handle)
+
+    if (present(on_gpu)) this%on_gpu = on_gpu
 
     ! Allocate longwave arrays
     if (config%do_lw) then
@@ -1318,7 +2056,7 @@ contains
     call field_new(this%f_cloud_cover_sw,lbounds=(/istartcol,1/), &
           & ubounds=(/iendcol,nblocks/), persistent=.true., init_value=-1.0_jprb)
 
-    if (lhook) call dr_hook('radiation_flux:allocate',1,hook_handle)
+    if (this%on_gpu) call this%get_device_data()
 
     if (lhook) call dr_hook('radiation_radiation_field_type:flux_field_init',1,hook_handle)
 
@@ -2019,5 +2757,707 @@ contains
     if (lhook) call dr_hook('radiation_radiation_field_type:flux_field_update_flux',1,hook_handle)
 
   end subroutine flux_field_update_flux
+
+!---------------------------------------------------------------------
+  ! Allocate field api device buffers and update device pointers
+  subroutine flux_field_get_device_data(this)
+
+    use yomhook, only : lhook, dr_hook, jphook
+
+    class(flux_field_type), intent(inout) :: this
+    real(jphook) :: hook_handle
+
+    if (lhook) call dr_hook('radiation_field_type:flux_field_get_device_data',0,hook_handle)
+
+    ! longwave fluxes
+    if (associated(this%f_lw_up)) then
+      call this%f_lw_up%get_device_data_wronly(this%lw_up_d)
+    end if
+    if (associated(this%f_lw_dn)) then
+      call this%f_lw_dn%get_device_data_wronly(this%lw_dn_d)
+    end if
+    if (associated(this%f_lw_up_clear)) then
+      call this%f_lw_up_clear%get_device_data_wronly(this%lw_up_clear_d)
+    end if
+    if (associated(this%f_lw_dn_clear)) then
+      call this%f_lw_dn_clear%get_device_data_wronly(this%lw_dn_clear_d)
+    end if
+
+    ! shortwave fluxes
+    if (associated(this%f_sw_up)) then
+      call this%f_sw_up%get_device_data_wronly(this%sw_up_d)
+    end if
+    if (associated(this%f_sw_dn)) then
+      call this%f_sw_dn%get_device_data_wronly(this%sw_dn_d)
+    end if
+    if (associated(this%f_sw_dn_direct)) then
+      call this%f_sw_dn_direct%get_device_data_wronly(this%sw_dn_direct_d)
+    end if
+    if (associated(this%f_sw_up_clear)) then
+      call this%f_sw_up_clear%get_device_data_wronly(this%sw_up_clear_d)
+    end if
+    if (associated(this%f_sw_dn_clear)) then
+      call this%f_sw_dn_clear%get_device_data_wronly(this%sw_dn_clear_d)
+    end if
+    if (associated(this%f_sw_dn_direct_clear)) then
+      call this%f_sw_dn_direct_clear%get_device_data_wronly(this%sw_dn_direct_clear_d)
+    end if
+
+    ! band fluxes
+    if (associated(this%f_lw_up_band)) then
+      call this%f_lw_up_band%get_device_data_wronly(this%lw_up_band_d)
+    end if
+    if (associated(this%f_lw_dn_band)) then
+      call this%f_lw_dn_band%get_device_data_wronly(this%lw_dn_band_d)
+    end if
+    if (associated(this%f_sw_up_band)) then
+      call this%f_sw_up_band%get_device_data_wronly(this%sw_up_band_d)
+    end if
+    if (associated(this%f_sw_dn_band)) then
+      call this%f_sw_dn_band%get_device_data_wronly(this%sw_dn_band_d)
+    end if
+    if (associated(this%f_sw_dn_direct_band)) then
+      call this%f_sw_dn_direct_band%get_device_data_wronly(this%sw_dn_direct_band_d)
+    end if
+    if (associated(this%f_lw_up_clear_band)) then
+      call this%f_lw_up_clear_band%get_device_data_wronly(this%lw_up_clear_band_d)
+    end if
+    if (associated(this%f_lw_dn_clear_band)) then
+      call this%f_lw_dn_clear_band%get_device_data_wronly(this%lw_dn_clear_band_d)
+    end if
+    if (associated(this%f_sw_up_clear_band)) then
+      call this%f_sw_up_clear_band%get_device_data_wronly(this%sw_up_clear_band_d)
+    end if
+    if (associated(this%f_sw_dn_clear_band)) then
+      call this%f_sw_dn_clear_band%get_device_data_wronly(this%sw_dn_clear_band_d)
+    end if
+    if (associated(this%f_sw_dn_direct_clear_band)) then
+      call this%f_sw_dn_direct_clear_band%get_device_data_wronly(this%sw_dn_direct_clear_band_d)
+    end if
+
+    ! g fluxes
+    if (associated(this%f_lw_dn_surf_g)) then
+      call this%f_lw_dn_surf_g%get_device_data_wronly(this%lw_dn_surf_g_d)
+    end if
+    if (associated(this%f_lw_dn_surf_clear_g)) then
+      call this%f_lw_dn_surf_clear_g%get_device_data_wronly(this%lw_dn_surf_clear_g_d)
+    end if
+    if (associated(this%f_sw_dn_diffuse_surf_g)) then
+      call this%f_sw_dn_diffuse_surf_g%get_device_data_wronly(this%sw_dn_diffuse_surf_g_d)
+    end if
+    if (associated(this%f_sw_dn_direct_surf_g)) then
+      call this%f_sw_dn_direct_surf_g%get_device_data_wronly(this%sw_dn_direct_surf_g_d)
+    end if
+    if (associated(this%f_sw_dn_diffuse_surf_clear_g)) then
+      call this%f_sw_dn_diffuse_surf_clear_g%get_device_data_wronly(this%sw_dn_diffuse_surf_clear_g_d)
+    end if
+    if (associated(this%f_sw_dn_direct_surf_clear_g)) then
+      call this%f_sw_dn_direct_surf_clear_g%get_device_data_wronly(this%sw_dn_direct_surf_clear_g_d)
+    end if
+
+    ! TOA g fluxes
+    if (associated(this%f_lw_up_toa_g)) then
+      call this%f_lw_up_toa_g%get_device_data_wronly(this%lw_up_toa_g_d)
+    end if
+    if (associated(this%f_lw_up_toa_clear_g)) then
+      call this%f_lw_up_toa_clear_g%get_device_data_wronly(this%lw_up_toa_clear_g_d)
+    end if
+    if (associated(this%f_sw_dn_toa_g)) then
+      call this%f_sw_dn_toa_g%get_device_data_wronly(this%sw_dn_toa_g_d)
+    end if
+    if (associated(this%f_sw_up_toa_g)) then
+      call this%f_sw_up_toa_g%get_device_data_wronly(this%sw_up_toa_g_d)
+    end if
+    if (associated(this%f_sw_up_toa_clear_g)) then
+      call this%f_sw_up_toa_clear_g%get_device_data_wronly(this%sw_up_toa_clear_g_d)
+    end if
+
+    ! surface band fluxes
+    if (associated(this%f_sw_dn_surf_band)) then
+      call this%f_sw_dn_surf_band%get_device_data_wronly(this%sw_dn_surf_band_d)
+    end if
+    if (associated(this%f_sw_dn_direct_surf_band)) then
+      call this%f_sw_dn_direct_surf_band%get_device_data_wronly(this%sw_dn_direct_surf_band_d)
+    end if
+    if (associated(this%f_sw_dn_surf_clear_band)) then
+      call this%f_sw_dn_surf_clear_band%get_device_data_wronly(this%sw_dn_surf_clear_band_d)
+    end if
+    if (associated(this%f_sw_dn_direct_surf_clear_band)) then
+      call this%f_sw_dn_direct_surf_clear_band%get_device_data_wronly(this%sw_dn_direct_surf_clear_band_d)
+    end if
+
+    ! TOA band fluxes
+    if (associated(this%f_lw_up_toa_band)) then
+      call this%f_lw_up_toa_band%get_device_data_wronly(this%lw_up_toa_band_d)
+    end if
+    if (associated(this%f_lw_up_toa_clear_band)) then
+      call this%f_lw_up_toa_clear_band%get_device_data_wronly(this%lw_up_toa_clear_band_d)
+    end if
+    if (associated(this%f_sw_dn_toa_band)) then
+      call this%f_sw_dn_toa_band%get_device_data_wronly(this%sw_dn_toa_band_d)
+    end if
+    if (associated(this%f_sw_up_toa_band)) then
+      call this%f_sw_up_toa_band%get_device_data_wronly(this%sw_up_toa_band_d)
+    end if
+    if (associated(this%f_sw_up_toa_clear_band)) then
+      call this%f_sw_up_toa_clear_band%get_device_data_wronly(this%sw_up_toa_clear_band_d)
+    end if
+
+    ! canopy fluxes
+    if (associated(this%f_lw_dn_surf_canopy)) then
+      call this%f_lw_dn_surf_canopy%get_device_data_wronly(this%lw_dn_surf_canopy_d)
+    end if
+    if (associated(this%f_sw_dn_diffuse_surf_canopy)) then
+      call this%f_sw_dn_diffuse_surf_canopy%get_device_data_wronly(this%sw_dn_diffuse_surf_canopy_d)
+    end if
+    if (associated(this%f_sw_dn_direct_surf_canopy)) then
+      call this%f_sw_dn_direct_surf_canopy%get_device_data_wronly(this%sw_dn_direct_surf_canopy_d)
+    end if
+
+    ! cloud cover
+    if (associated(this%f_cloud_cover_lw)) then
+      call this%f_cloud_cover_lw%get_device_data_rdwr(this%cloud_cover_lw_d)
+    end if
+    if (associated(this%f_cloud_cover_sw)) then
+      call this%f_cloud_cover_sw%get_device_data_rdwr(this%cloud_cover_sw_d)
+    end if
+
+    ! lw derivatives
+    if (associated(this%f_lw_derivatives)) then
+      call this%f_lw_derivatives%get_device_data_wronly(this%lw_derivatives_d)
+    end if
+
+    if (lhook) call dr_hook('radiation_field_type:flux_field_get_device_data',1,hook_handle)
+
+  end subroutine flux_field_get_device_data
+
+  !---------------------------------------------------------------------
+  ! Copy flux field type to device and attach device pointers
+  ! using unstructured data regions
+  subroutine flux_field_attach(this, block_index)
+
+    use yomhook, only : lhook, dr_hook, jphook
+
+    class(flux_field_type), intent(inout) :: this
+    integer,                intent(in)    :: block_index
+    real(jphook) :: hook_handle
+
+    if (lhook) call dr_hook('radiation_field_type:flux_field_attach',0,hook_handle)
+
+    !$acc enter data copyin(this)
+
+    ! longwave fluxes
+    if (associated(this%f_lw_up)) then
+      !$acc enter data attach(this%lw_up_d)
+    end if
+    if (associated(this%f_lw_dn)) then
+      !$acc enter data attach(this%lw_dn_d)
+    end if
+    if (associated(this%f_lw_up_clear)) then
+      !$acc enter data attach(this%lw_up_clear_d)
+    end if
+    if (associated(this%f_lw_dn_clear)) then
+      !$acc enter data attach(this%lw_dn_clear_d)
+    end if
+
+    ! shortwave fluxes
+    if (associated(this%f_sw_up)) then
+      !$acc enter data attach(this%sw_up_d)
+    end if
+    if (associated(this%f_sw_dn)) then
+      !$acc enter data attach(this%sw_dn_d)
+    end if
+    if (associated(this%f_sw_dn_direct)) then
+      !$acc enter data attach(this%sw_dn_direct_d)
+    end if
+    if (associated(this%f_sw_up_clear)) then
+      !$acc enter data attach(this%sw_up_clear_d)
+    end if
+    if (associated(this%f_sw_dn_clear)) then
+      !$acc enter data attach(this%sw_dn_clear_d)
+    end if
+    if (associated(this%f_sw_dn_direct_clear)) then
+      !$acc enter data attach(this%sw_dn_direct_clear_d)
+    end if
+
+    ! band fluxes
+    if (associated(this%f_lw_up_band)) then
+      !$acc enter data attach(this%lw_up_band_d)
+    end if
+    if (associated(this%f_lw_dn_band)) then
+      !$acc enter data attach(this%lw_dn_band_d)
+    end if
+    if (associated(this%f_sw_up_band)) then
+      !$acc enter data attach(this%sw_up_band_d)
+    end if
+    if (associated(this%f_sw_dn_band)) then
+      !$acc enter data attach(this%sw_dn_band_d)
+    end if
+    if (associated(this%f_sw_dn_direct_band)) then
+      !$acc enter data attach(this%sw_dn_direct_band_d)
+    end if
+    if (associated(this%f_lw_up_clear_band)) then
+      !$acc enter data attach(this%lw_up_clear_band_d)
+    end if
+    if (associated(this%f_lw_dn_clear_band)) then
+      !$acc enter data attach(this%lw_dn_clear_band_d)
+    end if
+    if (associated(this%f_sw_up_clear_band)) then
+      !$acc enter data attach(this%sw_up_clear_band_d)
+    end if
+    if (associated(this%f_sw_dn_clear_band)) then
+      !$acc enter data attach(this%sw_dn_clear_band_d)
+    end if
+    if (associated(this%f_sw_dn_direct_clear_band)) then
+      !$acc enter data attach(this%sw_dn_direct_clear_band_d)
+    end if
+
+    ! g fluxes
+    if (associated(this%f_lw_dn_surf_g)) then
+      !$acc enter data attach(this%lw_dn_surf_g_d)
+    end if
+    if (associated(this%f_lw_dn_surf_clear_g)) then
+      !$acc enter data attach(this%lw_dn_surf_clear_g_d)
+    end if
+    if (associated(this%f_sw_dn_diffuse_surf_g)) then
+      !$acc enter data attach(this%sw_dn_diffuse_surf_g_d)
+    end if
+    if (associated(this%f_sw_dn_direct_surf_g)) then
+      !$acc enter data attach(this%sw_dn_direct_surf_g_d)
+    end if
+    if (associated(this%f_sw_dn_diffuse_surf_clear_g)) then
+      !$acc enter data attach(this%sw_dn_diffuse_surf_clear_g_d)
+    end if
+    if (associated(this%f_sw_dn_direct_surf_clear_g)) then
+      !$acc enter data attach(this%sw_dn_direct_surf_clear_g_d)
+    end if
+
+    ! TOA g fluxes
+    if (associated(this%f_lw_up_toa_g)) then
+      !$acc enter data attach(this%lw_up_toa_g_d)
+    end if
+    if (associated(this%f_lw_up_toa_clear_g)) then
+      !$acc enter data attach(this%lw_up_toa_clear_g_d)
+    end if
+    if (associated(this%f_sw_dn_toa_g)) then
+      !$acc enter data attach(this%sw_dn_toa_g_d)
+    end if
+    if (associated(this%f_sw_up_toa_g)) then
+      !$acc enter data attach(this%sw_up_toa_g_d)
+    end if
+    if (associated(this%f_sw_up_toa_clear_g)) then
+      !$acc enter data attach(this%sw_up_toa_clear_g_d)
+    end if
+
+    ! surface band fluxes
+    if (associated(this%f_sw_dn_surf_band)) then
+      !$acc enter data attach(this%sw_dn_surf_band_d)
+    end if
+    if (associated(this%f_sw_dn_direct_surf_band)) then
+      !$acc enter data attach(this%sw_dn_direct_surf_band_d)
+    end if
+    if (associated(this%f_sw_dn_surf_clear_band)) then
+      !$acc enter data attach(this%sw_dn_surf_clear_band_d)
+    end if
+    if (associated(this%f_sw_dn_direct_surf_clear_band)) then
+      !$acc enter data attach(this%sw_dn_direct_surf_clear_band_d)
+    end if
+
+    ! TOA band fluxes
+    if (associated(this%f_lw_up_toa_band)) then
+      !$acc enter data attach(this%lw_up_toa_band_d)
+    end if
+    if (associated(this%f_lw_up_toa_clear_band)) then
+      !$acc enter data attach(this%lw_up_toa_clear_band_d)
+    end if
+    if (associated(this%f_sw_dn_toa_band)) then
+      !$acc enter data attach(this%sw_dn_toa_band_d)
+    end if
+    if (associated(this%f_sw_up_toa_band)) then
+      !$acc enter data attach(this%sw_up_toa_band_d)
+    end if
+    if (associated(this%f_sw_up_toa_clear_band)) then
+      !$acc enter data attach(this%sw_up_toa_clear_band_d)
+    end if
+
+    ! canopy fluxes
+    if (associated(this%f_lw_dn_surf_canopy)) then
+      !$acc enter data attach(this%lw_dn_surf_canopy_d)
+    end if
+    if (associated(this%f_sw_dn_diffuse_surf_canopy)) then
+      !$acc enter data attach(this%sw_dn_diffuse_surf_canopy_d)
+    end if
+    if (associated(this%f_sw_dn_direct_surf_canopy)) then
+      !$acc enter data attach(this%sw_dn_direct_surf_canopy_d)
+    end if
+
+    ! cloud cover
+    if (associated(this%f_cloud_cover_lw)) then
+      !$acc enter data attach(this%cloud_cover_lw_d)
+    end if
+    if (associated(this%f_cloud_cover_sw)) then
+      !$acc enter data attach(this%cloud_cover_sw_d)
+    end if
+
+    ! lw derivatives
+    if (associated(this%f_lw_derivatives)) then
+      !$acc enter data attach(this%lw_derivatives_d)
+    end if
+
+    if (lhook) call dr_hook('radiation_field_type:flux_field_attach',1,hook_handle)
+
+  end subroutine flux_field_attach
+
+  !---------------------------------------------------------------------
+  ! Delete flux field type from device and detach device
+  ! pointers using unstructured data regions
+  subroutine flux_field_detach(this, block_index)
+
+    use yomhook, only : lhook, dr_hook, jphook
+
+    class(flux_field_type), intent(inout) :: this
+    integer,                intent(in)    :: block_index
+    real(jphook) :: hook_handle
+
+    if (lhook) call dr_hook('radiation_field_type:flux_field_detach',0,hook_handle)
+
+    ! longwave fluxes
+    if (associated(this%f_lw_up)) then
+      !$acc exit data detach(this%lw_up_d)
+    end if
+    if (associated(this%f_lw_dn)) then
+      !$acc exit data detach(this%lw_dn_d)
+    end if
+    if (associated(this%f_lw_up_clear)) then
+      !$acc exit data detach(this%lw_up_clear_d)
+    end if
+    if (associated(this%f_lw_dn_clear)) then
+      !$acc exit data detach(this%lw_dn_clear_d)
+    end if
+
+    ! shortwave fluxes
+    if (associated(this%f_sw_up)) then
+      !$acc exit data detach(this%sw_up_d)
+    end if
+    if (associated(this%f_sw_dn)) then
+      !$acc exit data detach(this%sw_dn_d)
+    end if
+    if (associated(this%f_sw_dn_direct)) then
+      !$acc exit data detach(this%sw_dn_direct_d)
+    end if
+    if (associated(this%f_sw_up_clear)) then
+      !$acc exit data detach(this%sw_up_clear_d)
+    end if
+    if (associated(this%f_sw_dn_clear)) then
+      !$acc exit data detach(this%sw_dn_clear_d)
+    end if
+    if (associated(this%f_sw_dn_direct_clear)) then
+      !$acc exit data detach(this%sw_dn_direct_clear_d)
+    end if
+
+    ! band fluxes
+    if (associated(this%f_lw_up_band)) then
+      !$acc exit data detach(this%lw_up_band_d)
+    end if
+    if (associated(this%f_lw_dn_band)) then
+      !$acc exit data detach(this%lw_dn_band_d)
+    end if
+    if (associated(this%f_sw_up_band)) then
+      !$acc exit data detach(this%sw_up_band_d)
+    end if
+    if (associated(this%f_sw_dn_band)) then
+      !$acc exit data detach(this%sw_dn_band_d)
+    end if
+    if (associated(this%f_sw_dn_direct_band)) then
+      !$acc exit data detach(this%sw_dn_direct_band_d)
+    end if
+    if (associated(this%f_lw_up_clear_band)) then
+      !$acc exit data detach(this%lw_up_clear_band_d)
+    end if
+    if (associated(this%f_lw_dn_clear_band)) then
+      !$acc exit data detach(this%lw_dn_clear_band_d)
+    end if
+    if (associated(this%f_sw_up_clear_band)) then
+      !$acc exit data detach(this%sw_up_clear_band_d)
+    end if
+    if (associated(this%f_sw_dn_clear_band)) then
+      !$acc exit data detach(this%sw_dn_clear_band_d)
+    end if
+    if (associated(this%f_sw_dn_direct_clear_band)) then
+      !$acc exit data detach(this%sw_dn_direct_clear_band_d)
+    end if
+
+    ! g fluxes
+    if (associated(this%f_lw_dn_surf_g)) then
+      !$acc exit data detach(this%lw_dn_surf_g_d)
+    end if
+    if (associated(this%f_lw_dn_surf_clear_g)) then
+      !$acc exit data detach(this%lw_dn_surf_clear_g_d)
+    end if
+    if (associated(this%f_sw_dn_diffuse_surf_g)) then
+      !$acc exit data detach(this%sw_dn_diffuse_surf_g_d)
+    end if
+    if (associated(this%f_sw_dn_direct_surf_g)) then
+      !$acc exit data detach(this%sw_dn_direct_surf_g_d)
+    end if
+    if (associated(this%f_sw_dn_diffuse_surf_clear_g)) then
+      !$acc exit data detach(this%sw_dn_diffuse_surf_clear_g_d)
+    end if
+    if (associated(this%f_sw_dn_direct_surf_clear_g)) then
+      !$acc exit data detach(this%sw_dn_direct_surf_clear_g_d)
+    end if
+
+    ! TOA g fluxes
+    if (associated(this%f_lw_up_toa_g)) then
+      !$acc exit data detach(this%lw_up_toa_g_d)
+    end if
+    if (associated(this%f_lw_up_toa_clear_g)) then
+      !$acc exit data detach(this%lw_up_toa_clear_g_d)
+    end if
+    if (associated(this%f_sw_dn_toa_g)) then
+      !$acc exit data detach(this%sw_dn_toa_g_d)
+    end if
+    if (associated(this%f_sw_up_toa_g)) then
+      !$acc exit data detach(this%sw_up_toa_g_d)
+    end if
+    if (associated(this%f_sw_up_toa_clear_g)) then
+      !$acc exit data detach(this%sw_up_toa_clear_g_d)
+    end if
+
+    ! surface band fluxes
+    if (associated(this%f_sw_dn_surf_band)) then
+      !$acc exit data detach(this%sw_dn_surf_band_d)
+    end if
+    if (associated(this%f_sw_dn_direct_surf_band)) then
+      !$acc exit data detach(this%sw_dn_direct_surf_band_d)
+    end if
+    if (associated(this%f_sw_dn_surf_clear_band)) then
+      !$acc exit data detach(this%sw_dn_surf_clear_band_d)
+    end if
+    if (associated(this%f_sw_dn_direct_surf_clear_band)) then
+      !$acc exit data detach(this%sw_dn_direct_surf_clear_band_d)
+    end if
+
+    ! TOA band fluxes
+    if (associated(this%f_lw_up_toa_band)) then
+      !$acc exit data detach(this%lw_up_toa_band_d)
+    end if
+    if (associated(this%f_lw_up_toa_clear_band)) then
+      !$acc exit data detach(this%lw_up_toa_clear_band_d)
+    end if
+    if (associated(this%f_sw_dn_toa_band)) then
+      !$acc exit data detach(this%sw_dn_toa_band_d)
+    end if
+    if (associated(this%f_sw_up_toa_band)) then
+      !$acc exit data detach(this%sw_up_toa_band_d)
+    end if
+    if (associated(this%f_sw_up_toa_clear_band)) then
+      !$acc exit data detach(this%sw_up_toa_clear_band_d)
+    end if
+
+    ! canopy fluxes
+    if (associated(this%f_lw_dn_surf_canopy)) then
+      !$acc exit data detach(this%lw_dn_surf_canopy_d)
+    end if
+    if (associated(this%f_sw_dn_diffuse_surf_canopy)) then
+      !$acc exit data detach(this%sw_dn_diffuse_surf_canopy_d)
+    end if
+    if (associated(this%f_sw_dn_direct_surf_canopy)) then
+      !$acc exit data detach(this%sw_dn_direct_surf_canopy_d)
+    end if
+
+    ! cloud cover
+    if (associated(this%f_cloud_cover_lw)) then
+      !$acc exit data detach(this%cloud_cover_lw_d)
+    end if
+    if (associated(this%f_cloud_cover_sw)) then
+      !$acc exit data detach(this%cloud_cover_sw_d)
+    end if
+
+    ! lw derivatives
+    if (associated(this%f_lw_derivatives)) then
+      !$acc exit data detach(this%lw_derivatives_d)
+    end if
+
+    !$acc exit data delete(this)
+
+    if (lhook) call dr_hook('radiation_field_type:flux_field_detach',1,hook_handle)
+
+  end subroutine flux_field_detach
+
+  !---------------------------------------------------------------------
+  ! Associate flux_type with device pointers for a given block
+  subroutine flux_associate_device_pointers(this, flux, block_index)
+
+    use yomhook, only : lhook, dr_hook, jphook
+
+    class(flux_field_type), intent(inout) :: this
+    class(flux_type),       intent(inout) :: flux
+    integer,                intent(in)    :: block_index
+
+    real(jphook) :: hook_handle
+
+    if (lhook) call dr_hook('radiation_field_type:flux_associate_device_pointers',0,hook_handle)
+
+    ! longwave up and down fluxes
+    if (associated(this%lw_up_d)) then
+      flux%lw_up => this%lw_up_d(:,:,block_index)
+    end if
+    if (associated(this%lw_dn_d)) then
+      flux%lw_dn => this%lw_dn_d(:,:,block_index)
+    end if
+    if (associated(this%lw_up_clear_d)) then
+      flux%lw_up_clear => this%lw_up_clear_d(:,:,block_index)
+    end if
+    if (associated(this%lw_dn_clear_d)) then
+      flux%lw_dn_clear => this%lw_dn_clear_d(:,:,block_index)
+    end if
+
+    ! shortwave up and down fluxes
+    if (associated(this%sw_up_d)) then
+      flux%sw_up => this%sw_up_d(:,:,block_index)
+    end if
+    if (associated(this%sw_dn_d)) then
+      flux%sw_dn => this%sw_dn_d(:,:,block_index)
+    end if
+    if (associated(this%sw_dn_direct_d)) then
+      flux%sw_dn_direct => this%sw_dn_direct_d(:,:,block_index)
+    end if
+    if (associated(this%sw_up_clear_d)) then
+      flux%sw_up_clear => this%sw_up_clear_d(:,:,block_index)
+    end if
+    if (associated(this%sw_dn_clear_d)) then
+      flux%sw_dn_clear => this%sw_dn_clear_d(:,:,block_index)
+    end if
+    if (associated(this%sw_dn_direct_clear_d)) then
+      flux%sw_dn_direct_clear => this%sw_dn_direct_clear_d(:,:,block_index)
+    end if
+
+    ! band fluxes
+    if (associated(this%lw_up_band_d)) then
+      flux%lw_up_band => this%lw_up_band_d(:,:,:,block_index)
+    end if
+    if (associated(this%lw_dn_band_d)) then
+      flux%lw_dn_band => this%lw_dn_band_d(:,:,:,block_index)
+    end if
+    if (associated(this%sw_up_band_d)) then
+      flux%sw_up_band => this%sw_up_band_d(:,:,:,block_index)
+    end if
+    if (associated(this%sw_dn_band_d)) then
+      flux%sw_dn_band => this%sw_dn_band_d(:,:,:,block_index)
+    end if
+    if (associated(this%sw_dn_direct_band_d)) then
+      flux%sw_dn_direct_band => this%sw_dn_direct_band_d(:,:,:,block_index)
+    end if
+    if (associated(this%lw_up_clear_band_d)) then
+      flux%lw_up_clear_band => this%lw_up_clear_band_d(:,:,:,block_index)
+    end if
+    if (associated(this%lw_dn_clear_band_d)) then
+      flux%lw_dn_clear_band => this%lw_dn_clear_band_d(:,:,:,block_index)
+    end if
+    if (associated(this%sw_up_clear_band_d)) then
+      flux%sw_up_clear_band => this%sw_up_clear_band_d(:,:,:,block_index)
+    end if
+    if (associated(this%sw_dn_clear_band_d)) then
+      flux%sw_dn_clear_band => this%sw_dn_clear_band_d(:,:,:,block_index)
+    end if
+    if (associated(this%sw_dn_direct_clear_band_d)) then
+      flux%sw_dn_direct_clear_band => this%sw_dn_direct_clear_band_d(:,:,:,block_index)
+    end if
+
+    ! g fluxes
+    if (associated(this%lw_dn_surf_g_d)) then
+      flux%lw_dn_surf_g => this%lw_dn_surf_g_d(:,:,block_index)
+    end if
+    if (associated(this%lw_dn_surf_clear_g_d)) then
+      flux%lw_dn_surf_clear_g => this%lw_dn_surf_clear_g_d(:,:,block_index)
+    end if
+    if (associated(this%sw_dn_diffuse_surf_g_d)) then
+      flux%sw_dn_diffuse_surf_g => this%sw_dn_diffuse_surf_g_d(:,:,block_index)
+    end if
+    if (associated(this%sw_dn_direct_surf_g_d)) then
+      flux%sw_dn_direct_surf_g => this%sw_dn_direct_surf_g_d(:,:,block_index)
+    end if
+    if (associated(this%sw_dn_diffuse_surf_clear_g_d)) then
+      flux%sw_dn_diffuse_surf_clear_g => this%sw_dn_diffuse_surf_clear_g_d(:,:,block_index)
+    end if
+    if (associated(this%sw_dn_direct_surf_clear_g_d)) then
+      flux%sw_dn_direct_surf_clear_g => this%sw_dn_direct_surf_clear_g_d(:,:,block_index)
+    end if
+    ! TOA g fluxes
+    if (associated(this%lw_up_toa_g_d)) then
+      flux%lw_up_toa_g => this%lw_up_toa_g_d(:,:,block_index)
+    end if
+    if (associated(this%lw_up_toa_clear_g_d)) then
+      flux%lw_up_toa_clear_g => this%lw_up_toa_clear_g_d(:,:,block_index)
+    end if
+    if (associated(this%sw_dn_toa_g_d)) then
+      flux%sw_dn_toa_g => this%sw_dn_toa_g_d(:,:,block_index)
+    end if
+    if (associated(this%sw_up_toa_g_d)) then
+      flux%sw_up_toa_g => this%sw_up_toa_g_d(:,:,block_index)
+    end if
+    if (associated(this%sw_up_toa_clear_g_d)) then
+      flux%sw_up_toa_clear_g => this%sw_up_toa_clear_g_d(:,:,block_index)
+    end if
+
+    ! surface band fluxes
+    if (associated(this%sw_dn_surf_band_d)) then
+      flux%sw_dn_surf_band => this%sw_dn_surf_band_d(:,:,block_index)
+    end if
+    if (associated(this%sw_dn_direct_surf_band_d)) then
+      flux%sw_dn_direct_surf_band => this%sw_dn_direct_surf_band_d(:,:,block_index)
+    end if
+    if (associated(this%sw_dn_surf_clear_band_d)) then
+      flux%sw_dn_surf_clear_band => this%sw_dn_surf_clear_band_d(:,:,block_index)
+    end if
+    if (associated(this%sw_dn_direct_surf_clear_band_d)) then
+      flux%sw_dn_direct_surf_clear_band => this%sw_dn_direct_surf_clear_band_d(:,:,block_index)
+    end if
+
+    ! TOA band fluxes
+    if (associated(this%lw_up_toa_band_d)) then
+      flux%lw_up_toa_band => this%lw_up_toa_band_d(:,:,block_index)
+    end if
+    if (associated(this%lw_up_toa_clear_band_d)) then
+      flux%lw_up_toa_clear_band => this%lw_up_toa_clear_band_d(:,:,block_index)
+    end if
+    if (associated(this%sw_dn_toa_band_d)) then
+      flux%sw_dn_toa_band => this%sw_dn_toa_band_d(:,:,block_index)
+    end if
+    if (associated(this%sw_up_toa_band_d)) then
+      flux%sw_up_toa_band => this%sw_up_toa_band_d(:,:,block_index)
+    end if
+    if (associated(this%sw_up_toa_clear_band_d)) then
+      flux%sw_up_toa_clear_band => this%sw_up_toa_clear_band_d(:,:,block_index)
+    end if
+
+    ! canopy fluxes
+    if (associated(this%lw_dn_surf_canopy_d)) then
+      flux%lw_dn_surf_canopy => this%lw_dn_surf_canopy_d(:,:,block_index)
+    end if
+    if (associated(this%sw_dn_diffuse_surf_canopy_d)) then
+      flux%sw_dn_diffuse_surf_canopy => this%sw_dn_diffuse_surf_canopy_d(:,:,block_index)
+    end if
+    if (associated(this%sw_dn_direct_surf_canopy_d)) then
+      flux%sw_dn_direct_surf_canopy => this%sw_dn_direct_surf_canopy_d(:,:,block_index)
+    end if
+
+    ! cloud cover
+    if (associated(this%cloud_cover_lw_d)) then
+      flux%cloud_cover_lw => this%cloud_cover_lw_d(:,block_index)
+    end if
+    if (associated(this%cloud_cover_sw_d)) then
+      flux%cloud_cover_sw => this%cloud_cover_sw_d(:,block_index)
+    end if
+
+    ! LW derivatives
+    if (associated(this%lw_derivatives_d)) then
+      flux%lw_derivatives => this%lw_derivatives_d(:,:,block_index)
+    end if
+
+    if (lhook) call dr_hook('radiation_field_type:flux_associate_device_pointers',1,hook_handle)
+
+  end subroutine flux_associate_device_pointers
 
 end module radiation_field_type_module
