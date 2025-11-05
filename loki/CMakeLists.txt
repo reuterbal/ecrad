@@ -44,6 +44,7 @@ ecbuild_add_library(
         "${PROJECT_SOURCE_DIR}/ifs/radiation_field_type_mod.F90"
     DEFINITIONS
         $<${HAVE_FIELD_API}:HAVE_FIELD_API>
+        $<${HAVE_LOKI}:HAVE_LOKI>
     PRIVATE_INCLUDES
         ${ecrad_loki_SOURCE_DIRS}
     PUBLIC_INCLUDES
