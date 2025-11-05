@@ -138,6 +138,7 @@ if( TARGET ecrad_loki.${PREC} )
             loki_driver_lib.${PREC}
                 ecrad_base.${PREC}
                 $<${HAVE_OMP}:OpenMP::OpenMP_Fortran>
+                $<${HAVE_ACC}:OpenACC::OpenACC_Fortran>
         )
     endif()
 endif()

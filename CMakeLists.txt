@@ -80,6 +80,45 @@ ecbuild_add_option(
     REQUIRED_PACKAGES "OpenMP COMPONENTS Fortran"
 )
 
+if( ${CMAKE_VERSION} VERSION_LESS "3.25" )
+  if ( ECRAD_ENABLE_ACC OR (NOT DEFINED ECRAD_ENABLE_ACC AND ENABLE_ACC) )
+    # See https://gitlab.kitware.com/cmake/cmake/-/issues/23691, fixed in CMake 3.25
+    # (TL;DR: FindOpenACC sets OpenACC_<LANG>_FOUND correctly but does not set
+    #  OpenACC_FOUND unless all three C, CXX, and Fortran have been found - even if
+    #  only one language has been requested via COMPONENTS)
+    find_package( OpenACC COMPONENTS Fortran )
+    if( OpenACC_Fortran_FOUND )
+      set( OpenACC_FOUND ON )
+    endif()
+  endif()
+endif()
+ecbuild_add_option(
+    FEATURE ACC
+    DEFAULT OFF
+    DESCRIPTION "Use OpenACC to offload computations to GPU"
+    REQUIRED_PACKAGES "OpenACC COMPONENTS Fortran"
+    CONDITION CMAKE_Fortran_COMPILER_ID MATCHES "PGI|NVHPC"
+)
+
+if( CMAKE_VERSION VERSION_LESS 3.25 )
+    set( NVTX_TARGET CUDA::nvToolsExt )
+else()
+    set( NVTX_TARGET CUDA::nvtx3 )
+endif()
+ecbuild_add_option(
+    FEATURE NVTX
+    DEFAULT ON
+    DESCRIPTION "Enable NVTX markers in code"
+    REQUIRED_PACKAGES "CUDAToolkit COMPONENTS ${NVTX_TARGET}"
+    CONDITION HAVE_ACC
+)
+if( HAVE_NVTX )
+    list( APPEND NVTX_TARGET nvhpcwrapnvtx )
+    list( APPEND ECRAD_COMPILE_DEFINITIONS HAVE_NVTX )
+endif()
+
+
+
 ecbuild_add_option(
     FEATURE LOKI
     DEFAULT ON

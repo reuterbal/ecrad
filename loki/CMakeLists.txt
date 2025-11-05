@@ -54,7 +54,9 @@ ecbuild_add_library(
         ecrad_base.${PREC}
         $<${HAVE_FIELD_API}:field_api_${PREC}>
         NetCDF::NetCDF_Fortran
+    PUBLIC_LIBS
         $<${HAVE_OMP}:OpenMP::OpenMP_Fortran>
+        $<${HAVE_ACC}:OpenACC::OpenACC_Fortran>
 )
 
 if( HAVE_BITIDENTITY_TESTING )
