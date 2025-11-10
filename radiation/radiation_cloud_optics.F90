@@ -298,13 +298,13 @@ contains
     associate(ho => config%cloud_optics)
 
       ! Array-wise assignment
-      od_lw_cloud  = 0.0_jprb
-      od_sw_cloud  = 0.0_jprb
-      ssa_sw_cloud = 0.0_jprb
-      g_sw_cloud   = 0.0_jprb
+      od_lw_cloud(:,:,:)  = 0.0_jprb
+      od_sw_cloud(:,:,:)  = 0.0_jprb
+      ssa_sw_cloud(:,:,:) = 0.0_jprb
+      g_sw_cloud(:,:,:)   = 0.0_jprb
       if (config%do_lw_cloud_scattering) then
-        ssa_lw_cloud = 0.0_jprb
-        g_lw_cloud   = 0.0_jprb
+        ssa_lw_cloud(:,:,:) = 0.0_jprb
+        g_lw_cloud(:,:,:)   = 0.0_jprb
       end if
 
       do jlev = 1,nlev
