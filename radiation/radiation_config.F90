@@ -654,6 +654,7 @@ module radiation_config
 #endif
 
 
+
   end type config_type
 
 !  procedure, private :: print_logical, print_real, print_int
@@ -2214,8 +2215,8 @@ contains
     !$ACC ENTER DATA COPYIN(this%aerosol_optics)
     call this%aerosol_optics%create_device()
 
-    !$ACC ENTER DATA COPYIN(this%pdf_sampler)
-    call this%pdf_sampler%create_device()
+    ! !$ACC ENTER DATA COPYIN(this%pdf_sampler) FIXME: Not neccessary for tc
+    ! call this%pdf_sampler%create_device()
 
   end subroutine create_device
 
@@ -2245,8 +2246,8 @@ contains
     !$ACC UPDATE HOST(this%aerosol_optics)
     call this%aerosol_optics%update_host()
 
-    !$ACC UPDATE HOST(this%pdf_sampler)
-    call this%pdf_sampler%update_host()
+    ! !$ACC UPDATE HOST(this%pdf_sampler) FIXME: Not neccessary for tc
+    ! call this%pdf_sampler%update_host()
 
   end subroutine update_host
 
@@ -2276,8 +2277,8 @@ contains
     !$ACC UPDATE DEVICE(this%aerosol_optics)
     call this%aerosol_optics%update_device()
 
-    !$ACC UPDATE DEVICE(this%pdf_sampler)
-    call this%pdf_sampler%update_device()
+    ! !$ACC UPDATE DEVICE(this%pdf_sampler) FIXME: not neccessary for tc
+    ! call this%pdf_sampler%update_device()
 
   end subroutine update_device
 
@@ -2307,8 +2308,8 @@ contains
     !$ACC EXIT DATA DELETE(this%aerosol_optics)
     call this%aerosol_optics%delete_device()
 
-    !$ACC EXIT DATA DELETE(this%pdf_sampler)
-    call this%pdf_sampler%delete_device()
+    ! !$ACC EXIT DATA DELETE(this%pdf_sampler) FIXME: not neccessary for tc
+    ! call this%pdf_sampler%delete_device()
 
   end subroutine delete_device
 #endif
