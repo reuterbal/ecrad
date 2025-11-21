@@ -144,7 +144,7 @@ module radiation_aerosol_optics_data
      procedure :: set_hydrophilic_type
      procedure :: set_empty_type
      procedure :: set_types
-     procedure :: calc_rh_index
+     procedure, nopass :: calc_rh_index
      procedure :: print_description
 
 #ifdef HAVE_ACC
@@ -649,7 +649,7 @@ contains
 
     !use yomhook,     only : lhook, dr_hook, jphook
 
-    class(aerosol_optics_type), intent(in)    :: this
+    type(aerosol_optics_type),  intent(in)    :: this
     real(jprb),                 intent(in)    :: rh
     integer                                   :: calc_rh_index
     !real(jphook) :: hook_handle
