@@ -615,12 +615,12 @@ contains
         do jcol = istartcol,iendcol
 
           ! Reset temporary arrays
-          od_sw_aerosol     = 0.0_jprb
-          scat_sw_aerosol   = 0.0_jprb
-          scat_g_sw_aerosol = 0.0_jprb
-          od_lw_aerosol     = 0.0_jprb
-          scat_lw_aerosol   = 0.0_jprb
-          scat_g_lw_aerosol = 0.0_jprb
+          od_sw_aerosol(:,:)     = 0.0_jprb
+          scat_sw_aerosol(:,:)   = 0.0_jprb
+          scat_g_sw_aerosol(:,:) = 0.0_jprb
+          od_lw_aerosol(:,:)     = 0.0_jprb
+          scat_lw_aerosol(:,:)   = 0.0_jprb
+          scat_g_lw_aerosol(:,:) = 0.0_jprb
 
           do jlev = istartlev,iendlev
             ! Compute relative humidity with respect to liquid
