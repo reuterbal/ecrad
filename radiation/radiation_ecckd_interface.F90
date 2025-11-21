@@ -161,9 +161,7 @@ contains
     real(jphook) :: hook_handle
 
     if (lhook) call dr_hook('radiation_ecckd_interface:set_gas_units',0,hook_handle)
-    !$loki inline
-    call gas%set_units(IVolumeMixingRatio)
-    !$loki end inline
+    call gas%set_units(gas, IVolumeMixingRatio)
     if (lhook) call dr_hook('radiation_ecckd_interface:set_gas_units',1,hook_handle)
 
   end subroutine set_gas_units
@@ -247,10 +245,10 @@ contains
 
     ! Check that the gas concentrations are stored in volume mixing
     ! ratio with no scaling; if not, return a vector of scalings
-    call gas%assert_units(IVolumeMixingRatio, scale_factor=1.0_jprb, &
+    call gas%assert_units(gas, IVolumeMixingRatio, scale_factor=1.0_jprb, &
          &                istatus=is_volume_mixing_ratio)
     if (.not. is_volume_mixing_ratio) then
-      call gas%get_scaling(IVolumeMixingRatio, concentration_scaling)
+      call gas%get_scaling(gas, IVolumeMixingRatio, concentration_scaling)
     else
       concentration_scaling = 1.0_jprb
     end if

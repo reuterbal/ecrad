@@ -65,15 +65,15 @@ module radiation_gas
    contains
      procedure :: allocate   => allocate_gas
      procedure :: deallocate => deallocate_gas
-     procedure :: put_gas_jprd
-     procedure :: put_gas_jprm
+     procedure, nopass :: put_gas_jprd
+     procedure, nopass :: put_gas_jprm
      generic   :: put => put_gas_jprd, put_gas_jprm
-     procedure :: put_well_mixed => put_well_mixed_gas
+     procedure, nopass :: put_well_mixed => put_well_mixed_gas
      procedure :: scale      => scale_gas
-     procedure :: set_units  => set_units_gas
-     procedure :: assert_units => assert_units_gas
-     procedure :: get        => get_gas
-     procedure :: get_scaling
+     procedure, nopass :: set_units  => set_units_gas
+     procedure, nopass :: assert_units => assert_units_gas
+     procedure, nopass :: get => get_gas
+     procedure, nopass :: get_scaling
      procedure :: reverse    => reverse_gas
      procedure :: out_of_physical_bounds
   end type gas_type
@@ -146,7 +146,7 @@ contains
 
     use radiation_io,   only : nulerr, radiation_abort
 
-    class(gas_type),      intent(inout) :: this
+    type(gas_type),       intent(inout) :: this
     integer,              intent(in)    :: igas
     integer,              intent(in)    :: iunits
     integer,              intent(in)    :: mixing_ratio_size_1
@@ -226,7 +226,7 @@ contains
     use yomhook,        only : lhook, dr_hook, jphook
     use radiation_io,   only : nulerr, radiation_abort
 
-    class(gas_type),      intent(inout) :: this
+    type(gas_type),       intent(inout) :: this
     integer,              intent(in)    :: igas
     integer,              intent(in)    :: iunits
     real(jprd),           intent(in)    :: mixing_ratio(:,:)
@@ -262,7 +262,7 @@ contains
     use yomhook,        only : lhook, dr_hook, jphook
     use radiation_io,   only : nulerr, radiation_abort
 
-    class(gas_type),      intent(inout) :: this
+    type(gas_type),       intent(inout) :: this
     integer,              intent(in)    :: igas
     integer,              intent(in)    :: iunits
     real(jprm),           intent(in)    :: mixing_ratio(:,:)
@@ -297,7 +297,7 @@ contains
     use yomhook,        only : lhook, dr_hook, jphook
     use radiation_io,   only : nulerr, radiation_abort
 
-    class(gas_type),      intent(inout) :: this
+    type(gas_type),      intent(inout) :: this
     integer,              intent(in)    :: igas
     integer,              intent(in)    :: iunits
     real(jprb),           intent(in)    :: mixing_ratio
@@ -418,7 +418,7 @@ contains
   ! dimensionless volume mixing ratios, then the values would be
   ! internally divided by 1.0e-6.
   subroutine set_units_gas(this, iunits, igas, scale_factor)
-    class(gas_type),      intent(inout) :: this
+    type(gas_type),      intent(inout) :: this
     integer,              intent(in)    :: iunits
     integer,    optional, intent(in)    :: igas
     real(jprb), optional, intent(in)    :: scale_factor
@@ -509,7 +509,7 @@ contains
   ! "iunits" (which can be IVolumeMixingRatio or IMassMixingRatio)
   subroutine get_scaling(this, iunits, scaling)
   !$loki routine seq
-    class(gas_type), intent(in)  :: this
+    type(gas_type),  intent(in)  :: this
     integer,         intent(in)  :: iunits
     real(jprb),      intent(out) :: scaling(NMaxGases)
     integer :: jg
@@ -538,7 +538,7 @@ contains
   !$loki routine seq
     use radiation_io,   only : nulerr, radiation_abort
 
-    class(gas_type),      intent(in)  :: this
+    type(gas_type),      intent(in)  :: this
     integer,              intent(in)  :: iunits
     integer,    optional, intent(in)  :: igas
     real(jprb), optional, intent(in)  :: scale_factor
@@ -618,7 +618,7 @@ contains
     use yomhook,        only : lhook, dr_hook, jphook
     use radiation_io,   only : nulerr, radiation_abort
 
-    class(gas_type),      intent(in)  :: this
+    type(gas_type),      intent(in)  :: this
     integer,              intent(in)  :: igas
     integer,              intent(in)  :: iunits
     real(jprb),           intent(out) :: mixing_ratio(:,:)

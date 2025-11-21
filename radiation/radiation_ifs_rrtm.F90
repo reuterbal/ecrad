@@ -205,7 +205,7 @@ contains
     use radiation_gas,           only : gas_type, IMassMixingRatio
     type(gas_type),    intent(inout) :: gas
 
-    call gas%set_units(IMassMixingRatio)
+    call gas%set_units(gas, IMassMixingRatio)
 
   end subroutine set_gas_units
 
@@ -397,7 +397,7 @@ contains
     end do
     
     ! Check we have gas mixing ratios in the right units
-    call gas%assert_units(IMassMixingRatio)
+    call gas%assert_units(gas, IMassMixingRatio)
 
     ! Warning: O2 is hard-coded within the following function so the
     ! user-provided concentrations of this gas are ignored for both

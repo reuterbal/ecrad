@@ -609,7 +609,7 @@ contains
           g_lw(:,:,istartcol:iendcol)   = 0.0_jprb
         end if
 
-        call gas%get(IH2O, IMassMixingRatio, h2o_mmr, istartcol=istartcol)
+        call gas%get(gas, IH2O, IMassMixingRatio, h2o_mmr, istartcol=istartcol)
 
         ! Loop over column
         do jcol = istartcol,iendcol

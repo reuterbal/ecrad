@@ -570,21 +570,21 @@ contains
       if (jgas == IH2O) then
         if (file%exists('q')) then
           call file%get('q', gas_mr)
-          call gas%put(IH2O, IMassMixingRatio, gas_mr)
+          call gas%put(gas, IH2O, IMassMixingRatio, gas_mr)
         else if (file%exists('h2o_mmr')) then
           call file%get('h2o_mmr', gas_mr)
-          call gas%put(IH2O, IMassMixingRatio, gas_mr)
+          call gas%put(gas, IH2O, IMassMixingRatio, gas_mr)
         else
           call file%get('h2o' // trim(driver_config%vmr_suffix_str), gas_mr);
-          call gas%put(IH2O, IVolumeMixingRatio, gas_mr)
+          call gas%put(gas, IH2O, IVolumeMixingRatio, gas_mr)
         end if
       else if (jgas == IO3) then
         if (file%exists('o3_mmr')) then
           call file%get('o3_mmr', gas_mr)
-          call gas%put(IO3, IMassMixingRatio, gas_mr)
+          call gas%put(gas, IO3, IMassMixingRatio, gas_mr)
         else
           call file%get('o3' // trim(driver_config%vmr_suffix_str), gas_mr)
-          call gas%put(IO3, IVolumeMixingRatio, gas_mr)
+          call gas%put(gas, IO3, IVolumeMixingRatio, gas_mr)
         end if
       else
         ! Find number of dimensions of the variable holding gas "jgas" in
@@ -597,10 +597,10 @@ contains
         if (irank == 0) then
           ! Store this as a well-mixed gas
           call file%get(trim(gas_var_name), well_mixed_gas_vmr)
-          call gas%put_well_mixed(jgas, IVolumeMixingRatio, well_mixed_gas_vmr)
+          call gas%put_well_mixed(gas, jgas, IVolumeMixingRatio, well_mixed_gas_vmr)
         else if (irank == 2) then
           call file%get(trim(gas_var_name), gas_mr)
-          call gas%put(jgas, IVolumeMixingRatio, gas_mr)
+          call gas%put(gas, jgas, IVolumeMixingRatio, gas_mr)
         else if (irank > 0) then
           write(nulout,'(a,a,a)')  '***  Error: ', trim(gas_var_name), ' does not have 0 or 2 dimensions'
           stop
