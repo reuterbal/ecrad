@@ -83,15 +83,15 @@ module radiation_cloud
   contains
     procedure :: allocate   => allocate_cloud_arrays
     procedure :: deallocate => deallocate_cloud_arrays
-    procedure :: set_overlap_param_fix
-    procedure :: set_overlap_param_var
+    procedure, nopass :: set_overlap_param_fix
+    procedure, nopass :: set_overlap_param_var
     generic   :: set_overlap_param => set_overlap_param_fix, set_overlap_param_var
     procedure :: set_overlap_param_approx
     procedure :: create_fractional_std
     procedure :: create_inv_cloud_effective_size
     procedure :: create_inv_cloud_effective_size_eta
-    procedure :: param_cloud_effective_separation_eta
-    procedure :: crop_cloud_fraction
+    procedure, nopass :: param_cloud_effective_separation_eta
+    procedure, nopass :: crop_cloud_fraction
     procedure :: out_of_physical_bounds
 
   end type cloud_type
@@ -221,7 +221,7 @@ contains
     use radiation_thermodynamics, only : thermodynamics_type
     use radiation_constants,      only : GasConstantDryAir, AccelDueToGravity
 
-    class(cloud_type),         intent(inout) :: this
+    type(cloud_type),         intent(inout) :: this
     type(thermodynamics_type), intent(in)    :: thermodynamics
     real(jprb),                intent(in)    :: decorrelation_length ! m
     integer,         optional, intent(in)    :: startcol, endcol
@@ -333,7 +333,7 @@ contains
     use radiation_thermodynamics, only : thermodynamics_type
     use radiation_constants,      only : GasConstantDryAir, AccelDueToGravity
 
-    class(cloud_type),         intent(inout) :: this
+    type(cloud_type),         intent(inout) :: this
     type(thermodynamics_type), intent(in)    :: thermodynamics
     integer,                   intent(in)    :: istartcol, iendcol
     real(jprb),                intent(in)    :: decorrelation_length(istartcol:iendcol) ! m
@@ -662,7 +662,7 @@ contains
     use yomhook,                  only : lhook, dr_hook, jphook
     use radiation_io,             only : nulerr, radiation_abort
 
-    class(cloud_type), intent(inout) :: this
+    type(cloud_type), intent(inout) :: this
     integer,           intent(in)    :: ncol, nlev
     ! Pressure on half levels (Pa)
     real(jprb),        intent(in)    :: pressure_hl(:,:)
@@ -768,7 +768,7 @@ contains
     
     use yomhook, only : lhook, dr_hook, jphook
 
-    class(cloud_type), intent(inout) :: this
+    type(cloud_type),  intent(inout) :: this
     integer,           intent(in)    :: istartcol, iendcol
 
     integer :: nlev, ntype

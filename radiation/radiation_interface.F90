@@ -218,7 +218,7 @@ contains
     use radiation_single_level,   only : single_level_type, get_albedos
     use radiation_thermodynamics, only : thermodynamics_type
     use radiation_gas,            only : gas_type
-    use radiation_cloud,          only : cloud_type
+    use radiation_cloud,          only : cloud_type, crop_cloud_fraction
     use radiation_aerosol,        only : aerosol_type
     use radiation_flux,           only : flux_type
     !$loki remove
@@ -368,7 +368,7 @@ contains
         ! Crop the cloud fraction to remove clouds that have too small
         ! a fraction or water content; after this, we can safely
         ! assume that a cloud is present if cloud%fraction > 0.0.
-        call cloud%crop_cloud_fraction(istartcol, iendcol, &
+        call crop_cloud_fraction(cloud, istartcol, iendcol, &
              &            config%cloud_fraction_threshold, &
              &            config%cloud_mixing_ratio_threshold)
 

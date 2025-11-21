@@ -237,7 +237,7 @@ contains
         ! Convert overlap decorrelation length to overlap parameter between
         ! adjacent layers, stored in cloud%overlap_param
         allocate(cloud%overlap_param(ncol, nlev-1))
-        call cloud%set_overlap_param(thermodynamics, &
+        call cloud%set_overlap_param_fix(cloud, thermodynamics, &
              &    driver_config%overlap_decorr_length_override)
       else if (.not. associated(cloud%overlap_param)) then 
         if (driver_config%iverbose >= 1) then
@@ -245,7 +245,7 @@ contains
                &  decorr_length_default, ' m'
         end if
         allocate(cloud%overlap_param(ncol, nlev-1))
-        call cloud%set_overlap_param(thermodynamics, decorr_length_default)
+        call cloud%set_overlap_param_fix(cloud, thermodynamics, decorr_length_default)
       else if (driver_config%overlap_decorr_length_scaling > 0.0_jprb) then
         ! Scale the overlap decorrelation length by taking the overlap
         ! parameter to a power
@@ -349,7 +349,7 @@ contains
           end if
           allocate(cloud%inv_cloud_effective_size(ncol,nlev))
           allocate(cloud%inv_inhom_effective_size(ncol,nlev))
-          call cloud%param_cloud_effective_separation_eta(ncol, nlev, &
+          call cloud%param_cloud_effective_separation_eta(cloud, ncol, nlev, &
                &  thermodynamics%pressure_hl, &
                &  driver_config%cloud_separation_scale_surface, &
                &  driver_config%cloud_separation_scale_toa, &
