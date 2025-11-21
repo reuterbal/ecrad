@@ -100,6 +100,10 @@ ecbuild_add_option(
     CONDITION CMAKE_Fortran_COMPILER_ID MATCHES "PGI|NVHPC"
 )
 
+if( HAVE_ACC )
+    list( APPEND ECRAD_COMPILE_DEFINITIONS HAVE_ACC )
+endif()
+
 if( CMAKE_VERSION VERSION_LESS 3.25 )
     set( NVTX_TARGET CUDA::nvToolsExt )
 else()

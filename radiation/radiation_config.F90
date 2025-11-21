@@ -646,7 +646,7 @@ module radiation_config
      procedure :: consolidate_sw_albedo_intervals
      procedure :: consolidate_lw_emiss_intervals
 
-#ifdef _OPENACC
+#ifdef HAVE_ACC
     procedure :: create_device
     procedure :: update_host
     procedure :: update_device
@@ -2187,7 +2187,7 @@ contains
     write(nulout,'(a,a,a,a,i0,a)') str, ' (', name, '=', val,')'
   end subroutine print_enum
 
-#ifdef _OPENACC
+#ifdef HAVE_ACC
 
   subroutine create_device(this)
     class(config_type), intent(inout) :: this

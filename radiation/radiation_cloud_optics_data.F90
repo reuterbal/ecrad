@@ -40,12 +40,12 @@ module radiation_cloud_optics_data
 
    contains
      procedure :: setup => setup_cloud_optics
-#ifdef _OPENACC
+#ifdef HAVE_ACC
      procedure :: create_device
      procedure :: update_host
      procedure :: update_device
      procedure :: delete_device
-#endif _OPENACC
+#endif
 
   end type cloud_optics_type
 
@@ -116,7 +116,7 @@ contains
 
   end subroutine setup_cloud_optics
 
-#ifdef _OPENACC
+#ifdef HAVE_ACC
 
   subroutine create_device(this)
     class(cloud_optics_type), intent(inout) :: this

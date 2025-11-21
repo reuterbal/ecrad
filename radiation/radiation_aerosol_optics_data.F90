@@ -147,7 +147,7 @@ module radiation_aerosol_optics_data
      procedure :: calc_rh_index
      procedure :: print_description
 
-#ifdef _OPENACC
+#ifdef HAVE_ACC
      procedure :: create_device
      procedure :: update_host
      procedure :: update_device
@@ -753,7 +753,7 @@ contains
 
   end function get_line
 
-#ifdef _OPENACC
+#ifdef HAVE_ACC
 
   subroutine create_device(this)
     class(aerosol_optics_type), intent(inout) :: this
