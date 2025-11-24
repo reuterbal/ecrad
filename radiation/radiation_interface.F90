@@ -220,7 +220,7 @@ contains
     use radiation_gas,            only : gas_type
     use radiation_cloud,          only : cloud_type, crop_cloud_fraction
     use radiation_aerosol,        only : aerosol_type
-    use radiation_flux,           only : flux_type
+    use radiation_flux,           only : flux_type, calc_toa_spectral, calc_surface_spectral
     !$loki remove
     use radiation_spartacus_sw,   only : solver_spartacus_sw
     use radiation_spartacus_lw,   only : solver_spartacus_lw
@@ -324,8 +324,10 @@ contains
       ! increasing height: the following subroutine reverses them,
       ! call the radiation scheme and then reverses the returned
       ! fluxes
+      !$loki remove
       call radiation_reverse(ncol, nlev, istartcol, iendcol, config, &
            &  single_level, thermodynamics, gas, cloud, aerosol, flux)
+      !$loki end  remove
     else
 
       ! Input arrays arranged in order of increasing pressure /
@@ -527,8 +529,8 @@ contains
 
       ! Store surface downwelling, and TOA, fluxes in bands from
       ! fluxes in g points
-      call flux%calc_surface_spectral(config, istartcol, iendcol)
-      call flux%calc_toa_spectral    (config, istartcol, iendcol)
+      call calc_surface_spectral(flux, config, istartcol, iendcol)
+      call calc_toa_spectral    (flux, config, istartcol, iendcol)
 
     end if
     
@@ -579,6 +581,8 @@ contains
 
     ! Start and end levels for aerosol data
     integer :: istartlev, iendlev
+
+  !$loki remove
 
     if (config%iverbose >= 2) then
       write(nulout,'(a)') 'Reversing arrays to be in order of increasing pressure'
@@ -684,6 +688,8 @@ contains
     if (associated(aerosol%mixing_ratio)) then
       call aerosol_rev%deallocate
     end if
+
+  !$loki end remove
 
   end subroutine radiation_reverse
 

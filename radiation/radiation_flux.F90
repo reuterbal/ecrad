@@ -111,8 +111,8 @@ module radiation_flux
    contains
      procedure :: allocate   => allocate_flux_type
      procedure :: deallocate => deallocate_flux_type
-     procedure :: calc_surface_spectral
-     procedure :: calc_toa_spectral
+     procedure, nopass :: calc_surface_spectral
+     procedure, nopass :: calc_toa_spectral
      procedure :: out_of_physical_bounds
      procedure :: heating_rate_out_of_physical_bounds
   end type flux_type
@@ -487,7 +487,7 @@ contains
     use yomhook,          only : lhook, dr_hook, jphook
     use radiation_config, only : config_type
 
-    class(flux_type),  intent(inout) :: this
+    type(flux_type),  intent(inout) :: this
     type(config_type), intent(in)    :: config
     integer,           intent(in)    :: istartcol, iendcol
 
@@ -669,7 +669,7 @@ contains
     use yomhook,          only : lhook, dr_hook, jphook
     use radiation_config, only : config_type
 
-    class(flux_type),  intent(inout) :: this
+    type(flux_type),  intent(inout) :: this
     type(config_type), intent(in)    :: config
     integer,           intent(in)    :: istartcol, iendcol
 
