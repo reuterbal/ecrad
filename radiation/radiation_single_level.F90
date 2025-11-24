@@ -263,25 +263,37 @@ contains
       ! spectral intervals and with column as the first dimension
       if (config%use_canopy_full_spectrum_sw) then
         ! Albedos provided in each g point
+        !$loki remove
         if (size(this%sw_albedo,2) /= config%n_g_sw) then
           write(nulerr,'(a,i0,a)') '*** Error: single_level%sw_albedo does not have the expected ', &
                &  config%n_g_sw, ' spectral intervals'
           call radiation_abort()
         end if
-        sw_albedo_diffuse = transpose(this%sw_albedo(istartcol:iendcol,:))
+        !$loki end remove
+        do jcol = istartcol,iendcol
+          do jband=1,config%n_g_sw
+            sw_albedo_diffuse(jband,jcol) = this%sw_albedo(jcol,jband)
+          end do
+        end do
         if (associated(this%sw_albedo_direct)) then
-          sw_albedo_direct = transpose(this%sw_albedo_direct(istartcol:iendcol,:))
+          do jcol = istartcol,iendcol
+            do jband=1,config%n_g_sw
+              sw_albedo_direct(jband,jcol) = this%sw_albedo_direct(jcol,jband)
+            end do
+          end do
         end if
       else if (.not. config%do_nearest_spectral_sw_albedo) then
         ! Albedos averaged accurately to ecRad spectral bands
         nalbedoband = size(config%sw_albedo_weights,1)
+        !$loki remove
         if (size(this%sw_albedo,2) /= nalbedoband) then
           write(nulerr,'(a,i0,a)') '*** Error: single_level%sw_albedo does not have the expected ', &
                &  nalbedoband, ' bands'
           call radiation_abort()
         end if
+        !$loki end remove
 
-        sw_albedo_band = 0.0_jprb
+        sw_albedo_band(istartcol:iendcol,1:config%n_bands_sw) = 0.0_jprb
         do jband = 1,config%n_bands_sw
           do jalbedoband = 1,nalbedoband
             if (config%sw_albedo_weights(jalbedoband,jband) /= 0.0_jprb) then
@@ -295,10 +307,15 @@ contains
           end do
         end do
 
-        sw_albedo_diffuse = transpose(sw_albedo_band(istartcol:iendcol, &
-             &                              config%i_band_from_reordered_g_sw))
+        do jcol = istartcol,iendcol
+          do jband=1,config%n_g_sw
+            sw_albedo_diffuse(jband,jcol) = sw_albedo_band(jcol, &
+                                          &                config%i_band_from_reordered_g_sw(jband))
+          end do
+        end do
+
         if (associated(this%sw_albedo_direct)) then
-          sw_albedo_band = 0.0_jprb
+          sw_albedo_band(istartcol:iendcol,1:config%n_bands_sw) = 0.0_jprb
           do jband = 1,config%n_bands_sw
             do jalbedoband = 1,nalbedoband
               if (config%sw_albedo_weights(jalbedoband,jband) /= 0.0_jprb) then
@@ -309,46 +326,76 @@ contains
               end if
             end do
           end do
-          sw_albedo_direct = transpose(sw_albedo_band(istartcol:iendcol, &
-               &                             config%i_band_from_reordered_g_sw))
+          do jcol = istartcol,iendcol
+            do jband=1,config%n_g_sw
+              sw_albedo_direct(jband,jcol) = sw_albedo_band(jcol, &
+                                           &                config%i_band_from_reordered_g_sw(jband))
+            end do
+          end do
         else
-          sw_albedo_direct = sw_albedo_diffuse
+          do jcol = istartcol,iendcol
+            do jband=1,config%n_g_sw
+              sw_albedo_direct(jband,jcol) = sw_albedo_diffuse(jband, jcol)
+            end do
+          end do
         end if
       else
+        !$loki remove
         ! Albedos mapped less accurately to ecRad spectral bands
         if (maxval(config%i_albedo_from_band_sw) > size(this%sw_albedo,2)) then
           write(nulerr,'(a,i0,a)') '*** Error: single_level%sw_albedo has fewer than required ', &
                &  maxval(config%i_albedo_from_band_sw), ' bands'
           call radiation_abort()
         end if      
-        sw_albedo_diffuse = transpose(this%sw_albedo(istartcol:iendcol, &
-             &  config%i_albedo_from_band_sw(config%i_band_from_reordered_g_sw)))
+        !$loki end remove
+          do jcol = istartcol,iendcol
+            do jband=1,ubound(this%sw_albedo,2)
+              sw_albedo_diffuse(jband,jcol) = this%sw_albedo(jcol, &
+                   &  config%i_albedo_from_band_sw(config%i_band_from_reordered_g_sw(jband)))
+            end do
+          end do
         if (associated(this%sw_albedo_direct)) then
-          sw_albedo_direct = transpose(this%sw_albedo_direct(istartcol:iendcol, &
-               &  config%i_albedo_from_band_sw(config%i_band_from_reordered_g_sw)))
+          do jcol = istartcol,iendcol
+            do jband=1,ubound(this%sw_albedo_direct,2)
+              sw_albedo_direct(jband,jcol) = this%sw_albedo_direct(jcol, &
+                   &  config%i_albedo_from_band_sw(config%i_band_from_reordered_g_sw(jband)))
+            end do
+          end do
         else
-          sw_albedo_direct = sw_albedo_diffuse
+          do jcol = istartcol,iendcol
+            do jband=1,ubound(this%sw_albedo,2)
+              sw_albedo_direct(jband,jcol) = sw_albedo_diffuse(jband, jcol)
+            end do
+          end do
         end if
       end if
     end if
 
     if (config%do_lw .and. present(lw_albedo)) then
       if (config%use_canopy_full_spectrum_lw) then
+        !$loki remove
         if (config%n_g_lw /= size(this%lw_emissivity,2)) then
           write(nulerr,'(a,i0,a)') '*** Error: single_level%lw_emissivity does not have the expected ', &
                &  config%n_g_lw, ' spectral intervals'
           call radiation_abort()
         end if
-        lw_albedo = 1.0_jprb - transpose(this%lw_emissivity(istartcol:iendcol,:))
+        !$loki end remove
+        do jcol=istartcol,iendcol
+          do jband=1,config%n_g_lw
+            lw_albedo(jband,jcol) = 1.0_jprb - this%lw_emissivity(jcol,jband)
+          end do
+        end do
       else if (.not. config%do_nearest_spectral_lw_emiss) then
         ! Albedos averaged accurately to ecRad spectral bands
         nalbedoband = size(config%lw_emiss_weights,1)
+        !$loki remove
         if (nalbedoband /= size(this%lw_emissivity,2)) then
           write(nulerr,'(a,i0,a)') '*** Error: single_level%lw_emissivity does not have the expected ', &
                &  nalbedoband, ' bands'
           call radiation_abort()
         end if
-        lw_albedo_band = 0.0_jprb
+        !$loki end remove
+        lw_albedo_band(istartcol:iendcol, 1:config%n_bands_lw) = 0.0_jprb
         do jband = 1,config%n_bands_lw
           do jalbedoband = 1,nalbedoband
             if (config%lw_emiss_weights(jalbedoband,jband) /= 0.0_jprb) then
@@ -362,16 +409,26 @@ contains
           end do
         end do
 
-        lw_albedo = transpose(lw_albedo_band(istartcol:iendcol, &
-             &                config%i_band_from_reordered_g_lw))
+        do jcol=istartcol,iendcol
+          do jband=1,config%n_bands_lw
+           lw_albedo(jband,jcol) = lw_albedo_band(jcol, &
+                                 &                config%i_band_from_reordered_g_lw(jband))
+          end do
+        end do
       else
+        !$loki remove
         if (maxval(config%i_emiss_from_band_lw) > size(this%lw_emissivity,2)) then
           write(nulerr,'(a,i0,a)') '*** Error: single_level%lw_emissivity has fewer than required ', &
                &  maxval(config%i_emiss_from_band_lw), ' bands'
           call radiation_abort()
         end if
-        lw_albedo = 1.0_jprb - transpose(this%lw_emissivity(istartcol:iendcol, &
-             &  config%i_emiss_from_band_lw(config%i_band_from_reordered_g_lw)))
+        !$loki end remove
+        do jcol=istartcol,iendcol
+          do jband=1,ubound(config%i_band_from_reordered_g_lw,1)
+            lw_albedo(jband,jcol) = 1.0_jprb - (this%lw_emissivity(jcol, &
+                  &  config%i_emiss_from_band_lw(config%i_band_from_reordered_g_lw(jband))))
+          end do
+        end do
       end if
     end if
 
