@@ -41,8 +41,8 @@ module radiation_thermodynamics
    contains
      procedure :: allocate   => allocate_thermodynamics_arrays
      procedure :: deallocate => deallocate_thermodynamics_arrays
-     procedure :: calc_saturation_wrt_liquid
-     procedure :: get_layer_mass
+     procedure, nopass :: calc_saturation_wrt_liquid
+     procedure, nopass :: get_layer_mass
      procedure :: get_layer_mass_column
      procedure :: out_of_physical_bounds
 
@@ -122,7 +122,7 @@ contains
 
     use yomhook,  only : lhook, dr_hook, jphook
 
-    class(thermodynamics_type), intent(inout) :: this
+    type(thermodynamics_type), intent(inout) :: this
     integer, intent(in)                       :: istartcol, iendcol
 
     ! Pressure and temperature at full levels
@@ -169,7 +169,7 @@ contains
     use yomhook,              only : lhook, dr_hook, jphook
     use radiation_constants,  only : AccelDueToGravity
 
-    class(thermodynamics_type), intent(in)  :: this
+    type(thermodynamics_type),  intent(in)  :: this
     integer,                    intent(in)  :: istartcol, iendcol
     real(jprb),                 intent(out) :: layer_mass(istartcol:iendcol,ubound(this%pressure_hl,2))
 

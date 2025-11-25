@@ -356,7 +356,7 @@ THERMODYNAMICS%TEMPERATURE_HL(KIDIA:KFDIA,KLEV+1)&
 !     &  PPRESSURE, PTEMPERATURE, THERMODYNAMICS%H2O_SAT_LIQ, 2)
 ! Alternative approximate version using temperature and pressure from
 ! the thermodynamics structure
-CALL thermodynamics%calc_saturation_wrt_liquid(KIDIA, KFDIA)
+CALL thermodynamics%calc_saturation_wrt_liquid(thermodynamics, KIDIA, KFDIA)
 
 ! Set single-level fileds
 SINGLE_LEVEL%SOLAR_IRRADIANCE              = PSOLAR_IRRADIANCE
@@ -502,7 +502,7 @@ ENDIF
 
 ! Compute the dry mass of each layer neglecting humidity effects, in
 ! kg m-2, needed to scale some of the aerosol inputs
-CALL THERMODYNAMICS%GET_LAYER_MASS(KIDIA,KFDIA,ZLAYER_MASS)
+CALL THERMODYNAMICS%GET_LAYER_MASS(THERMODYNAMICS, KIDIA,KFDIA,ZLAYER_MASS)
 
 ! Copy over aerosol mass mixing ratio
 IF (YRERAD%NAERMACC == 1) THEN
