@@ -576,7 +576,8 @@ contains
            &  od_lw, ssa_lw, g_lw, od_sw, ssa_sw, g_sw)
     else
       ! Aerosol mixing ratios have been provided
-
+      
+      !$loki remove
       do jtype = 1,config%n_aerosol_types
         if (config%aerosol_optics%iclass(jtype) == IAerosolClassUndefined) then
           write(nulerr,'(a)') '*** Error: not all aerosol types are defined'
@@ -587,6 +588,7 @@ contains
       if (config%iverbose >= 2) then
         write(nulout,'(a)') 'Computing aerosol absorption/scattering properties'
       end if
+      !$loki end remove
 
       associate(ao => config%aerosol_optics)
 

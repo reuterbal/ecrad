@@ -756,6 +756,7 @@ contains
 #ifdef HAVE_ACC
 
   subroutine create_device(this)
+    !$loki routine seq
     class(aerosol_optics_type), intent(inout) :: this
 
     !$ACC ENTER DATA COPYIN(this%iclass) IF(allocated(this%iclass)) ASYNC(1)
@@ -795,6 +796,7 @@ contains
   end subroutine create_device
 
   subroutine update_host(this)
+    !$loki routine seq
     class(aerosol_optics_type), intent(inout) :: this
 
     !$ACC UPDATE HOST(this%iclass) IF(allocated(this%iclass)) ASYNC(1)
@@ -834,6 +836,7 @@ contains
   end subroutine update_host
 
   subroutine update_device(this)
+    !$loki routine seq
     class(aerosol_optics_type), intent(inout) :: this
 
     !$ACC UPDATE DEVICE(this%iclass) IF(allocated(this%iclass)) ASYNC(1)
@@ -873,6 +876,7 @@ contains
   end subroutine update_device
 
   subroutine delete_device(this)
+    !$loki routine seq
     class(aerosol_optics_type), intent(inout) :: this
 
     !$ACC EXIT DATA DELETE(this%iclass) IF(allocated(this%iclass)) ASYNC(1)
