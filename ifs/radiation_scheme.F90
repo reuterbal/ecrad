@@ -386,8 +386,10 @@ SINGLE_LEVEL%LW_EMISSIVITY(KIDIA:KFDIA,:)  = PSPECTRALEMISS(KIDIA:KFDIA,:)
 !        &          + ASIN(PGEMU(JLON))*6000.0_JPRD)
 ! ENDDO
 
+!$loki remove
 ! Simple initialization of the seeds for the Monte Carlo scheme
 call single_level%init_seed_simple(kidia, kfdia)
+!$loki end remove
 
 ! Added for bit-identity validation against ecrad standalone:
 ! Overwrite seed with user-specified values
@@ -480,10 +482,12 @@ if(present(PCLOUD_OVERLAP)) then
   YLCLOUD%OVERLAP_PARAM(KIDIA:KFDIA,:) = PCLOUD_OVERLAP(KIDIA:KFDIA,:)
 endif
 
+!$loki remove
 ! Cloud water content fractional standard deviation is configurable
 ! from namelist NAERAD but must be globally constant. Before it was
 ! hard coded at 1.0.
 CALL YLCLOUD%CREATE_FRACTIONAL_STD(KLON, KLEV, YRERAD%RCLOUD_FRAC_STD)
+!$loki end remove
 
 
 IF (         RAD_CONFIG%I_SOLVER_LW == ISOLVERSPARTACUS &
