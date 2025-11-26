@@ -119,6 +119,7 @@ contains
 #ifdef HAVE_ACC
 
   subroutine create_device(this)
+    !$loki routine seq
     class(cloud_optics_type), intent(inout) :: this
 
     !$ACC ENTER DATA COPYIN(this%liq_coeff_lw) IF(allocated(this%liq_coeff_lw)) ASYNC(1)
@@ -130,6 +131,7 @@ contains
   end subroutine create_device
 
   subroutine update_host(this)
+    !$loki routine seq
     class(cloud_optics_type), intent(inout) :: this
 
     !$ACC UPDATE HOST(this%liq_coeff_lw) IF(allocated(this%liq_coeff_lw)) ASYNC(1)
@@ -141,6 +143,7 @@ contains
   end subroutine update_host
 
   subroutine update_device(this)
+    !$loki routine seq
     class(cloud_optics_type), intent(inout) :: this
 
     !$ACC UPDATE DEVICE(this%liq_coeff_lw) IF(allocated(this%liq_coeff_lw)) ASYNC(1)
@@ -152,6 +155,7 @@ contains
   end subroutine update_device
 
   subroutine delete_device(this)
+    !$loki routine seq
     class(cloud_optics_type), intent(inout) :: this
 
     !$ACC EXIT DATA DELETE(this%liq_coeff_lw) IF(allocated(this%liq_coeff_lw)) ASYNC(1)

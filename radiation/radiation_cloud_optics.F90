@@ -354,9 +354,11 @@ contains
                     &  lwp_in_cloud, cloud%re_liq(jcol,jlev), &
                     &  od_sw_liq, scat_od_sw_liq, g_sw_liq)
               else
+                !$loki remove
                 write(nulerr,*) '*** Error: Unknown liquid model with code', &
                     &          config%i_liq_model
                 call radiation_abort()
+                !$loki end remove
               end if
 
               ! Delta-Eddington scaling in the shortwave only
