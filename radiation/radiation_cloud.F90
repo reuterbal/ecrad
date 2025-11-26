@@ -214,7 +214,7 @@ contains
   ! field. This version assumes a fixed decorrelation_length for all
   ! columns.
   subroutine set_overlap_param_fix(this, thermodynamics, decorrelation_length, &
-       &  istartcol, iendcol)
+       &  startcol, endcol)
 
     use yomhook,                  only : lhook, dr_hook, jphook
     use radiation_io,             only : nulerr, radiation_abort
@@ -224,14 +224,14 @@ contains
     class(cloud_type),         intent(inout) :: this
     type(thermodynamics_type), intent(in)    :: thermodynamics
     real(jprb),                intent(in)    :: decorrelation_length ! m
-    integer,         optional, intent(in)    :: istartcol, iendcol
+    integer,         optional, intent(in)    :: startcol, endcol
 
     ! Ratio of gas constant for dry air to acceleration due to gravity
     real(jprb), parameter :: R_over_g = GasConstantDryAir / AccelDueToGravity
 
-    ! Process only columns i1 to i2, which will be istartcol to
-    ! iendcol if they were provided
-    integer :: i1, i2
+    ! Process only columns istartcol to iendcol, which will be startcol to
+    ! endcol if they were provided
+    integer :: istartcol, iendcol
 
     integer :: ncol, nlev
 
@@ -246,18 +246,19 @@ contains
     ncol = size(thermodynamics%pressure_hl,dim=1)
     nlev = size(thermodynamics%pressure_hl,dim=2)-1
 
-    if (present(istartcol)) then
-      i1 = istartcol
+    if (present(startcol)) then
+      istartcol = startcol
     else
-      i1 = 1
+      istartcol = 1
     end if
 
-    if (present(iendcol)) then
-      i2 = iendcol
+    if (present(endcol)) then
+      iendcol = endcol
     else
-      i2 = ncol
+      iendcol = ncol
     end if
 
+    !$loki remove
     if (.not. associated(this%overlap_param)) then
       write(nulerr,'(a)') '*** Error: overlap_param not associated'
       call radiation_abort()
@@ -269,12 +270,13 @@ contains
       write(nulerr,'(a)') '*** Error: overlap_param previously allocated shape differs from input arguments'
       call radiation_abort()
     end if
+    !$loki end remove
 
-    if (thermodynamics%pressure_hl(i1,2) > thermodynamics%pressure_hl(i1,1)) then
+    if (thermodynamics%pressure_hl(istartcol,2) > thermodynamics%pressure_hl(istartcol,1)) then
       ! Pressure is increasing with index (order of layers is
       ! top-of-atmosphere to surface). In case pressure_hl(:,1)=0, we
       ! don't take the logarithm of the first pressure in each column.
-      do jcol = i1,i2
+      do jcol = istartcol,iendcol
         this%overlap_param(jcol,1) = exp(-(R_over_g/decorrelation_length) &
              &                            * thermodynamics%temperature_hl(jcol,2) &
              &                            *log(thermodynamics%pressure_hl(jcol,3) &
@@ -282,7 +284,7 @@ contains
       end do
 
       do jlev = 2,nlev-1
-        do jcol = i1,i2
+        do jcol = istartcol,iendcol
           this%overlap_param(jcol,jlev) = exp(-(0.5_jprb*R_over_g/decorrelation_length) &
               &                            * thermodynamics%temperature_hl(jcol,jlev+1) &
               &                            *log(thermodynamics%pressure_hl(jcol,jlev+2) &
@@ -295,7 +297,7 @@ contains
        ! to top-of-atmosphere).  In case pressure_hl(:,nlev+1)=0, we
        ! don't take the logarithm of the last pressure in each column.
       do jlev = 1,nlev-2
-        do jcol = i1,i2
+        do jcol = istartcol,iendcol
           this%overlap_param(jcol,jlev) = exp(-(0.5_jprb*R_over_g/decorrelation_length) &
               &                            * thermodynamics%temperature_hl(jcol,jlev+1) &
               &                            *log(thermodynamics%pressure_hl(jcol,jlev) &
@@ -303,7 +305,7 @@ contains
         end do
       end do
 
-      do jcol = i1,i2
+      do jcol = istartcol,iendcol
         this%overlap_param(jcol,nlev-1) = exp(-(R_over_g/decorrelation_length) &
             &                            * thermodynamics%temperature_hl(jcol,nlev) &
             &                            *log(thermodynamics%pressure_hl(jcol,nlev-1) &
@@ -352,6 +354,7 @@ contains
     ncol = size(thermodynamics%pressure_hl,dim=1)
     nlev = size(thermodynamics%pressure_hl,dim=2)-1
 
+    !$loki remove
     if (.not. associated(this%overlap_param)) then
       write(nulerr,'(a)') '*** Error: overlap_param not associated'
       call radiation_abort()
@@ -363,6 +366,7 @@ contains
       write(nulerr,'(a)') '*** Error: overlap_param previously allocated shape differs from input arguments'
       call radiation_abort()
     end if
+    !$loki end remove
 
     if (thermodynamics%pressure_hl(istartcol,2) > thermodynamics%pressure_hl(istartcol,1)) then
       ! Pressure is increasing with index (order of layers is
@@ -465,6 +469,7 @@ contains
       i2 = ncol
     end if
 
+    !$loki remove
     if (.not. associated(this%overlap_param)) then
       write(nulerr,'(a)') '*** Error: overlap_param not associated'
       call radiation_abort()
@@ -476,6 +481,7 @@ contains
       write(nulerr,'(a)') '*** Error: overlap_param previously allocated shape differs from input arguments'
       call radiation_abort()
     end if
+    !$loki end remove
 
     if (thermodynamics%pressure_hl(i1,2) > thermodynamics%pressure_hl(i1,1)) then
        ! Pressure is increasing with index (order of layers is
@@ -546,6 +552,7 @@ contains
 
     if (lhook) call dr_hook('radiation_cloud:create_inv_cloud_effective_size',0,hook_handle)
 
+    !$loki remove
     if (.not. associated(this%inv_cloud_effective_size)) then
       write(nulerr,'(a)') '*** Error: inv_cloud_effective_size not associated'
       call radiation_abort()
@@ -553,7 +560,7 @@ contains
       write(nulerr,'(a)') '*** Error: inv_cloud_effective_size previously allocated shape differs from input arguments'
       call radiation_abort()
     end if
-
+    !$loki end remove
 
     this%inv_cloud_effective_size = inv_eff_size
 
@@ -597,6 +604,7 @@ contains
 
     if (lhook) call dr_hook('radiation_cloud:create_inv_cloud_effective_size_eta',0,hook_handle)
 
+    !$loki remove
     if (.not. associated(this%inv_cloud_effective_size)) then
       write(nulerr,'(a)') '*** Error: inv_cloud_effective_size not associated'
       call radiation_abort()
@@ -604,7 +612,7 @@ contains
       write(nulerr,'(a)') '*** Error: inv_cloud_effective_size previously allocated shape differs from input arguments'
       call radiation_abort()
     end if
-
+    !$loki end remove
 
     if (present(istartcol)) then
       i1 = istartcol
@@ -649,7 +657,7 @@ contains
   ! coeff_a + coeff_b*exp(-(eta**power)).  
   subroutine param_cloud_effective_separation_eta(this, ncol, nlev, &
        &  pressure_hl, separation_surf, separation_toa, power, &
-       &  inhom_separation_factor, istartcol, iendcol)
+       &  inhom_separation_factor, startcol, endcol)
 
     use yomhook,                  only : lhook, dr_hook, jphook
     use radiation_io,             only : nulerr, radiation_abort
@@ -664,7 +672,7 @@ contains
     real(jprb),           intent(in) :: separation_toa ! m
     real(jprb),           intent(in) :: power
     real(jprb), optional, intent(in) :: inhom_separation_factor
-    integer,    optional, intent(in) :: istartcol, iendcol
+    integer,    optional, intent(in) :: startcol, endcol
 
     ! Ratio of layer midpoint pressure to surface pressure
     real(jprb) :: eta(nlev)
@@ -678,8 +686,8 @@ contains
     ! Indices of column, level and surface half-level
     integer :: jcol, isurf
 
-    ! Local values of istartcol, iendcol
-    integer :: i1, i2
+    ! Local values of startcol, endcol
+    integer :: istartcol, iendcol
 
     real(jphook) :: hook_handle
 
@@ -695,6 +703,7 @@ contains
     coeff_b = (separation_toa - separation_surf) / coeff_e
     coeff_a = separation_toa - coeff_b
 
+    !$loki remove
     if (.not. associated(this%inv_cloud_effective_size)) then
       write(nulerr,'(a)') '*** Error: inv_cloud_effective_size not associated'
       call radiation_abort()
@@ -710,18 +719,19 @@ contains
       write(nulerr,'(a)') '*** Error: inv_inhom_effective_size previously allocated shape differs from input arguments'
       call radiation_abort()
     end if
+    !$loki end remove
 
 
-    if (present(istartcol)) then
-      i1 = istartcol
+    if (present(startcol)) then
+      istartcol = startcol
     else
-      i1 = 1
+      istartcol = 1
     end if
 
-    if (present(iendcol)) then
-      i2 = iendcol
+    if (present(endcol)) then
+      iendcol = endcol
     else
-      i2 = ncol
+      iendcol = ncol
     end if
 
     ! Locate the surface half-level
@@ -731,7 +741,7 @@ contains
       isurf = nlev+1
     end if
 
-    do jcol = i1,i2
+    do jcol = istartcol,iendcol
       eta = (pressure_hl(jcol,1:nlev)+pressure_hl(jcol,2:nlev+1)) &
            &  * (0.5_jprb / pressure_hl(jcol,isurf))
       eff_separation = coeff_a + coeff_b * exp(-eta**power)
