@@ -96,7 +96,7 @@ module radiation_single_level
     procedure :: allocate   => allocate_single_level
     procedure :: deallocate => deallocate_single_level
     procedure :: init_seed_simple
-    procedure :: get_albedos
+    procedure, nopass :: get_albedos
     procedure :: out_of_physical_bounds
 
   end type single_level_type
@@ -228,7 +228,7 @@ contains
     use radiation_io,     only : nulerr, radiation_abort
     use yomhook,          only : lhook, dr_hook, jphook
 
-    class(single_level_type), intent(in) :: this
+    type(single_level_type), intent(in) :: this
     type(config_type),        intent(in) :: config
     integer,                  intent(in) :: istartcol, iendcol
 

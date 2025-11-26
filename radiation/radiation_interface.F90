@@ -215,7 +215,7 @@ contains
          &   IGasModelMonochromatic, IGasModelIFSRRTMG, IGasModelECCKD, &
          &   ISolverMcICA, ISolverSpartacus, ISolverHomogeneous, &
          &   ISolverTripleclouds
-    use radiation_single_level,   only : single_level_type
+    use radiation_single_level,   only : single_level_type, get_albedos
     use radiation_thermodynamics, only : thermodynamics_type
     use radiation_gas,            only : gas_type
     use radiation_cloud,          only : cloud_type
@@ -332,9 +332,8 @@ contains
       ! decreasing height: progress normally
 
       ! Extract surface albedos at each gridpoint
-      call single_level%get_albedos(istartcol, iendcol, config, &
-           &                        sw_albedo_direct, sw_albedo_diffuse, &
-           &                        lw_albedo)
+      call get_albedos(single_level, istartcol, iendcol, config, &
+           &           sw_albedo_direct, sw_albedo_diffuse, lw_albedo)
 
       ! Compute gas absorption optical depth in shortwave and
       ! longwave, shortwave single scattering albedo (i.e. fraction of
