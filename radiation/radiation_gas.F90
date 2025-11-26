@@ -142,7 +142,7 @@ contains
   ! Put gas properties corresponding to gas ID "igas" with units
   ! "iunits"
   subroutine put_gas_check(this, igas, iunits, mixing_ratio_size_1, mixing_ratio_size_2, scale_factor, &
-       istartcol, i1, i2)
+       startcol, istartcol, iendcol)
 
     use radiation_io,   only : nulerr, radiation_abort
 
@@ -152,9 +152,10 @@ contains
     integer,              intent(in)    :: mixing_ratio_size_1
     integer,              intent(in)    :: mixing_ratio_size_2
     real(jprb), optional, intent(in)    :: scale_factor
-    integer,    optional, intent(in)    :: istartcol
-    integer,              intent(out)   :: i1, i2
-
+    integer,    optional, intent(in)    :: startcol
+    integer,              intent(out)   :: istartcol, iendcol
+    !$loki routine seq
+    !$loki remove
     ! Check inputs
     if (igas <= IGasNotPresent .or. iunits > NMaxGases) then
       write(nulerr,'(a,i0,a,i0,a,i0)') '*** Error: provided gas ID (', &
@@ -173,18 +174,20 @@ contains
       write(nulerr,'(a,i0,a,i0,a,i0)') '*** Error: attempt to put data to unassociated radiation_gas object'
       call radiation_abort()
     end if
+    !$loki end remove
 
-    if (present(istartcol)) then
-      i1 = istartcol
+    if (present(startcol)) then
+      istartcol = startcol
     else
-      i1 = 1
+      istartcol = 1
     end if
 
-    i2 = i1 + mixing_ratio_size_1 - 1
+    iendcol = istartcol + mixing_ratio_size_1 - 1
 
-    if (i1 < 1 .or. i2 < 1 .or. i1 > this%ncol .or. i2 > this%ncol) then
+    !$loki remove
+    if (istartcol < 1 .or. iendcol < 1 .or. istartcol > this%ncol .or. iendcol > this%ncol) then
       write(nulerr,'(a,i0,a,i0,a,i0)') '*** Error: attempt to put columns indexed ', &
-           &   i1, ' to ', i2, ' to array indexed 1 to ', this%ncol
+           &   istartcol, ' to ', iendcol, ' to array indexed 1 to ', this%ncol
       call radiation_abort()
     end if
 
@@ -194,6 +197,7 @@ contains
            &  ' levels'
       call radiation_abort()
     end if
+    !$loki end remove
 
     if (.not. this%is_present(igas)) then
       ! Gas not present until now
@@ -217,7 +221,7 @@ contains
   ! Put gas mixing ratio corresponding to gas ID "igas" with units
   ! "iunits"
   subroutine put_gas_jprd(this, igas, iunits, mixing_ratio, scale_factor, &
-       istartcol)
+       startcol)
 
     use yomhook,        only : lhook, dr_hook, jphook
     use radiation_io,   only : nulerr, radiation_abort
@@ -227,20 +231,20 @@ contains
     integer,              intent(in)    :: iunits
     real(jprd),           intent(in)    :: mixing_ratio(:,:)
     real(jprb), optional, intent(in)    :: scale_factor
-    integer,    optional, intent(in)    :: istartcol
+    integer,    optional, intent(in)    :: startcol
 
-    integer :: i1, i2, jc, jk
+    integer :: istartcol, iendcol, jcol, jlev
 
     real(jphook) :: hook_handle
 
     if (lhook) call dr_hook('radiation_gas:put',0,hook_handle)
 
     call put_gas_check(this, igas, iunits, size(mixing_ratio, 1), &
-          size(mixing_ratio, 2), scale_factor, istartcol, i1, i2)
+          size(mixing_ratio, 2), scale_factor, startcol, istartcol, iendcol)
 
-    do jk = 1,this%nlev
-      do jc = i1,i2
-        this%mixing_ratio(jc,jk,igas) = mixing_ratio(jc-i1+1,jk)
+    do jlev = 1,this%nlev
+      do jcol = istartcol,iendcol
+        this%mixing_ratio(jcol,jlev,igas) = mixing_ratio(jcol-istartcol+1,jlev)
       end do
     end do
 
@@ -253,7 +257,7 @@ contains
   ! Put gas mixing ratio corresponding to gas ID "igas" with units
   ! "iunits"
   subroutine put_gas_jprm(this, igas, iunits, mixing_ratio, scale_factor, &
-       istartcol)
+       startcol)
 
     use yomhook,        only : lhook, dr_hook, jphook
     use radiation_io,   only : nulerr, radiation_abort
@@ -263,20 +267,20 @@ contains
     integer,              intent(in)    :: iunits
     real(jprm),           intent(in)    :: mixing_ratio(:,:)
     real(jprb), optional, intent(in)    :: scale_factor
-    integer,    optional, intent(in)    :: istartcol
+    integer,    optional, intent(in)    :: startcol
 
-    integer :: i1, i2, jc, jk
+    integer :: istartcol, iendcol, jcol, jlev
 
     real(jphook) :: hook_handle
 
     if (lhook) call dr_hook('radiation_gas:put',0,hook_handle)
 
     call put_gas_check(this, igas, iunits, size(mixing_ratio, 1), &
-          size(mixing_ratio, 2), scale_factor, istartcol, i1, i2)
+          size(mixing_ratio, 2), scale_factor, startcol, istartcol, iendcol)
 
-    do jk = 1,this%nlev
-      do jc = i1,i2
-        this%mixing_ratio(jc,jk,igas) = mixing_ratio(jc-i1+1,jk)
+    do jlev = 1,this%nlev
+      do jcol = istartcol,iendcol
+        this%mixing_ratio(jcol,jlev,igas) = mixing_ratio(jcol-istartcol+1,jlev)
       end do
     end do
 
@@ -288,7 +292,7 @@ contains
   ! Put well-mixed gas mixing ratio corresponding to gas ID "igas"
   ! with units "iunits"
   subroutine put_well_mixed_gas(this, igas, iunits, mixing_ratio, &
-       scale_factor, istartcol, iendcol)
+       scale_factor, startcol, endcol)
 
     use yomhook,        only : lhook, dr_hook, jphook
     use radiation_io,   only : nulerr, radiation_abort
@@ -298,14 +302,15 @@ contains
     integer,              intent(in)    :: iunits
     real(jprb),           intent(in)    :: mixing_ratio
     real(jprb), optional, intent(in)    :: scale_factor
-    integer,    optional, intent(in)    :: istartcol, iendcol
+    integer,    optional, intent(in)    :: startcol, endcol
 
     real(jphook) :: hook_handle
 
-    integer :: i1, i2, jc, jk
+    integer :: istartcol, iendcol, jcol, jlev
 
     if (lhook) call dr_hook('radiation_gas:put_well_mixed',0,hook_handle)
 
+    !$loki remove
     ! Check inputs
     if (igas <= IGasNotPresent .or. igas > NMaxGases) then
       write(nulerr,'(a,i0,a,i0,a,i0)') '*** Error: provided gas ID (', &
@@ -324,24 +329,27 @@ contains
       write(nulerr,'(a)') '*** Error: attempt to put well-mixed gas data to unassociated radiation_gas object'
       call radiation_abort()
     end if
+    !$loki end remove
 
-    if (present(istartcol)) then
-      i1 = istartcol
+    if (present(startcol)) then
+      istartcol = startcol
     else
-      i1 = 1
+      istartcol = 1
     end if
 
-    if (present(iendcol)) then
-      i2 = iendcol
+    if (present(endcol)) then
+      iendcol = endcol
     else
-      i2 = this%ncol
+      iendcol = this%ncol
     end if
 
-    if (i1 < 1 .or. i2 < 1 .or. i1 > this%ncol .or. i2 > this%ncol) then
+    !$loki remove
+    if (istartcol < 1 .or. iendcol < 1 .or. istartcol > this%ncol .or. iendcol > this%ncol) then
       write(nulerr,'(a,i0,a,i0,a,i0)') '*** Error: attempt to put columns indexed ', &
-           &   i1, ' to ', i2, ' to array indexed 1 to ', this%ncol
+           &   istartcol, ' to ', iendcol, ' to array indexed 1 to ', this%ncol
       call radiation_abort()
     end if
+    !$loki end remove
 
     if (.not. this%is_present(igas)) then
       ! Gas not present until now
@@ -353,9 +361,9 @@ contains
     this%iunits(igas)                  = iunits
     this%is_well_mixed(igas)           = .true.
 
-    do jk = 1,this%nlev
-      do jc = i1,i2
-        this%mixing_ratio(jc,jk,igas) = mixing_ratio
+    do jlev = 1,this%nlev
+      do jcol = istartcol,iendcol
+        this%mixing_ratio(jcol,jlev,igas) = mixing_ratio
       end do
     end do
     if (present(scale_factor)) then
@@ -597,7 +605,7 @@ contains
     integer,    optional, intent(in)  :: istartcol
 
     real(jprb)                        :: sf
-    integer                           :: i1, i2
+    integer                           :: kidia, kfdia
 
     real(jphook) :: hook_handle
 
@@ -610,16 +618,17 @@ contains
     end if
 
     if (present(istartcol)) then
-      i1 = istartcol
+      kidia = istartcol
     else
-      i1 = 1
+      kidia = 1
     end if
 
-    i2 = i1 + size(mixing_ratio,1) - 1
-
-    if (i1 < 1 .or. i2 < 1 .or. i1 > this%ncol .or. i2 > this%ncol) then
+    kfdia = kidia + size(mixing_ratio,1) - 1
+    
+    !$loki remove
+    if (kidia < 1 .or. kfdia < 1 .or. kidia > this%ncol .or. kfdia > this%ncol) then
       write(nulerr,'(a,i0,a,i0,a,i0)') '*** Error: attempt to get columns indexed ', &
-           &   i1, ' to ', i2, ' from array indexed 1 to ', this%ncol
+           &   kidia, ' to ', kfdia, ' from array indexed 1 to ', this%ncol
       call radiation_abort()
     end if
 
@@ -629,6 +638,7 @@ contains
            &  ' levels'
       call radiation_abort()
     end if
+    !$loki end remove
 
     if (.not. this%is_present(igas)) then
       mixing_ratio = 0.0_jprb
@@ -643,9 +653,9 @@ contains
       sf = sf * this%scale_factor(igas)
 
       if (sf /= 1.0_jprb) then
-        mixing_ratio = this%mixing_ratio(i1:i2,:,igas) * sf
+        mixing_ratio(kidia:kfdia,1:this%nlev) = this%mixing_ratio(kidia:kfdia,1:this%nlev,igas) * sf
       else
-        mixing_ratio = this%mixing_ratio(i1:i2,:,igas)
+        mixing_ratio(kidia:kfdia,1:this%nlev) = this%mixing_ratio(kidia:kfdia,1:this%nlev,igas)
       end if
     end if
 
