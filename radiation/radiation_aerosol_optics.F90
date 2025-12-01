@@ -614,14 +614,6 @@ contains
         ! Loop over column
         do jcol = istartcol,iendcol
 
-          ! Reset temporary arrays
-          od_sw_aerosol(:,:)     = 0.0_jprb
-          scat_sw_aerosol(:,:)   = 0.0_jprb
-          scat_g_sw_aerosol(:,:) = 0.0_jprb
-          od_lw_aerosol(:,:)     = 0.0_jprb
-          scat_lw_aerosol(:,:)   = 0.0_jprb
-          scat_g_lw_aerosol(:,:) = 0.0_jprb
-
           do jlev = istartlev,iendlev
             ! Compute relative humidity with respect to liquid
             ! saturation and the index to the relative-humidity index of
@@ -633,6 +625,14 @@ contains
                 &    -thermodynamics%pressure_hl(jcol,jlev  )  ) &
                 &   * OneOverAccelDueToGravity
           end do
+
+          ! Reset temporary arrays
+          od_sw_aerosol(1:config%n_bands_sw,1:nlev)                   = 0.0_jprb
+          scat_sw_aerosol(1:config%n_bands_sw,1:nlev)                 = 0.0_jprb
+          scat_g_sw_aerosol(1:config%n_bands_sw,1:nlev)               = 0.0_jprb
+          od_lw_aerosol(1:config%n_bands_lw,1:nlev)                   = 0.0_jprb
+          scat_lw_aerosol(1:config%n_bands_lw_if_scattering,1:nlev)   = 0.0_jprb
+          scat_g_lw_aerosol(1:config%n_bands_lw_if_scattering,1:nlev) = 0.0_jprb
 
           do jtype = 1,config%n_aerosol_types
             itype = ao%itype(jtype)
