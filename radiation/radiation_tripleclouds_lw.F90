@@ -175,7 +175,7 @@ contains
     ! Index of the highest cloudy layer
     integer :: i_cloud_top
 
-    integer :: jcol, jlev, jg, jreg, jreg2, ng
+    integer :: jcol, jlev, jg, jreg, jreg2, ng, loki_dummy_var
 
     real(jphook) :: hook_handle
 
@@ -209,6 +209,10 @@ contains
       ! Section 2: Prepare column-specific variables and arrays
       ! --------------------------------------------------------
 
+      ! This is var is introduced as a work around for a Loki bug to make sure that
+      ! is_clear_sky_layer and i_cloud_top is contained inside the horizontal upon
+      ! revectorization in the loki SCCV pipeline
+      loki_dummy_var = jcol
       ! Define which layers contain cloud; assume that
       ! cloud%crop_cloud_fraction has already been called
       is_clear_sky_layer = .true.
