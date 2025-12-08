@@ -239,14 +239,17 @@ contains
       if (.not. config%do_lw_aerosol_scattering) then
         ! No scattering in clear-sky flux calculation; note that here
         ! the first two dimensions of the input arrays are unpacked
-        ! into vectors inside the routine        
-        call calc_no_scattering_transmittance_lw(ng*nlev, od(:,:,jcol), &
-             &  planck_hl(:,1:nlev,jcol), planck_hl(:,2:nlev+1, jcol), &
-             &  trans_clear, source_up_clear, source_dn_clear)
+        ! into vectors inside the routine        J
+        do jlev = 1,nlev
+          call calc_no_scattering_transmittance_lw(ng, od(:,jlev,jcol), &
+               &  planck_hl(:,jlev,jcol), planck_hl(:,jlev+1,jcol), &
+               &  trans_clear(:,jlev), source_up_clear(:,jlev), source_dn_clear(:,jlev))
+        end do
         ! Ensure that clear-sky reflectance is zero since it may be
         ! used in cloudy-sky case
         ref_clear = 0.0_jprb
         ! Simple down-then-up method to compute fluxes
+        ! !$loki inline
         call calc_fluxes_no_scattering_lw(ng, nlev, &
              &  trans_clear, source_up_clear, source_dn_clear, &
              &  emission(:,jcol), albedo(:,jcol), &
@@ -256,7 +259,7 @@ contains
         call calc_ref_trans_lw(ng*nlev, &
              &  od(:,:,jcol), ssa(:,:,jcol), g(:,:,jcol), &
              &  planck_hl(:,1:nlev,jcol), planck_hl(:,2:nlev+1,jcol), &
-             &  ref_clear, trans_clear, &
+             &  ref_clear, trans_clear(:,:), &
              &  source_up_clear, source_dn_clear)
         ! Use adding method to compute fluxes
         call adding_ica_lw(ng, nlev, &
