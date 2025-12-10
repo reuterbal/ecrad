@@ -508,6 +508,7 @@ contains
   ! apply to each gas in order to obtain the dimension units in
   ! "iunits" (which can be IVolumeMixingRatio or IMassMixingRatio)
   subroutine get_scaling(this, iunits, scaling)
+  !$loki routine seq
     class(gas_type), intent(in)  :: this
     integer,         intent(in)  :: iunits
     real(jprb),      intent(out) :: scaling(NMaxGases)
@@ -533,8 +534,8 @@ contains
   ! correct and false if they are not. Optional argument scale factor
   ! specifies any subsequent multiplication to apply; for PPMV one
   ! would use iunits=IVolumeMixingRatio and scale_factor=1.0e6.
-  recursive subroutine assert_units_gas(this, iunits, igas, scale_factor, istatus)
-
+  subroutine assert_units_gas(this, iunits, igas, scale_factor, istatus)
+  !$loki routine seq
     use radiation_io,   only : nulerr, radiation_abort
 
     class(gas_type),      intent(in)  :: this
@@ -543,7 +544,7 @@ contains
     real(jprb), optional, intent(in)  :: scale_factor
     logical,    optional, intent(out) :: istatus
 
-    integer :: jg
+    integer :: jg, ig
 
     real(jprb) :: sf
 
@@ -580,7 +581,27 @@ contains
       end if
     else
       do jg = 1,this%ntype
-        call this%assert_units(iunits, igas=this%icode(jg), scale_factor=sf, istatus=istatus)
+        ig = this%icode(jg)
+        if (this%is_present(ig)) then
+          if (iunits /= this%iunits(ig)) then
+            if (present(istatus)) then
+              istatus = .false.
+            else
+              write(nulerr,'(a,a,a)') '*** Error: ', trim(GasName(ig)), &
+                   &  ' is not in the required units'
+              call radiation_abort()
+            end if
+          else if (sf /= this%scale_factor(ig)) then
+            if (present(istatus)) then
+              istatus = .false.
+            else
+              write(nulerr,'(a,a,a,e12.4,a,e12.4)') '*** Error: ', GasName(ig), &
+                   &  ' scaling of ', this%scale_factor(ig), &
+                   &  ' does not match required ', sf
+              call radiation_abort()
+            end if
+          end if
+        end if
       end do
     end if
 
