@@ -142,7 +142,8 @@ contains
     use radiation_thermodynamics, only    : thermodynamics_type
     use radiation_cloud, only             : cloud_type
     use radiation_constants, only         : AccelDueToGravity
-    !use radiation_general_cloud_optics_data, only : general_cloud_optics_type
+    use radiation_general_cloud_optics_data, only : general_cloud_optics_type, &
+                                                  & add_optical_properties
 
     integer, intent(in) :: nlev               ! number of model levels
     integer, intent(in) :: istartcol, iendcol ! range of columns to process
@@ -211,12 +212,12 @@ contains
         ! containers for scattering optical depth and scattering
         ! coefficient x asymmetry factor, then scale after
         if (config%do_lw_cloud_scattering) then
-          call config%cloud_optics_lw(jtype)%add_optical_properties(config%n_bands_lw, nlev, &
+          call add_optical_properties(config%cloud_optics_lw(jtype), config%n_bands_lw, nlev, &
                &  iendcol+1-istartcol, cloud%fraction(istartcol:iendcol,:), &
                &  water_path, cloud%effective_radius(istartcol:iendcol,:,jtype), &
                &  od_lw_cloud, ssa_lw_cloud, g_lw_cloud)
         else
-          call config%cloud_optics_lw(jtype)%add_optical_properties(config%n_bands_lw, nlev, &
+          call add_optical_properties(config%cloud_optics_lw(jtype), config%n_bands_lw, nlev, &
                &  iendcol+1-istartcol, cloud%fraction(istartcol:iendcol,:), &
                &  water_path, cloud%effective_radius(istartcol:iendcol,:,jtype), od_lw_cloud)
         end if
@@ -226,7 +227,7 @@ contains
         ! For the moment, we use ssa_sw_cloud and g_sw_cloud as
         ! containers for scattering optical depth and scattering
         ! coefficient x asymmetry factor, then scale after
-        call config%cloud_optics_sw(jtype)%add_optical_properties(config%n_bands_sw, nlev, &
+        call add_optical_properties(config%cloud_optics_sw(jtype), config%n_bands_sw, nlev, &
              &  iendcol+1-istartcol, cloud%fraction(istartcol:iendcol,:), &
              &  water_path, cloud%effective_radius(istartcol:iendcol,:,jtype), &
              &  od_sw_cloud, ssa_sw_cloud, g_sw_cloud)

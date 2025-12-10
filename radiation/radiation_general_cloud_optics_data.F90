@@ -57,7 +57,7 @@ module radiation_general_cloud_optics_data
 
    contains
      procedure :: setup => setup_general_cloud_optics
-     procedure :: add_optical_properties
+     procedure, nopass :: add_optical_properties
      procedure :: save => save_general_cloud_optics_data
 
   end type general_cloud_optics_type
@@ -248,7 +248,7 @@ contains
 
     use yomhook, only : lhook, dr_hook, jphook
 
-    class(general_cloud_optics_type), intent(in) :: this
+    type(general_cloud_optics_type), intent(in) :: this
 
     ! Number of g points, levels and columns
     integer, intent(in) :: ng, nlev, ncol
