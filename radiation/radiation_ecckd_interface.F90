@@ -154,7 +154,7 @@ contains
 
     use radiation_gas, only : gas_type, IVolumeMixingRatio
     use yomhook,       only : lhook, dr_hook, jphook
-
+    use parkind1,      only : jprb
     type(gas_type),    intent(inout) :: gas
     
     integer :: kidia, kfdia
