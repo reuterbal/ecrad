@@ -107,13 +107,13 @@ module radiation_ecckd
 ! Vectorized version of the optical depth look-up performs better on
 ! NEC, but slower on x86
 #ifdef DWD_VECTOR_OPTIMIZATIONS
-    procedure :: calc_optical_depth => calc_optical_depth_ckd_model_vec
+    procedure, nopass :: calc_optical_depth => calc_optical_depth_ckd_model_vec
 #else
-    procedure :: calc_optical_depth => calc_optical_depth_ckd_model
+    procedure, nopass :: calc_optical_depth => calc_optical_depth_ckd_model
 #endif
     procedure :: print => print_ckd_model
-    procedure :: calc_planck_function
-    procedure :: calc_incoming_sw
+    procedure, nopass :: calc_planck_function
+    procedure, nopass :: calc_incoming_sw
 !    procedure :: deallocate => deallocate_ckd_model
 
   end type ckd_model_type
@@ -463,7 +463,7 @@ contains
 
     ! Input variables
 
-    class(ckd_model_type), intent(in), target  :: this
+    type(ckd_model_type), intent(in), target   :: this
     ! Number of columns, levels and input gases
     integer,               intent(in)  :: ncol, nlev, nmaxgas, istartcol, iendcol
     ! Pressure at half levels (Pa), dimensioned (ncol,nlev+1)
@@ -666,7 +666,7 @@ contains
 
     ! Input variables
 
-    class(ckd_model_type), intent(in), target  :: this
+    type(ckd_model_type), intent(in), target  :: this
     ! Number of columns, levels and input gases
     integer,               intent(in)  :: ncol, nlev, nmaxgas, istartcol, iendcol
     ! Pressure at half levels (Pa), dimensioned (ncol,nlev+1)
@@ -901,7 +901,7 @@ contains
   subroutine calc_planck_function(this, nt, temperature, planck)
   !$loki routine seq
 
-    class(ckd_model_type), intent(in)  :: this
+    type(ckd_model_type), intent(in)  :: this
     integer,    intent(in)  :: nt
     real(jprb), intent(in)  :: temperature(:) ! K
     real(jprb), intent(out) :: planck(this%ng,nt) ! W m-2
@@ -941,7 +941,7 @@ contains
 
     use radiation_io, only : nulerr, radiation_abort
 
-    class(ckd_model_type), intent(in)    :: this
+    type(ckd_model_type),  intent(in)    :: this
     real(jprb),            intent(in)    :: total_solar_irradiance ! W m-2
     real(jprb),            intent(inout) :: spectral_solar_irradiance(:,:) ! W m-2
     real(jprb), optional,  intent(in)    :: solar_spectral_multiplier

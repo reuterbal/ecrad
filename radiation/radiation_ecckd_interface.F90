@@ -154,7 +154,6 @@ contains
 
     use radiation_gas, only : gas_type, IVolumeMixingRatio
     use yomhook,       only : lhook, dr_hook, jphook
-    use parkind1,      only : jprb
     type(gas_type),    intent(inout) :: gas
     
     integer :: kidia, kfdia
@@ -182,6 +181,8 @@ contains
     use radiation_thermodynamics, only : thermodynamics_type
     use radiation_single_level,   only : single_level_type
     use radiation_gas_constants,  only : NMaxGases
+    use radiation_ecckd,          only : calc_optical_depth_ckd_model, calc_incoming_sw, &
+                                       & calc_planck_function
     use radiation_gas
 
     integer,                  intent(in) :: ncol               ! number of columns
@@ -256,12 +257,12 @@ contains
     if (config%do_sw .and. config%i_gas_model_sw == IGasModelECCKD) then
 
       if (is_volume_mixing_ratio) then
-        call config%gas_optics_sw%calc_optical_depth(ncol,nlev,istartcol,iendcol, &
+        call calc_optical_depth_ckd_model(config%gas_optics_sw,ncol,nlev,istartcol,iendcol, &
              &  NMaxGases, thermodynamics%pressure_hl, &
              &  temperature_fl, gas%mixing_ratio, &
              &  od_sw, rayleigh_od_fl=ssa_sw)
       else
-        call config%gas_optics_sw%calc_optical_depth(ncol,nlev,istartcol,iendcol, &
+        call calc_optical_depth_ckd_model(config%gas_optics_sw,ncol,nlev,istartcol,iendcol, &
              &  NMaxGases, thermodynamics%pressure_hl, &
              &  temperature_fl, gas%mixing_ratio, &
              &  od_sw, rayleigh_od_fl=ssa_sw, concentration_scaling=concentration_scaling)
@@ -281,10 +282,10 @@ contains
 
       if (present(incoming_sw)) then
         if (single_level%spectral_solar_cycle_multiplier == 0.0_jprb) then
-          call config%gas_optics_sw%calc_incoming_sw(single_level%solar_irradiance, &
+          call calc_incoming_sw(config%gas_optics_sw,single_level%solar_irradiance, &
                &        incoming_sw)
         else
-          call config%gas_optics_sw%calc_incoming_sw(single_level%solar_irradiance, &
+          call calc_incoming_sw(config%gas_optics_sw,single_level%solar_irradiance, &
                &        incoming_sw, single_level%spectral_solar_cycle_multiplier)
         end if
       end if
@@ -294,12 +295,12 @@ contains
     if (config%do_lw .and. config%i_gas_model_lw == IGasModelECCKD) then
 
       if (is_volume_mixing_ratio) then
-        call config%gas_optics_lw%calc_optical_depth(ncol,nlev,istartcol,iendcol, &
+        call calc_optical_depth_ckd_model(config%gas_optics_lw,ncol,nlev,istartcol,iendcol, &
              &  NMaxGases, thermodynamics%pressure_hl, &
              &  temperature_fl, gas%mixing_ratio, &
              &  od_lw)
       else
-        call config%gas_optics_lw%calc_optical_depth(ncol,nlev,istartcol,iendcol, &
+        call calc_optical_depth_ckd_model(config%gas_optics_lw,ncol,nlev,istartcol,iendcol, &
              &  NMaxGases, thermodynamics%pressure_hl, &
              &  temperature_fl, gas%mixing_ratio, &
              &  od_lw, concentration_scaling=concentration_scaling)
@@ -307,10 +308,10 @@ contains
 
       ! Calculate the Planck function for each g point
       do jcol = istartcol,iendcol
-        call config%gas_optics_lw%calc_planck_function(nlev+1, &
+        call config%gas_optics_lw%calc_planck_function(config%gas_optics_lw,nlev+1, &
              &  thermodynamics%temperature_hl(jcol,:), planck_hl(:,:,jcol))
       end do
-      call config%gas_optics_lw%calc_planck_function(iendcol+1-istartcol, &
+      call config%gas_optics_lw%calc_planck_function(config%gas_optics_lw,iendcol+1-istartcol, &
            &  single_level%skin_temperature(istartcol:iendcol), &
            &  lw_emission(:,:))
 !NEC$ forced_collapse
