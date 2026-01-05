@@ -141,9 +141,11 @@ contains
     ncol = size(this%pressure_hl,1)
     nlev = size(this%pressure_hl,2) - 1
 
+    !$loki remove
     if (.not. associated(this%h2o_sat_liq)) then
       allocate(this%h2o_sat_liq(ncol,nlev))
     end if
+    !$loki end remove
 
     do jlev = 1,nlev
        do jcol = istartcol,iendcol
