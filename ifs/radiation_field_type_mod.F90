@@ -774,9 +774,8 @@ contains
     class(single_level_type),       intent(inout) :: single_level
     integer,                        intent(in)    :: block_index
 
-    real(jphook) :: hook_handle
-
-    if (lhook) call dr_hook('radiation_field_type:single_level_associate_device_pointers',0,hook_handle)
+  !$acc routine seq
+  !$acc data present(this, single_level)
 
     if (associated(this%cos_sza_d)) then
       single_level%cos_sza => this%cos_sza_d(:,block_index)
@@ -810,8 +809,7 @@ contains
       single_level%iseed => this%iseed_d(:,block_index)
     end if
 
-    if (lhook) call dr_hook('radiation_field_type:single_level_associate_device_pointers',1,hook_handle)
-
+  !$acc end data
   end subroutine single_level_associate_device_pointers
 
 
@@ -1041,9 +1039,8 @@ contains
     class(thermodynamics_type),       intent(inout) :: thermodynamics
     integer,                          intent(in)    :: block_index
 
-    real(jphook) :: hook_handle
-
-    if (lhook) call dr_hook('radiation_field_type:thermodynamics_associate_device_pointers',0,hook_handle)
+  !$acc routine seq
+  !$acc data present(this, thermodynamics)
 
     if (associated(this%pressure_hl_d)) then
       thermodynamics%pressure_hl => this%pressure_hl_d(:,:,block_index)
@@ -1057,8 +1054,7 @@ contains
       thermodynamics%h2o_sat_liq => this%h2o_sat_liq_d(:,:,block_index)
     end if
 
-    if (lhook) call dr_hook('radiation_field_type:thermodynamics_associate_device_pointers',1,hook_handle)
-
+  !$acc end data
   end subroutine thermodynamics_associate_device_pointers
 
 
@@ -1228,9 +1224,8 @@ contains
     class(gas_type),       intent(inout) :: gas
     integer,               intent(in)    :: block_index
 
-    real(jphook) :: hook_handle
-
-    if (lhook) call dr_hook('radiation_field_type:gas_associate_device_pointers',0,hook_handle)
+  !$acc routine seq
+  !$acc data present(this, gas)
 
     if (associated(this%mixing_ratio_d)) then
       gas%mixing_ratio => this%mixing_ratio_d(:,:,:,block_index)
@@ -1239,8 +1234,7 @@ contains
     gas%ncol = this%ncol
     gas%nlev = this%nlev
 
-    if (lhook) call dr_hook('radiation_field_type:gas_associate_device_pointers',1,hook_handle)
-
+  !$acc end data
   end subroutine gas_associate_device_pointers
 
 
@@ -1611,9 +1605,8 @@ contains
     class(cloud_type),       intent(inout) :: ylcloud
     integer,                 intent(in)    :: block_index
 
-    real(jphook) :: hook_handle
-
-    if (lhook) call dr_hook('radiation_field_type:cloud_associate_device_pointers',0,hook_handle)
+  !$acc routine seq
+  !$acc data present(this, ylcloud)
 
     if (associated(this%mixing_ratio_d)) then
       ylcloud%mixing_ratio => this%mixing_ratio_d(:,:,:,block_index)
@@ -1654,8 +1647,7 @@ contains
       end if
     end if
 
-    if (lhook) call dr_hook('radiation_field_type:cloud_associate_device_pointers',1,hook_handle)
-
+  !$acc end data
   end subroutine cloud_associate_device_pointers
 
 
@@ -1836,16 +1828,14 @@ contains
     class(aerosol_type),       intent(inout) :: ylaerosol
     integer,                   intent(in)    :: block_index
 
-    real(jphook) :: hook_handle
-
-    if (lhook) call dr_hook('radiation_field_type:aerosol_associate_device_pointers',0,hook_handle)
+  !$acc routine seq
+  !$acc data present(this, ylaerosol)
 
     if (associated(this%mixing_ratio_d)) then
       ylaerosol%mixing_ratio => this%mixing_ratio_d(:,:,:,block_index)
     end if
 
-    if (lhook) call dr_hook('radiation_field_type:aerosol_associate_device_pointers',1,hook_handle)
-
+  !$acc end data
   end subroutine aerosol_associate_device_pointers
 
 
@@ -3295,9 +3285,8 @@ contains
     class(flux_type),       intent(inout) :: flux
     integer,                intent(in)    :: block_index
 
-    real(jphook) :: hook_handle
-
-    if (lhook) call dr_hook('radiation_field_type:flux_associate_device_pointers',0,hook_handle)
+  !$acc routine seq
+  !$acc data present(this, flux)
 
     ! longwave up and down fluxes
     if (associated(this%lw_up_d)) then
@@ -3456,8 +3445,7 @@ contains
       flux%lw_derivatives => this%lw_derivatives_d(:,:,block_index)
     end if
 
-    if (lhook) call dr_hook('radiation_field_type:flux_associate_device_pointers',1,hook_handle)
-
+  !$acc end data
   end subroutine flux_associate_device_pointers
 
 end module radiation_field_type_module
