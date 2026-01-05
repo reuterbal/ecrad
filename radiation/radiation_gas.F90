@@ -422,8 +422,7 @@ contains
     integer,              intent(in)    :: iunits
     integer,    optional, intent(in)    :: igas
     real(jprb), optional, intent(in)    :: scale_factor
-
-    integer :: jg, jlev, jcol, ig
+    integer :: jg, jlev, jcol, ig, istartcol, iendcol
 
     ! Scaling factor to convert from old to new
     real(jprb) :: sf
@@ -444,6 +443,9 @@ contains
       new_sf = 1.0_jprb
     end if
 
+    istartcol = 1
+    iendcol = this%ncol
+
     if (present(igas)) then
       if (this%is_present(igas)) then
         if (iunits == IMassMixingRatio &
@@ -458,7 +460,7 @@ contains
         if (sf /= 1.0_jprb) then
 
           do jlev=1,this%nlev
-            do jcol=1,this%ncol
+            do jcol=istartcol,iendcol
               this%mixing_ratio(jcol,jlev,igas) = this%mixing_ratio(jcol,jlev,igas) * sf
             end do
           end do
@@ -487,7 +489,7 @@ contains
           if (sf /= 1.0_jprb) then
 
             do jlev=1,this%nlev
-              do jcol=1,this%ncol
+              do jcol=istartcol,iendcol
                 this%mixing_ratio(jcol,jlev,ig) = this%mixing_ratio(jcol,jlev,ig) * sf
               end do
             end do
