@@ -271,14 +271,17 @@ contains
     real(jprb) :: re_index, weight1, weight2
     integer :: ire
 
-    integer :: jcol, jlev, jg
+    integer :: jcol, jlev, jg, istartcol, iendcol
 
     real(jphook) :: hook_handle
 
     if (lhook) call dr_hook('radiation_general_cloud_optics_data:add_optical_properties',0,hook_handle)
 
+    istartcol = 1
+    iendcol = ncol
+
     if (present(scat_od)) then
-      do jcol = 1,ncol
+      do jcol = istartcol,iendcol
         do jlev = 1,nlev
           if (cloud_fraction(jcol, jlev) > 0.0_jprb) then
             re_index = max(1.0_jprb, min(1.0_jprb + (effective_radius(jcol,jlev)-this%effective_radius_0) &
@@ -303,7 +306,7 @@ contains
       end do
     else
       ! No scattering: return the absorption optical depth
-      do jcol = 1,ncol
+      do jcol = istartcol,iendcol
         do jlev = 1,nlev
           if (water_path(jcol, jlev) > 0.0_jprb) then
             re_index = max(1.0_jprb, min(1.0_jprb + (effective_radius(jcol,jlev)-this%effective_radius_0) &
