@@ -188,7 +188,6 @@ contains
     ! Use volume mixing ratio preferred by ecCKD
     !$loki inline
     call set_gas_units_ecckd(gas)
-    !$loki end inline
     end if
 
   end subroutine set_gas_units
@@ -221,13 +220,10 @@ contains
     use radiation_cloud,          only : cloud_type, crop_cloud_fraction
     use radiation_aerosol,        only : aerosol_type
     use radiation_flux,           only : flux_type, calc_toa_spectral, calc_surface_spectral
-    !$loki remove
     use radiation_spartacus_sw,   only : solver_spartacus_sw
     use radiation_spartacus_lw,   only : solver_spartacus_lw
-    !$loki end remove
     use radiation_tripleclouds_sw,only : solver_tripleclouds_sw
     use radiation_tripleclouds_lw,only : solver_tripleclouds_lw
-    !$loki remove
     use radiation_mcica_sw,       only : solver_mcica_sw
     use radiation_mcica_lw,       only : solver_mcica_lw
     use radiation_cloudless_sw,   only : solver_cloudless_sw
@@ -235,7 +231,6 @@ contains
     use radiation_homogeneous_sw, only : solver_homogeneous_sw
     use radiation_homogeneous_lw, only : solver_homogeneous_lw
     use radiation_save,           only : save_radiative_properties
-    !$loki end remove
 
     ! Treatment of gas and hydrometeor optics 
     use radiation_monochromatic,  only : &
@@ -327,7 +322,7 @@ contains
       !$loki remove
       call radiation_reverse(ncol, nlev, istartcol, iendcol, config, &
            &  single_level, thermodynamics, gas, cloud, aerosol, flux)
-      !$loki end  remove
+      !$loki end remove
     else
 
       ! Input arrays arranged in order of increasing pressure /
@@ -343,18 +338,22 @@ contains
       ! incoming shortwave flux at each g-point, for the specified
       ! range of atmospheric columns
       if (config%i_gas_model_sw == IGasModelMonochromatic) then
+        !$loki remove
         call gas_optics_mono(ncol,nlev,istartcol,iendcol, config, &
              &  single_level, thermodynamics, gas, lw_albedo, &
              &  od_lw, od_sw, ssa_sw, &
              &  planck_hl, lw_emission, incoming_sw)
+        !$loki end remove
       else
         if (config%i_gas_model_sw == IGasModelIFSRRTMG &
              &   .or. config%i_gas_model_lw == IGasModelIFSRRTMG) then
+        !$loki remove
           call gas_optics_rrtmg(ncol,nlev,istartcol,iendcol, config, &
                &  single_level, thermodynamics, gas, &
                &  od_lw, od_sw, ssa_sw, lw_albedo=lw_albedo, &
                &  planck_hl=planck_hl, lw_emission=lw_emission, &
                &  incoming_sw=incoming_sw)
+        !$loki end remove
         end if
         if (config%i_gas_model_sw == IGasModelECCKD &
              &   .or. config%i_gas_model_lw == IGasModelECCKD) then
@@ -377,10 +376,12 @@ contains
         ! Compute hydrometeor absorption/scattering properties in each
         ! shortwave and longwave band
         if (config%i_gas_model_sw == IGasModelMonochromatic) then
+        !$loki remove
           call cloud_optics_mono(nlev, istartcol, iendcol, &
                &  config, thermodynamics, cloud, &
                &  od_lw_cloud, ssa_lw_cloud, g_lw_cloud, &
                &  od_sw_cloud, ssa_sw_cloud, g_sw_cloud)
+        !$loki end remove
         elseif (config%use_general_cloud_optics) then
           call general_cloud_optics(nlev, istartcol, iendcol, &
                &  config, thermodynamics, cloud, & 
@@ -582,8 +583,6 @@ contains
     ! Start and end levels for aerosol data
     integer :: istartlev, iendlev
 
-  !$loki remove
-
     if (config%iverbose >= 2) then
       write(nulout,'(a)') 'Reversing arrays to be in order of increasing pressure'
     end if
@@ -688,8 +687,6 @@ contains
     if (associated(aerosol%mixing_ratio)) then
       call aerosol_rev%deallocate
     end if
-
-  !$loki end remove
 
   end subroutine radiation_reverse
 
