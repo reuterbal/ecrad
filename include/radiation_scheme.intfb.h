@@ -26,6 +26,7 @@ SUBROUTINE RADIATION_SCHEME &
       &  FLUX, &
 #endif
  & PRE_LIQ, PRE_ICE, ISEED, PCLOUD_OVERLAP)
+!$acc routine vector
 use parkind1 , only:&
  & jpim,&
  & jprb
