@@ -153,7 +153,7 @@ contains
     integer,              intent(in)    :: mixing_ratio_size_2
     real(jprb), optional, intent(in)    :: scale_factor
     integer,    optional, intent(in)    :: startcol
-    integer,              intent(out)   :: istartcol, iendcol
+    integer,              intent(inout) :: istartcol, iendcol
     !$loki routine seq
     !$loki remove
     ! Check inputs
@@ -623,7 +623,7 @@ contains
     type(gas_type),      intent(in)  :: this
     integer,              intent(in)  :: igas
     integer,              intent(in)  :: iunits
-    real(jprb),           intent(out) :: mixing_ratio(:,:)
+    real(jprb),           intent(inout) :: mixing_ratio(:,:)
     real(jprb), optional, intent(in)  :: scale_factor
     integer,    optional, intent(in)  :: istartcol
 
