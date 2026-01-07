@@ -24,9 +24,8 @@ module radiation_gas
   public
 
   ! Available units
-  enum, bind(c)
-    enumerator IMassMixingRatio, IVolumeMixingRatio
-  end enum
+  integer, parameter :: IMassMixingRatio = 1
+  integer, parameter :: IVolumeMixingRatio = 2
 
   !---------------------------------------------------------------------
   ! This derived type describes the gaseous composition of the
