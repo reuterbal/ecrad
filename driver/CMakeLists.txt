@@ -135,10 +135,10 @@ if( TARGET ecrad_loki.${PREC} )
             DEFINITIONS
                 $<$<NOT:${HAVE_OMP}>:NO_OPENMP>
             LIBS
-            loki_driver_lib.${PREC}
+                loki_driver_lib.${PREC}
                 ecrad_base.${PREC}
                 $<${HAVE_OMP}:OpenMP::OpenMP_Fortran>
-                $<${HAVE_ACC}:OpenACC::OpenACC_Fortran>
+                $<${HAVE_ACC}:ecrad_openacc>
         )
     endif()
 endif()

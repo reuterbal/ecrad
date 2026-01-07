@@ -102,6 +102,24 @@ ecbuild_add_option(
 
 if( HAVE_ACC )
     list( APPEND ECRAD_COMPILE_DEFINITIONS HAVE_ACC )
+
+    # Create a wrapper target for OpenACC with custom flags
+    add_library( ecrad_openacc INTERFACE )
+    target_link_libraries( ecrad_openacc INTERFACE OpenACC::OpenACC_Fortran )
+
+    # GPU architecture
+    set( ECRAD_GPU_ARCH "cc80" CACHE STRING "NVIDIA GPU architecture for OpenACC" )
+
+    # Add optimization flags for all builds
+    target_compile_options( ecrad_openacc INTERFACE
+        $<$<COMPILE_LANGUAGE:Fortran>:-gpu=${ECRAD_GPU_ARCH},fastmath,rdc>
+    )
+
+    # Add debug/profiling flags for non-Release builds
+    target_compile_options( ecrad_openacc INTERFACE
+        $<$<NOT:$<CONFIG:Release>>:-Minfo=all>
+        $<$<NOT:$<CONFIG:Release>>:-gpu=${ECRAD_GPU_ARCH},lineinfo,debug>
+    )
 endif()
 
 if( CMAKE_VERSION VERSION_LESS 3.25 )

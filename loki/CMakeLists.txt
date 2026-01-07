@@ -57,7 +57,7 @@ ecbuild_add_library(
         NetCDF::NetCDF_Fortran
     PUBLIC_LIBS
         $<${HAVE_OMP}:OpenMP::OpenMP_Fortran>
-        $<${HAVE_ACC}:OpenACC::OpenACC_Fortran>
+        $<${HAVE_ACC}:ecrad_openacc>
 )
 
 if( HAVE_BITIDENTITY_TESTING )
@@ -74,5 +74,7 @@ loki_transform_target(
     PLAN ${CMAKE_CURRENT_BINARY_DIR}/ecrad_loki_plan.${PREC}.cmake
     SOURCES ${ecrad_loki_SOURCE_DIRS}
     NO_PLAN_SOURCEDIR
-    DEFINITIONS HAVE_FIELD_API=ON
+    DEFINITIONS
+        HAVE_FIELD_API=ON
+        HAVE_ACC=ON
 )
