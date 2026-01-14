@@ -101,8 +101,6 @@ ecbuild_add_option(
 )
 
 if( HAVE_ACC )
-    list( APPEND ECRAD_COMPILE_DEFINITIONS HAVE_ACC )
-
     # Create a wrapper target for OpenACC with custom flags
     add_library( ecrad_openacc INTERFACE )
     target_link_libraries( ecrad_openacc INTERFACE OpenACC::OpenACC_Fortran )

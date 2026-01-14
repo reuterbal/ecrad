@@ -115,18 +115,6 @@ if( TARGET ecrad_loki.${PREC} )
             Fortran_MODULE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/module_loki"
     )
 
-    ecbuild_add_executable(
-        TARGET ecrad_loki_${PREC}
-        SOURCES
-            ecrad_ifs_driver_blocked.F90
-        DEFINITIONS
-            $<$<NOT:${HAVE_OMP}>:NO_OPENMP>
-        LIBS
-            loki_driver_lib.${PREC}
-            ecrad_base.${PREC}
-            $<${HAVE_OMP}:OpenMP::OpenMP_Fortran>
-    )
-
     if( HAVE_FIELD_API )
         ecbuild_add_executable(
             TARGET ecrad_loki_field_api_${PREC}
@@ -134,12 +122,17 @@ if( TARGET ecrad_loki.${PREC} )
                 ecrad_ifs_driver_field_api.F90
             DEFINITIONS
                 $<$<NOT:${HAVE_OMP}>:NO_OPENMP>
+                HAVE_ACC
             LIBS
                 loki_driver_lib.${PREC}
                 ecrad_base.${PREC}
                 $<${HAVE_OMP}:OpenMP::OpenMP_Fortran>
                 $<${HAVE_ACC}:ecrad_openacc>
         )
+    set_target_properties( ecrad_loki_field_api_${PREC}
+        PROPERTIES
+            Fortran_MODULE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/module_loki"
+    )
     endif()
 endif()
 

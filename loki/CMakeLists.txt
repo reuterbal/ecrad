@@ -45,6 +45,7 @@ ecbuild_add_library(
     DEFINITIONS
         $<${HAVE_FIELD_API}:HAVE_FIELD_API>
         $<${HAVE_LOKI}:HAVE_LOKI>
+        HAVE_ACC
     PRIVATE_INCLUDES
         ${ecrad_loki_SOURCE_DIRS}
     PUBLIC_INCLUDES
