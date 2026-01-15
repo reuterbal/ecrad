@@ -425,9 +425,10 @@ contains
 
     ! Scaling factor to convert from old to new
     real(jprb) :: sf
-
     ! New scaling factor to store inside the gas object
     real(jprb) :: new_sf
+    ! Loki workaround variable
+    real(jprb) :: gas_sf
 
     if (present(scale_factor)) then
       ! "sf" is the scaling to be applied now to the numbers (and may
@@ -449,18 +450,20 @@ contains
       if (this%is_present(igas)) then
         if (iunits == IMassMixingRatio &
              &   .and. this%iunits(igas) == IVolumeMixingRatio) then
-          sf = sf * GasMolarMass(igas) / AirMolarMass
+          gas_sf = sf * GasMolarMass(igas) / AirMolarMass
         else if (iunits == IVolumeMixingRatio &
              &   .and. this%iunits(igas) == IMassMixingRatio) then
-          sf = sf * AirMolarMass / GasMolarMass(igas)
+          gas_sf = sf * AirMolarMass / GasMolarMass(igas)
+        else
+          gas_sf = sf
         end if
-        sf = sf * this%scale_factor(igas)
+        gas_sf = gas_sf * this%scale_factor(igas)
 
-        if (sf /= 1.0_jprb) then
+        if (gas_sf /= 1.0_jprb) then
 
           do jlev=1,this%nlev
             do jcol=istartcol,iendcol
-              this%mixing_ratio(jcol,jlev,igas) = this%mixing_ratio(jcol,jlev,igas) * sf
+              this%mixing_ratio(jcol,jlev,igas) = this%mixing_ratio(jcol,jlev,igas) * gas_sf
             end do
           end do
         end if
@@ -472,24 +475,24 @@ contains
     else
       ! "Inlined" function in loop instead of recursive call to itself
       do jg = 1,this%ntype
-        sf     = 1.0_jprb / new_sf
+        gas_sf     = 1.0_jprb / new_sf
 
         ig = this%icode(jg)
         if (this%is_present(ig)) then
           if (iunits == IMassMixingRatio &
                &   .and. this%iunits(ig) == IVolumeMixingRatio) then
-            sf = sf * GasMolarMass(ig) / AirMolarMass
+            gas_sf = sf * GasMolarMass(ig) / AirMolarMass
           else if (iunits == IVolumeMixingRatio &
                &   .and. this%iunits(ig) == IMassMixingRatio) then
-            sf = sf * AirMolarMass / GasMolarMass(ig)
+            gas_sf = sf * AirMolarMass / GasMolarMass(ig)
           end if
-          sf = sf * this%scale_factor(ig)
+          gas_sf = sf * this%scale_factor(ig)
 
-          if (sf /= 1.0_jprb) then
+          if (gas_sf /= 1.0_jprb) then
 
             do jlev=1,this%nlev
               do jcol=istartcol,iendcol
-                this%mixing_ratio(jcol,jlev,ig) = this%mixing_ratio(jcol,jlev,ig) * sf
+                this%mixing_ratio(jcol,jlev,ig) = this%mixing_ratio(jcol,jlev,ig) * gas_sf
               end do
             end do
           end if
@@ -626,8 +629,8 @@ contains
     real(jprb), optional, intent(in)  :: scale_factor
     integer,    optional, intent(in)  :: istartcol
 
-    real(jprb)                        :: sf
-    integer                           :: kidia, kfdia
+    real(jprb)                        :: sf, gas_sf
+    integer                           :: kidia, kfdia, jcol, jlev
 
     real(jphook) :: hook_handle
 
@@ -663,19 +666,21 @@ contains
     !$loki end remove
 
     if (.not. this%is_present(igas)) then
-      mixing_ratio = 0.0_jprb
+      mixing_ratio(kidia:kfdia,1:this%nlev) = 0.0_jprb
     else
       if (iunits == IMassMixingRatio &
            &   .and. this%iunits(igas) == IVolumeMixingRatio) then
-        sf = sf * GasMolarMass(igas) / AirMolarMass
+        gas_sf = sf * GasMolarMass(igas) / AirMolarMass
       else if (iunits == IVolumeMixingRatio &
            &   .and. this%iunits(igas) == IMassMixingRatio) then
-        sf = sf * AirMolarMass / GasMolarMass(igas)
+        gas_sf = sf * AirMolarMass / GasMolarMass(igas)
+      else
+        gas_sf = sf
       end if
-      sf = sf * this%scale_factor(igas)
+      gas_sf = gas_sf * this%scale_factor(igas)
 
-      if (sf /= 1.0_jprb) then
-        mixing_ratio(kidia:kfdia,1:this%nlev) = this%mixing_ratio(kidia:kfdia,1:this%nlev,igas) * sf
+      if (gas_sf /= 1.0_jprb) then
+        mixing_ratio(kidia:kfdia,1:this%nlev) = this%mixing_ratio(kidia:kfdia,1:this%nlev,igas) * gas_sf
       else
         mixing_ratio(kidia:kfdia,1:this%nlev) = this%mixing_ratio(kidia:kfdia,1:this%nlev,igas)
       end if
