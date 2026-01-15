@@ -904,7 +904,7 @@ contains
     type(ckd_model_type), intent(in)  :: this
     integer,    intent(in)  :: nt
     real(jprb), intent(in)  :: temperature(:) ! K
-    real(jprb), intent(out) :: planck(this%ng,nt) ! W m-2
+    real(jprb), intent(inout) :: planck(this%ng,nt) ! W m-2
 
     real(jprb) :: tindex1, tw1, tw2
     integer    :: it1, jt
