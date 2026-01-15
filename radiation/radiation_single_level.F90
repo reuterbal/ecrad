@@ -235,7 +235,7 @@ contains
     ! The longwave albedo of the surface in each longwave g-point;
     ! note that these are weighted averages of the values from
     ! individual tiles
-    real(jprb), intent(out), optional &
+    real(jprb), intent(inout), optional &
          &  :: lw_albedo(config%n_g_lw, istartcol:iendcol)
 
     ! Direct and diffuse shortwave surface albedo in each shortwave
