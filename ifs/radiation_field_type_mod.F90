@@ -768,11 +768,9 @@ contains
   ! Update single_level_type with the view pointers of this object
   subroutine single_level_associate_device_pointers(this, single_level, block_index)
 
-    use yomhook, only : lhook, dr_hook, jphook
-
-    class(single_level_field_type), intent(inout) :: this
-    class(single_level_type),       intent(inout) :: single_level
-    integer,                        intent(in)    :: block_index
+    type(single_level_field_type), intent(inout) :: this
+    type(single_level_type),       intent(inout) :: single_level
+    integer,                       intent(in)    :: block_index
 
   !$acc routine seq
   !$acc data present(this, single_level)
@@ -1033,11 +1031,9 @@ contains
   ! Associate thermodynamics_type with device pointers for a given block
   subroutine thermodynamics_associate_device_pointers(this, thermodynamics, block_index)
 
-    use yomhook, only : lhook, dr_hook, jphook
-
-    class(thermodynamics_field_type), intent(inout) :: this
-    class(thermodynamics_type),       intent(inout) :: thermodynamics
-    integer,                          intent(in)    :: block_index
+    type(thermodynamics_field_type), intent(inout) :: this
+    type(thermodynamics_type),       intent(inout) :: thermodynamics
+    integer,                         intent(in)    :: block_index
 
   !$acc routine seq
   !$acc data present(this, thermodynamics)
@@ -1218,11 +1214,9 @@ contains
   ! Associate gas_type with device pointers for a given block
   subroutine gas_associate_device_pointers(this, gas, block_index)
 
-    use yomhook, only : lhook, dr_hook, jphook
-
-    class(gas_field_type), intent(inout) :: this
-    class(gas_type),       intent(inout) :: gas
-    integer,               intent(in)    :: block_index
+    type(gas_field_type), intent(inout) :: this
+    type(gas_type),       intent(inout) :: gas
+    integer,              intent(in)    :: block_index
 
   !$acc routine seq
   !$acc data present(this, gas)
@@ -1599,11 +1593,9 @@ contains
   ! Associate cloud_type with device pointers for a given block
   subroutine cloud_associate_device_pointers(this, ylcloud, block_index)
 
-    use yomhook, only : lhook, dr_hook, jphook
-
-    class(cloud_field_type), intent(inout) :: this
-    class(cloud_type),       intent(inout) :: ylcloud
-    integer,                 intent(in)    :: block_index
+    type(cloud_field_type), intent(inout) :: this
+    type(cloud_type),       intent(inout) :: ylcloud
+    integer,                intent(in)    :: block_index
 
   !$acc routine seq
   !$acc data present(this, ylcloud)
@@ -1775,12 +1767,11 @@ contains
   !---------------------------------------------------------------------
   ! Copy aerosol field type to device and attach device pointers
   ! using unstructured data regions
-  subroutine aerosol_field_attach(this, block_index)
+  subroutine aerosol_field_attach(this)
 
     use yomhook, only : lhook, dr_hook, jphook
 
     class(aerosol_field_type), intent(inout) :: this
-    integer,                   intent(in)    :: block_index
     real(jphook) :: hook_handle
 
     if (lhook) call dr_hook('radiation_field_type:aerosol_field_attach',0,hook_handle)
@@ -1822,11 +1813,9 @@ contains
   ! Associate aerosol_type with device pointers for a given block
   subroutine aerosol_associate_device_pointers(this, ylaerosol, block_index)
 
-    use yomhook, only : lhook, dr_hook, jphook
-
-    class(aerosol_field_type), intent(inout) :: this
-    class(aerosol_type),       intent(inout) :: ylaerosol
-    integer,                   intent(in)    :: block_index
+    type(aerosol_field_type), intent(inout) :: this
+    type(aerosol_type),       intent(inout) :: ylaerosol
+    integer,                  intent(in)    :: block_index
 
   !$acc routine seq
   !$acc data present(this, ylaerosol)
@@ -2924,12 +2913,11 @@ contains
   !---------------------------------------------------------------------
   ! Copy flux field type to device and attach device pointers
   ! using unstructured data regions
-  subroutine flux_field_attach(this, block_index)
+  subroutine flux_field_attach(this)
 
     use yomhook, only : lhook, dr_hook, jphook
 
     class(flux_field_type), intent(inout) :: this
-    integer,                intent(in)    :: block_index
     real(jphook) :: hook_handle
 
     if (lhook) call dr_hook('radiation_field_type:flux_field_attach',0,hook_handle)
@@ -3279,11 +3267,9 @@ contains
   ! Associate flux_type with device pointers for a given block
   subroutine flux_associate_device_pointers(this, flux, block_index)
 
-    use yomhook, only : lhook, dr_hook, jphook
-
-    class(flux_field_type), intent(inout) :: this
-    class(flux_type),       intent(inout) :: flux
-    integer,                intent(in)    :: block_index
+    type(flux_field_type), intent(inout) :: this
+    type(flux_type),       intent(inout) :: flux
+    integer,               intent(in)    :: block_index
 
   !$acc routine seq
   !$acc data present(this, flux)
