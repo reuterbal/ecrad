@@ -656,7 +656,7 @@ contains
     end if
 
     if (associated(this%f_iseed)) then
-      call this%f_iseed%get_device_data_wronly(this%iseed_d)
+      call this%f_iseed%get_device_data_rdonly(this%iseed_d)
     end if
 
     if (lhook) call dr_hook('radiation_field_type:single_level_field_get_device_data',1,hook_handle)
