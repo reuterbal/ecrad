@@ -34,21 +34,21 @@ module radiation_cloud
     ! For maximum flexibility, an arbitrary number "ntype" of
     ! hydrometeor types can be stored, dimensioned (ncol,nlev,ntype)
     integer                                   :: ntype = 0
-    real(jprb), pointer, dimension(:,:,:) :: &
+    real(jprb), pointer, contiguous, dimension(:,:,:) :: &
          &  mixing_ratio=>null(), &  ! mass mixing ratio (kg/kg)
          &  effective_radius=>null() ! (m)
 
     ! For backwards compatibility, we also allow for the two
     ! traditional cloud types, liquid cloud droplets and ice cloud
     ! particles, dimensioned (ncol,nlev)
-    real(jprb), pointer, dimension(:,:) :: &
+    real(jprb), pointer, contiguous, dimension(:,:) :: &
          &  q_liq=>null(),  q_ice=>null(),  & ! mass mixing ratio (kg/kg)
          &  re_liq=>null(), re_ice=>null()    ! effective radius (m)
 
     ! For the moment, the different types of hydrometeor are assumed
     ! to be mixed with each other, so there is just one cloud fraction
     ! variable varying from 0 to 1
-    real(jprb), pointer, dimension(:,:) :: fraction=>null()
+    real(jprb), pointer, contiguous, dimension(:,:) :: fraction=>null()
 
     ! The fractional standard deviation of cloud optical depth in the
     ! cloudy part of the gridbox.  In the Tripleclouds representation
@@ -57,19 +57,19 @@ module radiation_cloud
     ! with the cloud optical depth scaled by 1+fractional_std and the
     ! other scaled by 1-fractional_std. This variable is dimensioned
     ! (ncol,nlev)
-    real(jprb), pointer, dimension(:,:) :: fractional_std=>null()
+    real(jprb), pointer, contiguous, dimension(:,:) :: fractional_std=>null()
 
     ! The inverse of the effective horizontal size of the clouds in
     ! the gridbox, used to compute the cloud edge length per unit
     ! gridbox area for use in representing 3D effects. This variable
     ! is dimensioned (ncol,nlev).
-    real(jprb), pointer, dimension(:,:) :: &
+    real(jprb), pointer, contiguous, dimension(:,:) :: &
          &  inv_cloud_effective_size=>null() ! m-1
 
     ! Similarly for the in-cloud heterogeneities, used to compute the
     ! edge length between the optically thin and thick cloudy regions
     ! of the gridbox.
-    real(jprb), pointer, dimension(:,:) :: &
+    real(jprb), pointer, contiguous, dimension(:,:) :: &
          &  inv_inhom_effective_size=>null() ! m-1
 
     ! The following variable describes the overlap of cloud boundaries
@@ -78,7 +78,7 @@ module radiation_cloud
     ! ecRad configuration, it may be the "alpha" overlap parameter of
     ! Hogan and Illingworth (2000) or the "beta" overlap parameter of
     ! Shonk et al. (2010).
-    real(jprb), pointer, dimension(:,:) :: overlap_param=>null()
+    real(jprb), pointer, contiguous, dimension(:,:) :: overlap_param=>null()
 
   contains
     procedure :: allocate   => allocate_cloud_arrays

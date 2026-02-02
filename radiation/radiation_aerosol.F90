@@ -31,13 +31,13 @@ module radiation_aerosol
      ! (ncol,istartlev:iendlev,config%n_aerosol_types), where ncol is
      ! the number of columns, istartlev:iendlev is the range of model
      ! levels where aerosols are present
-     real(jprb), pointer, dimension(:,:,:) :: &
+     real(jprb), pointer, contiguous, dimension(:,:,:) :: &
           &  mixing_ratio=>null()  ! mass mixing ratio (kg/kg)
 
      ! Alternatively, if is_direct=true, the optical properties are
      ! provided directly and are dimensioned
      ! (nband,istartlev:iendlev,ncol)
-     real(jprb), pointer, dimension(:,:,:) :: &
+     real(jprb), pointer, contiguous, dimension(:,:,:) :: &
           &  od_sw=>null(), ssa_sw=>null(), g_sw=>null(), & ! Shortwave optical properties
           &  od_lw=>null(), ssa_lw=>null(), g_lw=>null()    ! Longwave optical properties
 

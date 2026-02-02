@@ -27,7 +27,7 @@ module radiation_thermodynamics
   !---------------------------------------------------------------------
   ! Derived type for storing pressure and temperature at half levels
   type thermodynamics_type
-     real(jprb), pointer, dimension(:,:) :: &
+     real(jprb), pointer, contiguous, dimension(:,:) :: &
           &  pressure_hl=>null(), &   ! (ncol,nlev+1) pressure (Pa)
           &  temperature_hl=>null()   ! (ncol,nlev+1) temperature (K)
 
@@ -35,7 +35,7 @@ module radiation_thermodynamics
      ! can calculate it according to your favourite formula, or the
      ! calc_saturation_wrt_liquid subroutine can be used to do this
      ! approximately
-     real(jprb), pointer, dimension(:,:) :: &
+     real(jprb), pointer, contiguous, dimension(:,:) :: &
           &  h2o_sat_liq=>null() ! (ncol,nlev) specific humidity at liquid
                          ! saturation (kg/kg)
    contains

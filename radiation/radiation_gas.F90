@@ -44,7 +44,7 @@ module radiation_gas
 
     ! Mixing ratios of variable gases, dimensioned (ncol, nlev,
     ! NMaxGases)
-    real(jprb), pointer, dimension(:,:,:) :: mixing_ratio=>null()
+    real(jprb), pointer, contiguous, dimension(:,:,:) :: mixing_ratio=>null()
 
     ! Flag to indicate whether a gas is present
     logical :: is_present(NMaxGases) = .false.

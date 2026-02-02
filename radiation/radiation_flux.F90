@@ -40,7 +40,7 @@ module radiation_flux
      ! dimensions (ncol,nlev+1).  Note that only those fluxes that are
      ! requested will be used, so clear-sky and direct-beam arrays may
      ! not be associated
-     real(jprb), pointer, dimension(:,:) :: &
+     real(jprb), pointer, contiguous, dimension(:,:) :: &
           &  lw_up=>null(), lw_dn=>null(), &   ! Upwelling and downwelling longwave
           &  sw_up=>null(), sw_dn=>null(), &   ! Upwelling and downwelling shortwave
           &  sw_dn_direct=>null(), &   ! Direct-beam shortwave into a horizontal plane
@@ -50,7 +50,7 @@ module radiation_flux
      ! As above but fluxes in each spectral band in W m-2 with
      ! dimensions (nband,ncol,nlev+1).  These are only associated if
      ! config%do_save_spectral_flux==.true.
-     real(jprb), pointer, dimension(:,:,:) :: &
+     real(jprb), pointer, contiguous, dimension(:,:,:) :: &
           &  lw_up_band=>null(), lw_dn_band=>null(), &   ! Upwelling and downwelling longwave
           &  sw_up_band=>null(), sw_dn_band=>null(), &   ! Upwelling and downwelling shortwave
           &  sw_dn_direct_band=>null(), &        ! Direct-beam shortwave
@@ -61,7 +61,7 @@ module radiation_flux
      ! (ng,ncol), that are always saved by the solver, except for the
      ! clear-sky ones that are only produced if
      ! config%do_clear==.true.
-     real(jprb), pointer, dimension(:,:) :: &
+     real(jprb), pointer, contiguous, dimension(:,:) :: &
           &  lw_dn_surf_g=>null(), lw_dn_surf_clear_g=>null(), &
           &  sw_dn_diffuse_surf_g=>null(), sw_dn_direct_surf_g=>null(), &
           &  sw_dn_diffuse_surf_clear_g=>null(), sw_dn_direct_surf_clear_g=>null()
@@ -69,7 +69,7 @@ module radiation_flux
      ! (ng,ncol), that are always saved by the solver, except for the
      ! clear-sky ones that are only produced if
      ! config%do_clear==.true.
-     real(jprb), pointer, dimension(:,:) :: &
+     real(jprb), pointer, contiguous, dimension(:,:) :: &
           &  lw_up_toa_g=>null(), lw_up_toa_clear_g=>null(), &
           &  sw_dn_toa_g=>null(), sw_up_toa_g=>null(), sw_up_toa_clear_g=>null()
      ! Shortwave downwelling spectral fluxes in W m-2 at the surface,
@@ -79,14 +79,14 @@ module radiation_flux
      ! clear-sky quantities are only computed if
      ! config%do_clear==.true., but direct fluxes are computed whether
      ! or not do_direct==.true.. The dimensions are (nband,ncol).
-     real(jprb), pointer, dimension(:,:) :: &
+     real(jprb), pointer, contiguous, dimension(:,:) :: &
           &  sw_dn_surf_band=>null(), sw_dn_direct_surf_band=>null(), &
           &  sw_dn_surf_clear_band=>null(), sw_dn_direct_surf_clear_band=>null()
      ! Top-of-atmosphere spectral fluxes in W m-2. Only associated if
      ! config%do_toa_spectral_flux=.true.. Note that the clear-sky
      ! quantities are only computed if config%do_clear==.true.. The
      ! dimensions are (nband,ncol).
-     real(jprb), pointer, dimension(:,:) :: &
+     real(jprb), pointer, contiguous, dimension(:,:) :: &
           &  lw_up_toa_band=>null(), lw_up_toa_clear_band=>null(), &
           &  sw_dn_toa_band=>null(), sw_up_toa_band=>null(), sw_up_toa_clear_band=>null()
      ! Surface downwelling fluxes in W m-2 at the spectral resolution
@@ -94,18 +94,18 @@ module radiation_flux
      ! config%use_canopy_full_spectrum_[sw|lw] then these will be at
      ! g-point resolution; otherwise they will be at
      ! config%n_albedo_bands and config%n_emiss_bands resolution.
-     real(jprb), pointer, dimension(:,:) :: &
+     real(jprb), pointer, contiguous, dimension(:,:) :: &
           &  lw_dn_surf_canopy=>null(), &
           &  sw_dn_diffuse_surf_canopy=>null(), sw_dn_direct_surf_canopy=>null()
 
      ! Diagnosed cloud cover from the short- and long-wave solvers
-     real(jprb), pointer, dimension(:) :: &
+     real(jprb), pointer, contiguous, dimension(:) :: &
           &  cloud_cover_lw=>null(), cloud_cover_sw=>null()
      ! Longwave derivatives needed by Hogan and Bozzo (2015) method
      ! for approximate longwave updates in between the full radiation
      ! calls: rate of change of upwelling broad-band flux with respect
      ! to surface value, dimensioned (ncol,nlev+1)
-     real(jprb), pointer, dimension(:,:) :: &
+     real(jprb), pointer, contiguous, dimension(:,:) :: &
           &  lw_derivatives=>null()
 
    contains
