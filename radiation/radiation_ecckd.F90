@@ -489,8 +489,6 @@ contains
 
     ! Local variables
 
-    real(jprb), pointer :: molar_abs(:,:,:), molar_abs_conc(:,:,:,:)
-
     ! Natural logarithm of pressure at full levels
     real(jprb) :: log_pressure_fl(nlev)
 
@@ -551,22 +549,23 @@ contains
              &  * (pressure_hl(jcol,jlev+1) - pressure_hl(jcol,jlev))
       end do
 
-      optical_depth_fl(:,:,jcol) = 0.0_jprb
+      optical_depth_fl(1:this%ng,1:nlev,jcol) = 0.0_jprb
       
       do jgas = 1,this%ngas
 
-        associate (single_gas => this%single_gas(jgas))
-          igascode = this%single_gas(jgas)%i_gas_code
-          
-          select case (single_gas%i_conc_dependence)
-            
-          case (IConcDependenceLinear)
-            molar_abs => this%single_gas(jgas)%molar_abs
-            multiplier = simple_multiplier * mole_fraction_fl(jcol,:,igascode)
+        associate (single_gas => this%single_gas(jgas), &
+            &      molar_abs => this%single_gas(jgas)%molar_abs, &
+            &      molar_abs_conc => this%single_gas(jgas)%molar_abs_conc)
 
-            multiplier = multiplier * local_concentration_scaling(igascode)
-            
+          igascode = this%single_gas(jgas)%i_gas_code
+
+          select case (single_gas%i_conc_dependence)
+
+          case (IConcDependenceLinear)
             do jlev = 1,nlev
+              multiplier = simple_multiplier(jlev) * mole_fraction_fl(jcol,jlev,igascode) &
+                   &     * local_concentration_scaling(igascode)
+
               optical_depth_fl(:,jlev,jcol) = optical_depth_fl(:,jlev,jcol) &
                    &        + (multiplier(jlev)*tw1(jlev)) * (pw1(jlev) * molar_abs(:,ip1(jlev),it1(jlev)) &
                    &                +pw2(jlev) * molar_abs(:,ip1(jlev)+1,it1(jlev))) &
@@ -575,23 +574,20 @@ contains
             end do
 
           case (IConcDependenceRelativeLinear)
-            molar_abs => this%single_gas(jgas)%molar_abs
 
-            multiplier = simple_multiplier &
-                   &  * (mole_fraction_fl(jcol,:,igascode)*local_concentration_scaling(igascode) &
-                   &     - single_gas%reference_mole_frac)
-            
             do jlev = 1,nlev
+            multiplier = simple_multiplier(jlev) &
+                   &  * (mole_fraction_fl(jcol,jlev,igascode)*local_concentration_scaling(igascode) &
+                   &     - single_gas%reference_mole_frac)
               optical_depth_fl(:,jlev,jcol) = optical_depth_fl(:,jlev,jcol) &
-                   &        + (multiplier(jlev)*tw1(jlev)) * (pw1(jlev) * molar_abs(:,ip1(jlev),it1(jlev)) &
+                   &        + (multiplier*tw1(jlev)) * (pw1(jlev) * molar_abs(:,ip1(jlev),it1(jlev)) &
                    &                +pw2(jlev) * molar_abs(:,ip1(jlev)+1,it1(jlev))) &
-                   &        + (multiplier(jlev)*tw2(jlev)) * (pw1(jlev) * molar_abs(:,ip1(jlev),it1(jlev)+1) &
+                   &        + (multiplier*tw2(jlev)) * (pw1(jlev) * molar_abs(:,ip1(jlev),it1(jlev)+1) &
                    &                +pw2(jlev) * molar_abs(:,ip1(jlev)+1,it1(jlev)+1))
             end do
 
           case (IConcDependenceNone)
             ! Composite gases
-            molar_abs => this%single_gas(jgas)%molar_abs
             do jlev = 1,nlev
               optical_depth_fl(:,jlev,jcol) = optical_depth_fl(:,jlev,jcol) &
                    &  + (simple_multiplier(jlev)*tw1(jlev)) * (pw1(jlev) * molar_abs(:,ip1(jlev),it1(jlev)) &
@@ -605,7 +601,6 @@ contains
             scaling = local_concentration_scaling(igascode)
             
             ! Logarithmic interpolation in concentration space
-            molar_abs_conc => this%single_gas(jgas)%molar_abs_conc
             mole_frac1 = exp(single_gas%log_mole_frac1)
             do jlev = 1,nlev
               ! Take care of mole_fraction == 0
