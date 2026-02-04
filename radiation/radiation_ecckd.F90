@@ -971,8 +971,15 @@ contains
   ! Allocate CKD model type device arrays
   subroutine ckd_create_device(this)
     class(ckd_model_type), intent(inout) :: this
+    integer :: ig
 
-    !$acc enter data copyin(this%single_gas) if(allocated(this%single_gas))
+    if (allocated(this%single_gas)) then
+      !$acc enter data copyin(this%single_gas)
+      do ig=1,this%ngas
+        !$acc enter data copyin(this%single_gas(ig)%molar_abs)
+        !$acc enter data copyin(this%single_gas(ig)%molar_abs_conc)
+      end do
+    end if
     !$acc enter data copyin(this%temperature1) if(allocated(this%temperature1))
     !$acc enter data copyin(this%temperature1_planck) if(allocated(this%temperature1_planck))
     !$acc enter data copyin(this%planck_function) if(allocated(this%planck_function))
@@ -1016,7 +1023,15 @@ contains
   ! Delete CKD model type device arrays
   subroutine ckd_delete_device(this)
     class(ckd_model_type), intent(inout) :: this
+    integer :: ig
 
+    if (allocated(this%single_gas)) then
+      do ig=1,this%ngas
+        !$acc exit data delete(this%single_gas(ig)%molar_abs)
+        !$acc exit data delete(this%single_gas(ig)%molar_abs_conc)
+      end do
+      !$acc exit data delete(this%single_gas)
+    end if
     !$acc exit data delete(this%single_gas) if(allocated(this%single_gas))
     !$acc exit data delete(this%temperature1) if(allocated(this%temperature1))
     !$acc exit data delete(this%temperature1_planck) if(allocated(this%temperature1_planck))
