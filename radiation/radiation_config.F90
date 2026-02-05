@@ -2205,7 +2205,8 @@ contains
     !$ACC ENTER DATA COPYIN(this%i_spec_from_reordered_g_lw) IF(allocated(this%i_spec_from_reordered_g_lw))
     !$ACC ENTER DATA COPYIN(this%i_spec_from_reordered_g_sw) IF(allocated(this%i_spec_from_reordered_g_sw))
 
-    ! NB: ckd_model_type not yet implemented
+    call this%gas_optics_lw%create_device()
+    call this%gas_optics_sw%create_device()
 
     !$ACC ENTER DATA COPYIN(this%cloud_optics)
     call this%cloud_optics%create_device()
@@ -2236,7 +2237,8 @@ contains
     !$ACC UPDATE HOST(this%i_spec_from_reordered_g_lw) IF(allocated(this%i_spec_from_reordered_g_lw))
     !$ACC UPDATE HOST(this%i_spec_from_reordered_g_sw) IF(allocated(this%i_spec_from_reordered_g_sw))
 
-    ! NB: ckd_model_type not yet implemented
+    call this%gas_optics_lw%update_host()
+    call this%gas_optics_sw%update_host()
 
     !$ACC UPDATE HOST(this%cloud_optics)
     call this%cloud_optics%update_host()
@@ -2267,7 +2269,8 @@ contains
     !$ACC UPDATE DEVICE(this%i_spec_from_reordered_g_lw) IF(allocated(this%i_spec_from_reordered_g_lw))
     !$ACC UPDATE DEVICE(this%i_spec_from_reordered_g_sw) IF(allocated(this%i_spec_from_reordered_g_sw))
 
-    ! NB: ckd_model_type not yet implemented
+    call this%gas_optics_lw%update_device()
+    call this%gas_optics_sw%update_device()
 
     !$ACC UPDATE DEVICE(this%cloud_optics)
     call this%cloud_optics%update_device()
@@ -2298,7 +2301,8 @@ contains
     !$ACC EXIT DATA DELETE(this%i_spec_from_reordered_g_lw) IF(allocated(this%i_spec_from_reordered_g_lw))
     !$ACC EXIT DATA DELETE(this%i_spec_from_reordered_g_sw) IF(allocated(this%i_spec_from_reordered_g_sw))
 
-    ! NB: ckd_model_type not yet implemented
+    call this%gas_optics_lw%delete_device()
+    call this%gas_optics_sw%delete_device()
 
     !$ACC EXIT DATA DELETE(this%cloud_optics)
     call this%cloud_optics%delete_device()

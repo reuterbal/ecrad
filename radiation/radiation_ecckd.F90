@@ -115,7 +115,12 @@ module radiation_ecckd
     procedure, nopass :: calc_planck_function
     procedure, nopass :: calc_incoming_sw
 !    procedure :: deallocate => deallocate_ckd_model
-
+#ifdef HAVE_ACC
+    procedure :: create_device => ckd_create_device
+    procedure :: update_host => ckd_update_host
+    procedure :: update_device => ckd_update_device
+    procedure :: delete_device => ckd_delete_device
+#endif
   end type ckd_model_type
 
 
@@ -965,5 +970,67 @@ contains
     end if
 
   end subroutine calc_incoming_sw
+
+#ifdef HAVE_ACC
+  !---------------------------------------------------------------------
+  ! Allocate CKD model type device arrays
+  subroutine ckd_create_device(this)
+    class(ckd_model_type), intent(inout) :: this
+
+    !$acc enter data copyin(this%single_gas) if(allocated(this%single_gas))
+    !$acc enter data copyin(this%temperature1) if(allocated(this%temperature1))
+    !$acc enter data copyin(this%temperature1_planck) if(allocated(this%temperature1_planck))
+    !$acc enter data copyin(this%planck_function) if(allocated(this%planck_function))
+    !$acc enter data copyin(this%norm_solar_irradiance) if(allocated(this%norm_solar_irradiance))
+    !$acc enter data copyin(this%norm_amplitude_solar_irradiance) if(allocated(this%norm_amplitude_solar_irradiance))
+    !$acc enter data copyin(this%rayleigh_molar_scat) if(allocated(this%rayleigh_molar_scat))
+
+  end subroutine ckd_create_device
+
+  !---------------------------------------------------------------------
+  ! Update CKD model type host object
+  subroutine ckd_update_host(this)
+    class(ckd_model_type), intent(inout) :: this
+
+    !$acc update host(this%single_gas) if(allocated(this%single_gas))
+    !$acc update host(this%temperature1) if(allocated(this%temperature1))
+    !$acc update host(this%temperature1_planck) if(allocated(this%temperature1_planck))
+    !$acc update host(this%planck_function) if(allocated(this%planck_function))
+    !$acc update host(this%norm_solar_irradiance) if(allocated(this%norm_solar_irradiance))
+    !$acc update host(this%norm_amplitude_solar_irradiance) if(allocated(this%norm_amplitude_solar_irradiance))
+    !$acc update host(this%rayleigh_molar_scat) if(allocated(this%rayleigh_molar_scat))
+
+  end subroutine ckd_update_host
+
+  !---------------------------------------------------------------------
+  ! Update CKD model type device object
+  subroutine ckd_update_device(this)
+    class(ckd_model_type), intent(inout) :: this
+
+    !$acc update device(this%single_gas) if(allocated(this%single_gas))
+    !$acc update device(this%temperature1) if(allocated(this%temperature1))
+    !$acc update device(this%temperature1_planck) if(allocated(this%temperature1_planck))
+    !$acc update device(this%planck_function) if(allocated(this%planck_function))
+    !$acc update device(this%norm_solar_irradiance) if(allocated(this%norm_solar_irradiance))
+    !$acc update device(this%norm_amplitude_solar_irradiance) if(allocated(this%norm_amplitude_solar_irradiance))
+    !$acc update device(this%rayleigh_molar_scat) if(allocated(this%rayleigh_molar_scat))
+
+  end subroutine ckd_update_device
+
+  !---------------------------------------------------------------------
+  ! Delete CKD model type device arrays
+  subroutine ckd_delete_device(this)
+    class(ckd_model_type), intent(inout) :: this
+
+    !$acc exit data delete(this%single_gas) if(allocated(this%single_gas))
+    !$acc exit data delete(this%temperature1) if(allocated(this%temperature1))
+    !$acc exit data delete(this%temperature1_planck) if(allocated(this%temperature1_planck))
+    !$acc exit data delete(this%planck_function) if(allocated(this%planck_function))
+    !$acc exit data delete(this%norm_solar_irradiance) if(allocated(this%norm_solar_irradiance))
+    !$acc exit data delete(this%norm_amplitude_solar_irradiance) if(allocated(this%norm_amplitude_solar_irradiance))
+    !$acc exit data delete(this%rayleigh_molar_scat) if(allocated(this%rayleigh_molar_scat))
+
+    end subroutine ckd_delete_device
+#endif ! HAVE_ACC
 
 end module radiation_ecckd
