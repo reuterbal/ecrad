@@ -308,6 +308,7 @@ contains
 
       ! Calculate the Planck function for each g point
       do jcol = istartcol,iendcol
+        !$loki inline
         call config%gas_optics_lw%calc_planck_function(config%gas_optics_lw,nlev+1, &
              &  thermodynamics%temperature_hl(jcol,:), planck_hl(:,:,jcol))
       end do
