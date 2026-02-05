@@ -59,6 +59,12 @@ module radiation_general_cloud_optics_data
      procedure :: setup => setup_general_cloud_optics
      procedure, nopass :: add_optical_properties
      procedure :: save => save_general_cloud_optics_data
+#ifdef HAVE_ACC
+    procedure :: create_device => create_device_general_cloud_optics
+    procedure :: update_host => update_host_general_cloud_optics
+    procedure :: update_device => update_device_general_cloud_optics
+    procedure :: delete_device => delete_device_general_cloud_optics
+#endif
 
   end type general_cloud_optics_type
 
@@ -415,5 +421,42 @@ contains
     if (lhook) call dr_hook('radiation_general_cloud_optics_data:save',1,hook_handle)
 
   end subroutine save_general_cloud_optics_data
-  
+
+#ifdef HAVE_ACC
+  subroutine create_device_general_cloud_optics(this)
+    class(general_cloud_optics_type), intent(inout) :: this
+
+    !$acc enter data copyin(this%mass_ext) if(allocated(this%mass_ext))
+    !$acc enter data copyin(this%ssa) if(allocated(this%ssa))
+    !$acc enter data copyin(this%asymmetry) if(allocated(this%asymmetry))
+
+  end subroutine create_device_general_cloud_optics
+
+  subroutine update_host_general_cloud_optics(this)
+    class(general_cloud_optics_type), intent(inout) :: this
+
+    !$acc update host(this%mass_ext) if(allocated(this%mass_ext))
+    !$acc update host(this%ssa) if(allocated(this%ssa))
+    !$acc update host(this%asymmetry) if(allocated(this%asymmetry))
+
+  end subroutine update_host_general_cloud_optics
+
+  subroutine update_device_general_cloud_optics(this)
+    class(general_cloud_optics_type), intent(inout) :: this
+
+    !$acc update device(this%mass_ext) if(allocated(this%mass_ext))
+    !$acc update device(this%ssa) if(allocated(this%ssa))
+    !$acc update device(this%asymmetry) if(allocated(this%asymmetry))
+
+  end subroutine update_device_general_cloud_optics
+
+  subroutine delete_device_general_cloud_optics(this)
+    class(general_cloud_optics_type), intent(inout) :: this
+
+    !$acc exit data delete(this%mass_ext) if(allocated(this%mass_ext))
+    !$acc exit data delete(this%ssa) if(allocated(this%ssa))
+    !$acc exit data delete(this%asymmetry) if(allocated(this%asymmetry))
+
+  end subroutine delete_device_general_cloud_optics
+#endif ! HAVE_ACC
 end module radiation_general_cloud_optics_data

@@ -2191,6 +2191,7 @@ contains
 
   subroutine create_device(this)
     class(config_type), intent(inout) :: this
+    integer :: jtype
 
     !$ACC ENTER DATA COPYIN(this%g_frac_sw) IF(allocated(this%g_frac_sw))
     !$ACC ENTER DATA COPYIN(this%g_frac_lw) IF(allocated(this%g_frac_lw))
@@ -2211,7 +2212,19 @@ contains
     !$ACC ENTER DATA COPYIN(this%cloud_optics)
     call this%cloud_optics%create_device()
 
-    ! NB: general_cloud_optics_type not yet implemented
+    if (allocated(this%cloud_optics_sw)) then
+      !$ACC ENTER DATA COPYIN(this%cloud_optics_sw)
+      do jtype=1,this%n_cloud_types
+        call this%cloud_optics_sw(jtype)%create_device()
+      end do
+    end if
+
+    if (allocated(this%cloud_optics_lw)) then
+      !$ACC ENTER DATA COPYIN(this%cloud_optics_lw)
+      do jtype=1,this%n_cloud_types
+        call this%cloud_optics_lw(jtype)%create_device()
+      end do
+    end if
 
     !$ACC ENTER DATA COPYIN(this%aerosol_optics)
     call this%aerosol_optics%create_device()
@@ -2223,6 +2236,7 @@ contains
 
   subroutine update_host(this)
     class(config_type), intent(inout) :: this
+    integer :: jtype
 
     !$ACC UPDATE HOST(this%g_frac_sw) IF(allocated(this%g_frac_sw))
     !$ACC UPDATE HOST(this%g_frac_lw) IF(allocated(this%g_frac_lw))
@@ -2243,7 +2257,19 @@ contains
     !$ACC UPDATE HOST(this%cloud_optics)
     call this%cloud_optics%update_host()
 
-    ! NB: general_cloud_optics_type not yet implemented
+    if (allocated(this%cloud_optics_sw)) then
+      !$ACC UPDATE HOST(this%cloud_optics_sw)
+      do jtype=1,this%n_cloud_types
+        call this%cloud_optics_sw(jtype)%update_host()
+      end do
+    end if
+
+    if (allocated(this%cloud_optics_lw)) then
+      !$ACC UPDATE HOST(this%cloud_optics_lw)
+      do jtype=1,this%n_cloud_types
+        call this%cloud_optics_lw(jtype)%update_host()
+        end do
+    end if
 
     !$ACC UPDATE HOST(this%aerosol_optics)
     call this%aerosol_optics%update_host()
@@ -2255,6 +2281,7 @@ contains
 
   subroutine update_device(this)
     class(config_type), intent(inout) :: this
+    integer :: jtype
 
     !$ACC UPDATE DEVICE(this%g_frac_sw) IF(allocated(this%g_frac_sw))
     !$ACC UPDATE DEVICE(this%g_frac_lw) IF(allocated(this%g_frac_lw))
@@ -2275,7 +2302,19 @@ contains
     !$ACC UPDATE DEVICE(this%cloud_optics)
     call this%cloud_optics%update_device()
 
-    ! NB: general_cloud_optics_type not yet implemented
+    if (allocated(this%cloud_optics_sw)) then
+      !$ACC UPDATE DEVICE(this%cloud_optics_sw)
+      do jtype=1,this%n_cloud_types
+        call this%cloud_optics_sw(jtype)%update_device()
+      end do
+    end if
+
+    if (allocated(this%cloud_optics_lw)) then
+      !$ACC UPDATE DEVICE(this%cloud_optics_lw)
+      do jtype=1,this%n_cloud_types
+        call this%cloud_optics_lw(jtype)%update_device()
+      end do
+    end if
 
     !$ACC UPDATE DEVICE(this%aerosol_optics)
     call this%aerosol_optics%update_device()
@@ -2287,6 +2326,7 @@ contains
 
   subroutine delete_device(this)
     class(config_type), intent(inout) :: this
+    integer :: jtype
 
     !$ACC EXIT DATA DELETE(this%g_frac_sw) IF(allocated(this%g_frac_sw))
     !$ACC EXIT DATA DELETE(this%g_frac_lw) IF(allocated(this%g_frac_lw))
@@ -2307,7 +2347,19 @@ contains
     !$ACC EXIT DATA DELETE(this%cloud_optics)
     call this%cloud_optics%delete_device()
 
-    ! NB: general_cloud_optics_type not yet implemented
+    if (allocated(this%cloud_optics_sw)) then
+      !$ACC EXIT DATA DELETE(this%cloud_optics_sw)
+      do jtype=1,this%n_cloud_types
+        call this%cloud_optics_sw(jtype)%delete_device()
+      end do
+    end if
+
+    if (allocated(this%cloud_optics_lw)) then
+      !$ACC EXIT DATA DELETE(this%cloud_optics_lw)
+      do jtype=1,this%n_cloud_types
+        call this%cloud_optics_lw(jtype)%delete_device()
+      end do
+    end if
 
     !$ACC EXIT DATA DELETE(this%aerosol_optics)
     call this%aerosol_optics%delete_device()
