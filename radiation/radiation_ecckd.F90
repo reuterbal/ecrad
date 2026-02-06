@@ -106,10 +106,10 @@ module radiation_ecckd
     procedure :: read_spectral_solar_cycle
 ! Vectorized version of the optical depth look-up performs better on
 ! NEC, but slower on x86
-#ifdef DWD_VECTOR_OPTIMIZATIONS
+#if defined(DWD_VECTOR_OPTIMIZATIONS) || defined(HAVE_ACC)
     procedure, nopass :: calc_optical_depth => calc_optical_depth_ckd_model_vec
 #else
-    procedure, nopass :: calc_optical_depth => calc_optical_depth_ckd_model
+    procedure, nopass :: calc_optical_depth => calc_optical_depth_ckd_model_vec
 #endif
     procedure :: print => print_ckd_model
     procedure, nopass :: calc_planck_function
@@ -523,7 +523,7 @@ contains
 
     do jcol = istartcol,iendcol
 
-      log_pressure_fl = log(0.5_jprb * (pressure_hl(jcol,1:nlev)+pressure_hl(jcol,2:nlev+1)))
+      log_pressure_fl(1:nlev) = log(0.5_jprb * (pressure_hl(jcol,1:nlev)+pressure_hl(jcol,2:nlev+1)))
 
       do jlev = 1,nlev
         ! Find interpolation points in pressure

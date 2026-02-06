@@ -181,7 +181,7 @@ contains
     use radiation_thermodynamics, only : thermodynamics_type
     use radiation_single_level,   only : single_level_type
     use radiation_gas_constants,  only : NMaxGases
-    use radiation_ecckd,          only : calc_optical_depth_ckd_model, calc_incoming_sw, &
+    use radiation_ecckd,          only : calc_optical_depth_ckd_model_vec, calc_incoming_sw, &
                                        & calc_planck_function
     use radiation_gas
 
@@ -257,12 +257,12 @@ contains
     if (config%do_sw .and. config%i_gas_model_sw == IGasModelECCKD) then
 
       if (is_volume_mixing_ratio) then
-        call calc_optical_depth_ckd_model(config%gas_optics_sw,ncol,nlev,istartcol,iendcol, &
+        call calc_optical_depth_ckd_model_vec(config%gas_optics_sw,ncol,nlev,istartcol,iendcol, &
              &  NMaxGases, thermodynamics%pressure_hl, &
              &  temperature_fl, gas%mixing_ratio, &
              &  od_sw, rayleigh_od_fl=ssa_sw)
       else
-        call calc_optical_depth_ckd_model(config%gas_optics_sw,ncol,nlev,istartcol,iendcol, &
+        call calc_optical_depth_ckd_model_vec(config%gas_optics_sw,ncol,nlev,istartcol,iendcol, &
              &  NMaxGases, thermodynamics%pressure_hl, &
              &  temperature_fl, gas%mixing_ratio, &
              &  od_sw, rayleigh_od_fl=ssa_sw, concentration_scaling=concentration_scaling)
@@ -295,12 +295,12 @@ contains
     if (config%do_lw .and. config%i_gas_model_lw == IGasModelECCKD) then
 
       if (is_volume_mixing_ratio) then
-        call calc_optical_depth_ckd_model(config%gas_optics_lw,ncol,nlev,istartcol,iendcol, &
+        call calc_optical_depth_ckd_model_vec(config%gas_optics_lw,ncol,nlev,istartcol,iendcol, &
              &  NMaxGases, thermodynamics%pressure_hl, &
              &  temperature_fl, gas%mixing_ratio, &
              &  od_lw)
       else
-        call calc_optical_depth_ckd_model(config%gas_optics_lw,ncol,nlev,istartcol,iendcol, &
+        call calc_optical_depth_ckd_model_vec(config%gas_optics_lw,ncol,nlev,istartcol,iendcol, &
              &  NMaxGases, thermodynamics%pressure_hl, &
              &  temperature_fl, gas%mixing_ratio, &
              &  od_lw, concentration_scaling=concentration_scaling)
