@@ -61,8 +61,8 @@ module radiation_ecckd
     ! Number of entries
     integer :: nplanck = 0
     ! Temperature of first element of look-up table and increment (K)
-    real(jprb), allocatable :: temperature1_planck
-    real(jprb), allocatable :: d_temperature_planck
+    real(jprb) :: temperature1_planck
+    real(jprb) :: d_temperature_planck
     ! Planck function (black body flux into a horizontal plane) in W
     ! m-2, dimensioned (ng,nplanck)
     real(jprb), allocatable :: planck_function(:,:)
@@ -981,7 +981,6 @@ contains
       end do
     end if
     !$acc enter data copyin(this%temperature1) if(allocated(this%temperature1))
-    !$acc enter data copyin(this%temperature1_planck) if(allocated(this%temperature1_planck))
     !$acc enter data copyin(this%planck_function) if(allocated(this%planck_function))
     !$acc enter data copyin(this%norm_solar_irradiance) if(allocated(this%norm_solar_irradiance))
     !$acc enter data copyin(this%norm_amplitude_solar_irradiance) if(allocated(this%norm_amplitude_solar_irradiance))
@@ -996,7 +995,6 @@ contains
 
     !$acc update host(this%single_gas) if(allocated(this%single_gas))
     !$acc update host(this%temperature1) if(allocated(this%temperature1))
-    !$acc update host(this%temperature1_planck) if(allocated(this%temperature1_planck))
     !$acc update host(this%planck_function) if(allocated(this%planck_function))
     !$acc update host(this%norm_solar_irradiance) if(allocated(this%norm_solar_irradiance))
     !$acc update host(this%norm_amplitude_solar_irradiance) if(allocated(this%norm_amplitude_solar_irradiance))
@@ -1011,7 +1009,6 @@ contains
 
     !$acc update device(this%single_gas) if(allocated(this%single_gas))
     !$acc update device(this%temperature1) if(allocated(this%temperature1))
-    !$acc update device(this%temperature1_planck) if(allocated(this%temperature1_planck))
     !$acc update device(this%planck_function) if(allocated(this%planck_function))
     !$acc update device(this%norm_solar_irradiance) if(allocated(this%norm_solar_irradiance))
     !$acc update device(this%norm_amplitude_solar_irradiance) if(allocated(this%norm_amplitude_solar_irradiance))
@@ -1034,7 +1031,6 @@ contains
     end if
     !$acc exit data delete(this%single_gas) if(allocated(this%single_gas))
     !$acc exit data delete(this%temperature1) if(allocated(this%temperature1))
-    !$acc exit data delete(this%temperature1_planck) if(allocated(this%temperature1_planck))
     !$acc exit data delete(this%planck_function) if(allocated(this%planck_function))
     !$acc exit data delete(this%norm_solar_irradiance) if(allocated(this%norm_solar_irradiance))
     !$acc exit data delete(this%norm_amplitude_solar_irradiance) if(allocated(this%norm_amplitude_solar_irradiance))
