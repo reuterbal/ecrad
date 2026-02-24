@@ -147,8 +147,13 @@ function( add_ecrad_ifs_test )
             foreach( binary ecrad_ifs_${PREC} ecrad_ifs_blocked_${PREC} ecrad_ifs_field_api_${PREC} ecrad_loki_${PREC} ecrad_loki_field_api_${PREC} )
 
                 if( TARGET ${binary} )
+                    set ( _ref ecrad_${PREC}_${_PAR_NAME}_net )
+                    # verify Loki output vs ifs_field_api_driver (for conveniencee)
+                    if ( ${binary} STREQUAL "ecrad_loki_field_api_${PREC}")
+                        set ( _ref ecrad_ifs_field_api_${PREC}_${_PAR_NAME}_net )
+                    endif()
                     add_ecrad_nccmp_test(
-                        REFERENCE_NAME ecrad_${PREC}_${_PAR_NAME}_net
+                        REFERENCE_NAME ${_ref}
                         TEST_NAME ${binary}_${_PAR_NAME}_net
                         LW_THRESHOLD ${_PAR_LW_THRESHOLD}
                         SW_THRESHOLD ${_PAR_SW_THRESHOLD}
