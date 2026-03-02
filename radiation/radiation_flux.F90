@@ -317,162 +317,184 @@ contains
 
     if (associated(this%lw_up)) then
       deallocate(this%lw_up)
+      this%lw_up => null()
+
       if (associated(this%lw_dn)) then
         deallocate(this%lw_dn)
-        this%lw_dn=>null()
+        this%lw_dn => null()
       end if
       if (associated(this%lw_up_clear)) then
         deallocate(this%lw_up_clear)
-        this%lw_up_clear=>null()
+        this%lw_up_clear => null()
       end if
       if (associated(this%lw_dn_clear)) then
         deallocate(this%lw_dn_clear)
-        this%lw_dn_clear=>null()
+        this%lw_dn_clear => null()
       end if
     end if
 
     if (associated(this%sw_up)) then
       deallocate(this%sw_up)
+      this%sw_up => null()
+
       if (associated(this%sw_dn)) then
         deallocate(this%sw_dn)
-        this%sw_dn=>null()
+        this%sw_dn => null()
       end if
       if (associated(this%sw_up_clear)) then
         deallocate(this%sw_up_clear)
-        this%sw_up_clear=>null()
+        this%sw_up_clear => null()
       end if
       if (associated(this%sw_dn_clear)) then
         deallocate(this%sw_dn_clear)
-        this%sw_dn_clear=>null()
+        this%sw_dn_clear => null()
       end if
       if (associated(this%sw_dn_direct)) then
         deallocate(this%sw_dn_direct)
-        this%sw_dn_direct=>null()
+        this%sw_dn_direct => null()
       end if
       if (associated(this%sw_dn_direct_clear)) then
         deallocate(this%sw_dn_direct_clear)
-        this%sw_dn_direct_clear=>null()
+        this%sw_dn_direct_clear => null()
       end if
     end if
 
     if (associated(this%lw_up_band)) then
       deallocate(this%lw_up_band)
+      this%lw_up_band => null()
+
       if (associated(this%lw_dn_band)) then
         deallocate(this%lw_dn_band)
-        this%lw_dn_band=>null()
+        this%lw_dn_band => null()
       end if
       if (associated(this%lw_up_clear_band)) then
         deallocate(this%lw_up_clear_band)
-        this%lw_up_clear_band=>null()
+        this%lw_up_clear_band => null()
       end if
       if (associated(this%lw_dn_clear_band)) then
         deallocate(this%lw_dn_clear_band)
-        this%lw_dn_clear_band=>null()
+        this%lw_dn_clear_band => null()
       end if
     end if
-    
+
     if (associated(this%sw_up_band)) then
       deallocate(this%sw_up_band)
+      this%sw_up_band => null()
+
       if (associated(this%sw_dn_band)) then
         deallocate(this%sw_dn_band)
-        this%sw_dn_band=>null()
+        this%sw_dn_band => null()
       end if
       if (associated(this%sw_up_clear_band)) then
         deallocate(this%sw_up_clear_band)
-        this%sw_up_clear_band=>null()
+        this%sw_up_clear_band => null()
       end if
       if (associated(this%sw_dn_clear_band)) then
         deallocate(this%sw_dn_clear_band)
-        this%sw_dn_clear_band=>null()
+        this%sw_dn_clear_band => null()
       end if
       if (associated(this%sw_dn_direct_band)) then
         deallocate(this%sw_dn_direct_band)
-        this%sw_dn_direct_band=>null()
+        this%sw_dn_direct_band => null()
       end if
       if (associated(this%sw_dn_direct_clear_band)) then
         deallocate(this%sw_dn_direct_clear_band)
-        this%sw_dn_direct_clear_band=>null()
-      end if      
+        this%sw_dn_direct_clear_band => null()
+      end if
     end if
 
     if (associated(this%sw_dn_surf_band)) then
       deallocate(this%sw_dn_surf_band)
-      deallocate(this%sw_dn_direct_surf_band)
+      this%sw_dn_surf_band => null()
+
+      if (associated(this%sw_dn_direct_surf_band)) then
+        deallocate(this%sw_dn_direct_surf_band)
+        this%sw_dn_direct_surf_band => null()
+      end if
     end if
+
     if (associated(this%sw_dn_surf_clear_band)) then
       deallocate(this%sw_dn_surf_clear_band)
-      deallocate(this%sw_dn_direct_surf_clear_band)
+      this%sw_dn_surf_clear_band => null()
+
+      if (associated(this%sw_dn_direct_surf_clear_band)) then
+        deallocate(this%sw_dn_direct_surf_clear_band)
+        this%sw_dn_direct_surf_clear_band => null()
+      end if
     end if
 
     if (associated(this%lw_dn_surf_canopy)) then
-        deallocate(this%lw_dn_surf_canopy)
-        this%lw_dn_surf_canopy=>null()
-      end if
+      deallocate(this%lw_dn_surf_canopy)
+      this%lw_dn_surf_canopy => null()
+    end if
     if (associated(this%sw_dn_diffuse_surf_canopy)) then
-        deallocate(this%sw_dn_diffuse_surf_canopy)
-        this%sw_dn_diffuse_surf_canopy=>null()
-      end if
+      deallocate(this%sw_dn_diffuse_surf_canopy)
+      this%sw_dn_diffuse_surf_canopy => null()
+    end if
     if (associated(this%sw_dn_direct_surf_canopy)) then
-        deallocate(this%sw_dn_direct_surf_canopy)
-        this%sw_dn_direct_surf_canopy=>null()
-      end if
+      deallocate(this%sw_dn_direct_surf_canopy)
+      this%sw_dn_direct_surf_canopy => null()
+    end if
 
     if (associated(this%cloud_cover_sw)) then
       deallocate(this%cloud_cover_sw)
+      this%cloud_cover_sw => null()
     end if
     if (associated(this%cloud_cover_lw)) then
       deallocate(this%cloud_cover_lw)
+      this%cloud_cover_lw => null()
     end if
 
     if (associated(this%lw_derivatives)) then
       deallocate(this%lw_derivatives)
+      this%lw_derivatives => null()
     end if
 
     if (associated(this%lw_dn_surf_g)) then
-        deallocate(this%lw_dn_surf_g)
-        this%lw_dn_surf_g=>null()
-      end if
+      deallocate(this%lw_dn_surf_g)
+      this%lw_dn_surf_g => null()
+    end if
     if (associated(this%lw_dn_surf_clear_g)) then
-        deallocate(this%lw_dn_surf_clear_g)
-        this%lw_dn_surf_clear_g=>null()
-      end if
+      deallocate(this%lw_dn_surf_clear_g)
+      this%lw_dn_surf_clear_g => null()
+    end if
     if (associated(this%sw_dn_diffuse_surf_g)) then
-        deallocate(this%sw_dn_diffuse_surf_g)
-        this%sw_dn_diffuse_surf_g=>null()
-      end if
+      deallocate(this%sw_dn_diffuse_surf_g)
+      this%sw_dn_diffuse_surf_g => null()
+    end if
     if (associated(this%sw_dn_direct_surf_g)) then
-        deallocate(this%sw_dn_direct_surf_g)
-        this%sw_dn_direct_surf_g=>null()
-      end if
+      deallocate(this%sw_dn_direct_surf_g)
+      this%sw_dn_direct_surf_g => null()
+    end if
     if (associated(this%sw_dn_diffuse_surf_clear_g)) then
-        deallocate(this%sw_dn_diffuse_surf_clear_g)
-        this%sw_dn_diffuse_surf_clear_g=>null()
-      end if
+      deallocate(this%sw_dn_diffuse_surf_clear_g)
+      this%sw_dn_diffuse_surf_clear_g => null()
+    end if
     if (associated(this%sw_dn_direct_surf_clear_g)) then
-        deallocate(this%sw_dn_direct_surf_clear_g)
-        this%sw_dn_direct_surf_clear_g=>null()
-      end if
+      deallocate(this%sw_dn_direct_surf_clear_g)
+      this%sw_dn_direct_surf_clear_g => null()
+    end if
 
     if (associated(this%lw_up_toa_g)) then
-        deallocate(this%lw_up_toa_g)
-        this%lw_up_toa_g=>null()
-      end if
+      deallocate(this%lw_up_toa_g)
+      this%lw_up_toa_g => null()
+    end if
     if (associated(this%sw_up_toa_g)) then
-        deallocate(this%sw_up_toa_g)
-        this%sw_up_toa_g=>null()
-      end if
+      deallocate(this%sw_up_toa_g)
+      this%sw_up_toa_g => null()
+    end if
     if (associated(this%sw_dn_toa_g)) then
-        deallocate(this%sw_dn_toa_g)
-        this%sw_dn_toa_g=>null()
-      end if
+      deallocate(this%sw_dn_toa_g)
+      this%sw_dn_toa_g => null()
+    end if
     if (associated(this%lw_up_toa_clear_g)) then
-        deallocate(this%lw_up_toa_clear_g)
-        this%lw_up_toa_clear_g=>null()
-      end if
+      deallocate(this%lw_up_toa_clear_g)
+      this%lw_up_toa_clear_g => null()
+    end if
     if (associated(this%sw_up_toa_clear_g)) then
-        deallocate(this%sw_up_toa_clear_g)
-        this%sw_up_toa_clear_g=>null()
-      end if
+      deallocate(this%sw_up_toa_clear_g)
+      this%sw_up_toa_clear_g => null()
+    end if
 
     if (lhook) call dr_hook('radiation_flux:deallocate',1,hook_handle)
 
