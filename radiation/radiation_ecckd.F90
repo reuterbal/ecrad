@@ -498,7 +498,7 @@ contains
 
     real(jprb) :: multiplier(nlev), simple_multiplier(nlev), global_multiplier, temperature1
     real(jprb) :: scaling
-    real(jprb) :: local_concentration_scaling(nmaxgas)
+    real(jprb) :: local_concentration_scaling(NMaxGases) = 1.0_jprb
 
     ! Indices and weights in temperature, pressure and concentration interpolation
     real(jprb) :: pindex1, tindex1, cindex1
@@ -518,7 +518,7 @@ contains
     if (lhook) call dr_hook('radiation_ecckd:calc_optical_depth',0,hook_handle)
 
     global_multiplier = 1.0_jprb / (AccelDueToGravity * 0.001_jprb * AirMolarMass)
-    local_concentration_scaling = 1.0_jprb
+    ! local_concentration_scaling = 1.0_jprb
     if (present(concentration_scaling)) local_concentration_scaling = concentration_scaling
 
     do jcol = istartcol,iendcol
@@ -663,7 +663,6 @@ contains
 
     use yomhook,             only : lhook, dr_hook, jphook
     use radiation_constants, only : AccelDueToGravity
-
     ! Input variables
 
     type(ckd_model_type), intent(in), target  :: this
@@ -685,9 +684,8 @@ contains
     ! In the shortwave only, the Rayleigh scattering optical depth
     real(jprb),  optional, intent(out) :: rayleigh_od_fl(this%ng,nlev,istartcol:iendcol)
 
-    ! Local variables
 
-    real(jprb), pointer :: molar_abs(:,:,:), molar_abs_conc(:,:,:,:)
+    ! Local variables
 
     ! Natural logarithm of pressure at full levels
     real(jprb) :: log_pressure_fl
@@ -698,7 +696,7 @@ contains
 
     real(jprb) :: multiplier, simple_multiplier(ncol,nlev), global_multiplier, temperature1
     real(jprb) :: scaling
-    real(jprb) :: local_concentration_scaling(nmaxgas)
+    real(jprb) :: local_concentration_scaling(NMaxGases)
 
     ! Indices and weights in temperature, pressure and concentration interpolation
     real(jprb) :: pindex1, tindex1, cindex1
@@ -722,7 +720,7 @@ contains
 
     global_multiplier = 1.0_jprb / (AccelDueToGravity * 0.001_jprb * AirMolarMass)
     local_concentration_scaling = 1._jprb
-    if (present(concentration_scaling)) local_concentration_scaling = concentration_scaling
+    if (present(concentration_scaling)) local_concentration_scaling(1:nmaxgas) = concentration_scaling
 
     od_fl(:,:,:) = 0.0_jprb
 
@@ -757,13 +755,15 @@ contains
 
     do jgas = 1,this%ngas
 
-      associate (single_gas => this%single_gas(jgas))
+      associate (single_gas => this%single_gas(jgas), &
+               &  molar_abs=>this%single_gas(jgas)%molar_abs, &
+               &  molar_abs_conc=>this%single_gas(jgas)%molar_abs_conc)
+
         igascode = this%single_gas(jgas)%i_gas_code
           
         select case (single_gas%i_conc_dependence)
             
         case (IConcDependenceLinear)
-          molar_abs => this%single_gas(jgas)%molar_abs
 
           do jlev = 1,nlev
             do jg = 1, this%ng
@@ -781,7 +781,6 @@ contains
           end do
 
         case (IConcDependenceRelativeLinear)
-          molar_abs => this%single_gas(jgas)%molar_abs
 
           do jlev = 1,nlev
             do jg = 1, this%ng
@@ -801,7 +800,6 @@ contains
 
         case (IConcDependenceNone)
           ! Composite gases
-          molar_abs => this%single_gas(jgas)%molar_abs
 
           do jlev = 1,nlev
             do jg = 1, this%ng
@@ -820,7 +818,6 @@ contains
           case (IConcDependenceLUT)
             scaling = local_concentration_scaling(igascode)
             ! Logarithmic interpolation in concentration space
-            molar_abs_conc => this%single_gas(jgas)%molar_abs_conc
             mole_frac1 = exp(single_gas%log_mole_frac1)
 
             do jlev = 1,nlev
