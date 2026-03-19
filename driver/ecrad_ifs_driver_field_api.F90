@@ -171,7 +171,11 @@ program ecrad_ifs_driver
 
   ! Read "radiation_driver" namelist into radiation driver config type
   call driver_config%read(file_name)
+#if defined(HAVE_LOKI)
+  nproma = 32
+#else
   nproma = driver_config%nblocksize
+#endif
 
   if (driver_config%iverbose >= 2) then
     write(nulout,'(a)') '-------------------------- OFFLINE ECRAD RADIATION SCHEME --------------------------'
