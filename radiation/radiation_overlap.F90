@@ -303,7 +303,7 @@ contains
     real(jprb), intent(in), dimension(:,:)  :: overlap_param  ! (ncol,nlev-1)
 
     ! Output overlap matrices
-    real(jprb), intent(out), dimension(nreg,nreg,nlev+1,istartcol:iendcol) &
+    real(jprb), intent(inout), dimension(nreg,nreg,nlev+1,istartcol:iendcol) &
          &  :: u_matrix, v_matrix
 
     ! For regions 2 and above, the overlap decorrelation length for
@@ -317,7 +317,7 @@ contains
     real(jprb), intent(in), optional :: cloud_fraction_threshold
 
     ! The diagnosed cloud cover is an optional output
-    real(jprb), intent(out), optional :: cloud_cover(:)
+    real(jprb), intent(inout), optional :: cloud_cover(:)
 
     ! Do we use Shonk et al.'s (2010) "beta" overlap parameter?
     logical, intent(in), optional :: use_beta_overlap
