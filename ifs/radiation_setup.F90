@@ -381,9 +381,6 @@ CONTAINS
 #if defined(HAVE_LOKI)
     ! If Loki ise enabled we enable GPU
     YDERAD%LECRAD_ON_GPU=.TRUE.
-    ! For GPU variants we require NRPROMA to be at least 128
-    ! FIXME: NRPROMA is set in driver and not radiation_setup
-    ! YDERAD%NRPROMA = MAX(YDERAD%NRPROMA, 128)
 #endif
 
     ! For stability the cloud effective size can't be too small in
