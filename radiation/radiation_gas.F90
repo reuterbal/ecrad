@@ -644,11 +644,11 @@ contains
 
     if (present(istartcol)) then
       kidia = istartcol
+      kfdia = istartcol + size(mixing_ratio,1) - 1
     else
       kidia = 1
+      kfdia = size(mixing_ratio,1)
     end if
-
-    kfdia = kidia + size(mixing_ratio,1) - 1
     
     !$loki remove
     if (kidia < 1 .or. kfdia < 1 .or. kidia > this%ncol .or. kfdia > this%ncol) then
@@ -666,7 +666,11 @@ contains
     !$loki end remove
 
     if (.not. this%is_present(igas)) then
-      mixing_ratio(kidia:kfdia,1:this%nlev) = 0.0_jprb
+      do jlev = 1,this%nlev
+        do jcol = kidia,kfdia
+          mixing_ratio(jcol-kidia+1,jlev) = 0.0_jprb
+        end do
+      end do
     else
       if (iunits == IMassMixingRatio &
            &   .and. this%iunits(igas) == IVolumeMixingRatio) then
@@ -680,9 +684,17 @@ contains
       gas_sf = gas_sf * this%scale_factor(igas)
 
       if (gas_sf /= 1.0_jprb) then
-        mixing_ratio(kidia:kfdia,1:this%nlev) = this%mixing_ratio(kidia:kfdia,1:this%nlev,igas) * gas_sf
+        do jlev = 1,this%nlev
+          do jcol = kidia,kfdia
+            mixing_ratio(jcol-kidia+1,jlev) = this%mixing_ratio(jcol,jlev,igas) * gas_sf
+          end do
+        end do
       else
-        mixing_ratio(kidia:kfdia,1:this%nlev) = this%mixing_ratio(kidia:kfdia,1:this%nlev,igas)
+        do jlev = 1,this%nlev
+          do jcol = kidia,kfdia
+            mixing_ratio(jcol-kidia+1,jlev) = this%mixing_ratio(jcol,jlev,igas)
+          end do
+        end do
       end if
     end if
 
