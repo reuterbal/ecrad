@@ -1068,12 +1068,14 @@ contains
     logical,                intent(in), optional  :: on_gpu
 
     real(jphook) :: hook_handle
+    real(jprb), pointer :: host_ptr(:,:,:,:)
 
     if (lhook) call dr_hook('radiation_field_type:gas_field_init',0,hook_handle)
 
     if (present(on_gpu)) this%on_gpu = on_gpu
 
     call field_new(this%f_mixing_ratio, ubounds=(/ncol, nlev, NMaxGases, nblocks/), persistent=.true., init_value=0.0_jprb)
+    call this%f_mixing_ratio%get_host_data_rdonly(host_ptr)
 
     this%ncol = ncol
     this%nlev = nlev
@@ -1225,9 +1227,6 @@ contains
       gas%mixing_ratio => this%mixing_ratio_d(:,:,:,block_index)
     end if
 
-    gas%ncol = this%ncol
-    gas%nlev = this%nlev
-
   !$acc end data
   end subroutine gas_associate_device_pointers
 
@@ -1253,6 +1252,7 @@ contains
 
     real(jprb)   :: frac_std_local = 1.0_jprb
     real(jphook) :: hook_handle
+    real(jprb), pointer :: host_ptr(:,:,:)
 
     if (lhook) call dr_hook('radiation_field_type:cloud_field_init',0,hook_handle)
 
@@ -1274,6 +1274,7 @@ contains
     call field_new(this%f_fraction, ubounds=(/ncol,nlev, nblocks/), persistent=.true.)
     call field_new(this%f_overlap_param, ubounds=(/ncol,nlev-1, nblocks/), persistent=.true.)
     call field_new(this%f_fractional_std, ubounds=(/ncol,nlev, nblocks/), persistent=.true., init_value=frac_std_local)
+    call this%f_fractional_std%get_host_data_rdonly(host_ptr)
     call field_new(this%f_inv_cloud_effective_size, ubounds=(/ncol,nlev, nblocks/), persistent=.true.)
     call field_new(this%f_inv_inhom_effective_size, ubounds=(/ncol,nlev, nblocks/), persistent=.true.)
 
@@ -1482,7 +1483,7 @@ contains
     end if
 
     if (associated(this%f_fractional_std)) then
-      call this%f_fractional_std%get_device_data_rdwr(this%fractional_std_d)
+      call this%f_fractional_std%get_device_data_rdonly(this%fractional_std_d)
     end if
 
     if (associated(this%f_inv_cloud_effective_size)) then
@@ -1846,6 +1847,7 @@ contains
     logical, intent(in), optional         :: on_gpu
 
     real(jphook) :: hook_handle
+    real(jprb), pointer :: host_ptr(:,:)
 
     if (lhook) call dr_hook('radiation_field_type:flux_field_init',0,hook_handle)
 
@@ -2032,8 +2034,10 @@ contains
     ! Allocate cloud cover arrays
     call field_new(this%f_cloud_cover_lw,lbounds=(/istartcol,1/), &
           & ubounds=(/iendcol,nblocks/), persistent=.true., init_value=-1.0_jprb)
+    call this%f_cloud_cover_lw%get_host_data_rdonly(host_ptr)
     call field_new(this%f_cloud_cover_sw,lbounds=(/istartcol,1/), &
           & ubounds=(/iendcol,nblocks/), persistent=.true., init_value=-1.0_jprb)
+    call this%f_cloud_cover_sw%get_host_data_rdonly(host_ptr)
 
     if (this%on_gpu) call this%get_device_data()
 
