@@ -530,7 +530,7 @@ contains
     end if
 
 
-    this%fractional_std = frac_std
+    this%fractional_std(1:ncol,1:nlev) = frac_std
 
     if (lhook) call dr_hook('radiation_cloud:create_fractional_std',1,hook_handle)
 
