@@ -312,6 +312,7 @@ contains
         call config%gas_optics_lw%calc_planck_function(config%gas_optics_lw,nlev+1, &
              &  thermodynamics%temperature_hl(jcol,:), planck_hl(:,:,jcol))
       end do
+      !$loki separator
       call config%gas_optics_lw%calc_planck_function(config%gas_optics_lw,iendcol+1-istartcol, &
            &  single_level%skin_temperature(istartcol:iendcol), &
            &  lw_emission(:,:))
