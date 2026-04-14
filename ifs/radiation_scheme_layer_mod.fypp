@@ -22,6 +22,12 @@
 #:def chunked_join(iterable, linebreak)
 ${linebreak.join(','.join(iterable[i:i+5]) for i in range(0, len(iterable), 5))}$
 #:enddef chunked_join
+#! Conditions that are compile-time or always-true and should not generate runtime IF guards
+#:set unconditional = {'.true.', 'ldebug', 'lbitidentity', '.not.lrayfm.and.lepo3ra'}
+#! Remap condition: lapproxswupdate -> lapproxlwupdate (both controlled together)
+#:def guard(v)
+$:v.condition if variable_cnt[v.name] > 1 else ('lapproxlwupdate' if v.condition == 'lapproxswupdate' else v.condition)
+#:enddef
 #:endmute
 
 #:set active_args = [ &
@@ -53,8 +59,7 @@ MODULE RADIATION_SCHEME_LAYER_MOD
 IMPLICIT NONE
 
 PRIVATE
-PUBLIC :: RADIATION_SCHEME_LAYER, RADIATION_SCHEME_LAYER_PARALLEL
-
+PUBLIC :: RADIATION_SCHEME_LAYER
 CONTAINS
 
 SUBROUTINE RADIATION_SCHEME_LAYER &
@@ -85,9 +90,15 @@ REAL(KIND=JPRB),   INTENT(IN)   :: PSOLAR_IRRADIANCE ! (W m-2)
 
 INTEGER, OPTIONAL, INTENT(IN)   :: ISEED(:,:)
 
-CALL RADIATION_SCHEME_LAYER_PARALLEL( &
-    & YRADIATION, ZRGP_FIELDS, NGPTOT, NRPROMA, NFLEVG, &
-    & NFSD, KAEROSOL, PSOLAR_IRRADIANCE, ISEED=ISEED )
+IF (YRADIATION%YRERAD%LECRAD_ON_GPU) THEN
+  CALL RADIATION_SCHEME_LAYER_LOKI( &
+      & YRADIATION, ZRGP_FIELDS, NGPTOT, NRPROMA, NFLEVG, &
+      & NFSD, KAEROSOL, PSOLAR_IRRADIANCE, ISEED=ISEED )
+ELSE
+  CALL RADIATION_SCHEME_LAYER_PARALLEL( &
+      & YRADIATION, ZRGP_FIELDS, NGPTOT, NRPROMA, NFLEVG, &
+      & NFSD, KAEROSOL, PSOLAR_IRRADIANCE, ISEED=ISEED )
+ENDIF
 
 END SUBROUTINE RADIATION_SCHEME_LAYER
 
@@ -209,6 +220,8 @@ CALL FLUX_FIELD%INIT(NBLKS, YRADIATION%RAD_CONFIG, 1, NRPROMA, NFLEVG)
 #:for idx, v in enumerate(variables)
 #:if variable_cnt[v.name] > 1
 IF(${v.condition}$) CALL GET_STACK_MEMBER(ZRGP_FIELDS%FIELD_WRAPPER, ${idx+1}$, F_${v.name}$)
+#:elif guard(v) not in unconditional
+IF(${guard(v)}$) CALL GET_STACK_MEMBER(ZRGP_FIELDS%FIELD_WRAPPER, ${idx+1}$, F_${v.name}$)
 #:else
 CALL GET_STACK_MEMBER(ZRGP_FIELDS%FIELD_WRAPPER, ${idx+1}$, F_${v.name}$)
 #:endif
@@ -295,5 +308,290 @@ CALL FLUX_FIELD%FINAL()
 IF (LHOOK) CALL DR_HOOK('RADIATION_SCHEME_LAYER_PARALLEL',1,ZHOOK_HANDLE)
 
 END SUBROUTINE RADIATION_SCHEME_LAYER_PARALLEL
+
+SUBROUTINE RADIATION_SCHEME_LAYER_LOKI &
+     & (YRADIATION, ZRGP_FIELDS, NGPTOT, NRPROMA, NFLEVG, &
+     &  NFSD, KAEROSOL, PSOLAR_IRRADIANCE, ISEED)
+
+USE FIELD_MODULE, ONLY: FIELD_2RB, FIELD_3RB
+USE FIELD_FACTORY_MODULE
+USE FIELD_ACCESS_MODULE
+
+! Modules from ifs or ifsaux libraries
+USE RADIATION_SETUP , ONLY : TRADIATION
+USE PARKIND1        , ONLY : JPIM, JPRB
+USE YOMHOOK         , ONLY : LHOOK, DR_HOOK, JPHOOK
+USE RADINTG_ZRGP_MOD, ONLY : RADINTG_ZRGP_TYPE
+USE RADIATION_FIELD_TYPE_MODULE,    ONLY : SINGLE_LEVEL_FIELD_TYPE,    &
+                                         & SINGLE_LEVEL_ASSOCIATE_DEVICE_POINTERS, &
+                                         & THERMODYNAMICS_FIELD_TYPE,  &
+                                         & THERMODYNAMICS_ASSOCIATE_DEVICE_POINTERS, &
+                                         & GAS_FIELD_TYPE,             &
+                                         & GAS_ASSOCIATE_DEVICE_POINTERS, &
+                                         & CLOUD_FIELD_TYPE,           &
+                                         & CLOUD_ASSOCIATE_DEVICE_POINTERS, &
+                                         & AEROSOL_FIELD_TYPE,         &
+                                         & AEROSOL_ASSOCIATE_DEVICE_POINTERS, &
+                                         & FLUX_FIELD_TYPE, &
+                                         & FLUX_ASSOCIATE_DEVICE_POINTERS
+! Modules from radiation
+USE RADIATION_SINGLE_LEVEL,         ONLY: SINGLE_LEVEL_TYPE
+USE RADIATION_THERMODYNAMICS,       ONLY: THERMODYNAMICS_TYPE
+USE RADIATION_GAS,                  ONLY: GAS_TYPE
+USE RADIATION_CLOUD,                ONLY: CLOUD_TYPE
+USE RADIATION_AEROSOL,              ONLY: AEROSOL_TYPE
+USE RADIATION_FLUX,                 ONLY: FLUX_TYPE
+
+IMPLICIT NONE
+
+! INPUT ARGUMENTS
+
+TYPE(TRADIATION)   ,INTENT(IN), TARGET :: YRADIATION
+TYPE(RADINTG_ZRGP_TYPE), INTENT(INOUT) :: ZRGP_FIELDS
+
+! *** Array dimensions and ranges
+INTEGER(KIND=JPIM),INTENT(IN)   :: NGPTOT   ! Number of columns
+INTEGER(KIND=JPIM),INTENT(IN)   :: NRPROMA   ! Number of columns
+INTEGER(KIND=JPIM),INTENT(IN)   :: NFLEVG   ! Number of levels
+INTEGER(KIND=JPIM),INTENT(IN)   :: NFSD
+INTEGER(KIND=JPIM),INTENT(IN)   :: KAEROSOL ! Number of aerosol types
+
+! *** Single-level fields
+REAL(KIND=JPRB),   INTENT(IN)   :: PSOLAR_IRRADIANCE ! (W m-2)
+
+INTEGER, OPTIONAL, INTENT(IN)   :: ISEED(:,:)
+
+INTEGER(KIND=JPIM) :: KIDIA, KFDIA, IBL, JKGLO, NBLKS
+
+! Dummies for IFS config values
+LOGICAL :: LSPPRAD, LRAYFM, LEPO3RA
+LOGICAL, PARAMETER :: LDEBUG = .false.
+
+! Ecrad derived types and FIELD API wrapper types
+TYPE(SINGLE_LEVEL_FIELD_TYPE) :: SINGLE_LEVEL_FIELD
+TYPE(SINGLE_LEVEL_TYPE) :: SINGLE_LEVEL
+TYPE(THERMODYNAMICS_FIELD_TYPE) :: THERMODYNAMICS_FIELD
+TYPE(THERMODYNAMICS_TYPE) :: THERMODYNAMICS
+TYPE(GAS_FIELD_TYPE) :: GAS_FIELD
+TYPE(GAS_TYPE) :: GAS
+TYPE(CLOUD_FIELD_TYPE) :: YLCLOUD_FIELD
+TYPE(CLOUD_TYPE) :: YLCLOUD
+TYPE(AEROSOL_FIELD_TYPE) :: AEROSOL_FIELD
+TYPE(AEROSOL_TYPE) :: AEROSOL
+TYPE(FLUX_FIELD_TYPE) :: FLUX_FIELD
+TYPE(FLUX_TYPE) :: FLUX
+
+! Field pointers for each field in ZRGP
+#:for v_name in variable_names
+#:set dim = variable_dim[v_name]
+CLASS(FIELD_${dim}$RB), POINTER :: F_${v_name}$ => NULL()
+REAL(KIND=JPRB), POINTER, CONTIGUOUS :: P_${v_name}$(${','.join(':' * dim)}$) => NULL()
+#:endfor
+
+REAL(KIND=JPHOOK) :: ZHOOK_HANDLE
+
+#include "radiation_scheme.intfb.h"
+
+IF (LHOOK) CALL DR_HOOK('RADIATION_SCHEME_LAYER_LOKI',0,ZHOOK_HANDLE)
+
+ASSOCIATE(YDERAD=>YRADIATION%YRERAD, RAD_CONFIG=>YRADIATION%RAD_CONFIG)
+ASSOCIATE(LDIAGFORCING=>YDERAD%LDIAGFORCING, LAPPROXLWUPDATE=>YDERAD%LAPPROXLWUPDATE, &
+    & LAPPROXSWUPDATE=>YDERAD%LAPPROXSWUPDATE, NRADAER=>RAD_CONFIG%N_AEROSOL_TYPES)
+
+LSPPRAD=.FALSE.
+LRAYFM=.FALSE.
+LEPO3RA=.FALSE.
+
+NBLKS = (NGPTOT-1)/NRPROMA + 1
+
+! Initialise field types and update radiation types (pointers will be null, but reads constants)
+CALL SINGLE_LEVEL_FIELD%INIT(NBLKS, NRPROMA, YRADIATION%YRERAD%NSW, YRADIATION%YRERAD%NLWEMISS, &
+     &                      USE_SW_ALBEDO_DIRECT=.TRUE., ON_GPU=.TRUE.)
+CALL SINGLE_LEVEL_FIELD%UPDATE_SINGLE_LEVEL(SINGLE_LEVEL)
+CALL THERMODYNAMICS_FIELD%INIT(NBLKS, NRPROMA, NFLEVG, USE_H2O_SAT=.TRUE., ON_GPU=.TRUE.)
+CALL THERMODYNAMICS_FIELD%UPDATE_THERMODYNAMICS(THERMODYNAMICS)
+CALL GAS_FIELD%INIT(NBLKS, NRPROMA, NFLEVG, ON_GPU=.TRUE.)
+CALL GAS_FIELD%UPDATE_GAS(GAS)
+CALL YLCLOUD_FIELD%INIT(NBLKS, NRPROMA, NFLEVG, FRAC_STD=YRADIATION%YRERAD%RCLOUD_FRAC_STD, ON_GPU=.TRUE.)
+CALL YLCLOUD_FIELD%UPDATE_CLOUD(YLCLOUD)
+IF (YRADIATION%YRERAD%NAERMACC == 1) THEN
+  CALL AEROSOL_FIELD%INIT(NBLKS, NRPROMA, 1, NFLEVG, KAEROSOL, ON_GPU=.TRUE.) ! MACC aerosols
+ELSE
+  CALL AEROSOL_FIELD%INIT(NBLKS, NRPROMA, 1, NFLEVG, 6, ON_GPU=.TRUE.) ! Tegen climatology
+ENDIF
+CALL AEROSOL_FIELD%UPDATE_AEROSOL(AEROSOL)
+CALL FLUX_FIELD%INIT(NBLKS, YRADIATION%RAD_CONFIG, 1, NRPROMA, NFLEVG, ON_GPU=.TRUE.)
+CALL FLUX_FIELD%UPDATE_FLUX(FLUX)
+
+#:set active_args_set = set(active_args)
+#:for idx, v in enumerate(variables)
+#:if v.name in active_args_set
+#:if variable_cnt[v.name] > 1
+IF(${v.condition}$) CALL GET_STACK_MEMBER(ZRGP_FIELDS%FIELD_WRAPPER, ${idx+1}$, F_${v.name}$)
+#:elif guard(v) not in unconditional
+IF(${guard(v)}$) CALL GET_STACK_MEMBER(ZRGP_FIELDS%FIELD_WRAPPER, ${idx+1}$, F_${v.name}$)
+#:else
+CALL GET_STACK_MEMBER(ZRGP_FIELDS%FIELD_WRAPPER, ${idx+1}$, F_${v.name}$)
+#:endif
+#:endif
+#:endfor
+
+
+! Copy ZRGP_FIELDS field stack to device
+CALL ZRGP_FIELDS%FIELD_WRAPPER%SYNC_DEVICE_RDWR()
+
+#:for v in zrgp_in.variables
+#:if v.name in active_args_set
+#:if variable_cnt[v.name] > 1
+IF(${v.condition}$) CALL SGET_DEVICE_DATA_RDONLY(P_${v.name}$,F_${v.name}$)
+#:else
+CALL SGET_DEVICE_DATA_RDONLY(P_${v.name}$,F_${v.name}$)
+#:endif
+#:endif
+#:endfor
+
+#:for v in zrgp_out.variables
+#:if v.name in active_args_set
+#:if variable_cnt[v.name] > 1
+IF(${v.condition}$) CALL SGET_DEVICE_DATA_RDWR(P_${v.name}$,F_${v.name}$)
+#:else
+CALL SGET_DEVICE_DATA_RDWR(P_${v.name}$,F_${v.name}$)
+#:endif
+#:endif
+#:endfor
+
+#:for v in zrgp_local.variables
+#:if v.name in active_args_set
+#:if variable_cnt[v.name] > 1
+IF(${v.condition}$) CALL SGET_DEVICE_DATA_WRONLY(P_${v.name}$,F_${v.name}$)
+#:else
+CALL SGET_DEVICE_DATA_WRONLY(P_${v.name}$,F_${v.name}$)
+#:endif
+#:endif
+#:endfor
+
+!$ACC ENTER DATA COPYIN(YRADIATION, YRADIATION%RAD_CONFIG)
+#ifdef HAVE_ACC
+CALL YRADIATION%RAD_CONFIG%CREATE_DEVICE()
+CALL SINGLE_LEVEL_FIELD%ATTACH()
+CALL THERMODYNAMICS_FIELD%ATTACH()
+CALL GAS_FIELD%ATTACH()
+CALL YLCLOUD_FIELD%ATTACH()
+CALL AEROSOL_FIELD%ATTACH()
+CALL FLUX_FIELD%ATTACH()
+#endif
+
+!$ACC DATA COPYIN(KIDIA, KFDIA, NRPROMA, ISEED) &
+!$ACC    & PRESENT( &
+!$ACC           &  P_IAMU0, P_ITS, P_IALD, P_IALP, &
+!$ACC           &  P_IEMISS, &
+!$ACC           &  P_ICCNL, P_ICCNO, &
+!$ACC           &  P_IGELAM,P_IGEMU, P_ISLM, &
+!$ACC           &  P_IPR, P_ITI, &
+!$ACC           &  P_IAPRS,P_IHTI, &
+!$ACC           &  P_IWV,P_IICO2,P_IICH4,P_IIN2O, &
+!$ACC           &  P_INO2,P_IC11,P_IC12, P_IC22, &
+!$ACC           &  P_ICL4,P_IOZ, &
+!$ACC           &  P_ICLC,P_ILWA,P_IIWA,P_IRWA, &
+!$ACC           &  P_ISWA, &
+!$ACC           &  P_IAER, P_IAERO, &
+!$ACC           &  P_IFRSO,P_IFRTH,P_ISWFC,P_ILWFC,&
+!$ACC           &  P_IFRSOD,P_IFRTED, &
+!$ACC           &  P_IFRSODC,P_IFRTEDC,&
+!$ACC           &  P_IFDIR,P_ICDIR,P_ISUDU, &
+!$ACC           &  P_IUVDF,P_IPARF, &
+!$ACC           &  P_IPARCF,P_ITINCF, &
+!$ACC           &  P_IEMIT,P_ILWDERIVATIVE, &
+!$ACC           &  P_ISWDIFFUSEBAND,P_ISWDIRECTBAND, &
+!$ACC           &  P_IRE_LIQ, P_IRE_ICE, P_IOVERLAP, &
+!$ACC           &  YRADIATION, YRADIATION%RAD_CONFIG, &
+!$ACC           &  SINGLE_LEVEL_FIELD, &
+!$ACC           &  THERMODYNAMICS_FIELD, &
+!$ACC           &  GAS_FIELD, &
+!$ACC           &  YLCLOUD_FIELD, &
+!$ACC           &  AEROSOL_FIELD, &
+!$ACC           &  FLUX_FIELD &
+!$ACC           &  )
+
+!$ACC PARALLEL LOOP GANG VECTOR VECTOR_LENGTH(NRPROMA) FIRSTPRIVATE(SINGLE_LEVEL,THERMODYNAMICS,GAS,YLCLOUD,AEROSOL,FLUX)
+DO JKGLO=1,NGPTOT,NRPROMA
+    KIDIA=1
+    KFDIA=MIN(NRPROMA,NGPTOT-JKGLO+1)
+    IBL=(JKGLO-1)/NRPROMA+1
+
+    ! Associate device pointers
+    CALL SINGLE_LEVEL_ASSOCIATE_DEVICE_POINTERS(SINGLE_LEVEL_FIELD, SINGLE_LEVEL, IBL)
+    CALL THERMODYNAMICS_ASSOCIATE_DEVICE_POINTERS(THERMODYNAMICS_FIELD, THERMODYNAMICS, IBL)
+    CALL GAS_ASSOCIATE_DEVICE_POINTERS(GAS_FIELD, GAS, IBL)
+    CALL CLOUD_ASSOCIATE_DEVICE_POINTERS(YLCLOUD_FIELD, YLCLOUD, IBL)
+    CALL AEROSOL_ASSOCIATE_DEVICE_POINTERS(AEROSOL_FIELD, AEROSOL, IBL)
+    CALL FLUX_ASSOCIATE_DEVICE_POINTERS(FLUX_FIELD, FLUX, IBL)
+
+    ! Call the ECRAD radiation scheme
+    CALL RADIATION_SCHEME &
+        & (YRADIATION, &
+        &  KIDIA, KFDIA, NRPROMA, &                       ! startcol, endcol, ncol
+        &  NFLEVG, KAEROSOL, &
+        &  PSOLAR_IRRADIANCE, &                               ! solar_irrad
+        &  P_IAMU0(:,IBL), P_ITS(:,IBL), P_IALD(:,:,IBL), P_IALP(:,:,IBL), &
+        &  P_IEMISS(:,:,IBL), &
+        &  P_ICCNL(:,IBL), P_ICCNO(:,IBL), &
+        &  P_IGELAM(:,IBL),P_IGEMU(:,IBL), P_ISLM(:,IBL), &
+        &  P_IPR(:,:,IBL), P_ITI(:,:,IBL), &
+        &  P_IAPRS(:,:,IBL),P_IHTI(:,:,IBL), &
+        &  P_IWV(:,:,IBL),P_IICO2(:,:,IBL),P_IICH4(:,:,IBL),P_IIN2O(:,:,IBL), &
+        &  P_INO2(:,:,IBL),P_IC11(:,:,IBL),P_IC12(:,:,IBL), P_IC22(:,:,IBL), &
+        &  P_ICL4(:,:,IBL),P_IOZ(:,:,IBL), &
+        &  P_ICLC(:,:,IBL),P_ILWA(:,:,IBL),P_IIWA(:,:,IBL),P_IRWA(:,:,IBL), &
+        &  P_ISWA(:,:,IBL), &
+        &  P_IAER(:,:,IBL), P_IAERO(:,:,IBL), &
+        ! Flux outputs
+        &  P_IFRSO(:,:,IBL),P_IFRTH(:,:,IBL),P_ISWFC(:,:,IBL),P_ILWFC(:,:,IBL),&
+        &  P_IFRSOD(:,IBL),P_IFRTED(:,:,IBL), &
+        &  P_IFRSODC(:,IBL),P_IFRTEDC(:,IBL),&
+        &  P_IFDIR(:,IBL),P_ICDIR(:,IBL),P_ISUDU(:,IBL), &
+        &  P_IUVDF(:,IBL),P_IPARF(:,IBL), &
+        &  P_IPARCF(:,IBL),P_ITINCF(:,IBL), &
+        &  P_IEMIT(:,IBL),P_ILWDERIVATIVE(:,:,IBL), &
+        &  P_ISWDIFFUSEBAND(:,:,IBL),P_ISWDIRECTBAND(:,:,IBL) &
+        &, SINGLE_LEVEL &
+        &, THERMODYNAMICS &
+        &, GAS &
+        &, YLCLOUD &
+        &, AEROSOL &
+        &, FLUX &
+        ! OPTIONAL ARGUMENTS
+#ifdef BITIDENTITY_TESTING
+        &  , PRE_LIQ=P_IRE_LIQ(:,:,IBL), PRE_ICE=P_IRE_ICE(:,:,IBL) &
+        &  , PCLOUD_OVERLAP=P_IOVERLAP(:,:,IBL) & !, ISEED=ISEED(:,IBL) &
+#endif
+        &  )
+
+END DO
+
+!$ACC END DATA
+!$ACC EXIT DATA DELETE(YRADIATION, YRADIATION%RAD_CONFIG)
+
+#ifdef HAVE_ACC
+CALL YRADIATION%RAD_CONFIG%DELETE_DEVICE()
+#endif
+
+! Copy ZRGP_FIELDS field stack back to host
+CALL ZRGP_FIELDS%FIELD_WRAPPER%SYNC_HOST_RDWR()
+
+END ASSOCIATE
+END ASSOCIATE
+
+CALL SINGLE_LEVEL_FIELD%FINAL()
+CALL THERMODYNAMICS_FIELD%FINAL()
+CALL GAS_FIELD%FINAL()
+CALL YLCLOUD_FIELD%FINAL()
+CALL AEROSOL_FIELD%FINAL()
+CALL FLUX_FIELD%FINAL()
+
+IF (LHOOK) CALL DR_HOOK('RADIATION_SCHEME_LAYER_LOKI',1,ZHOOK_HANDLE)
+
+END SUBROUTINE RADIATION_SCHEME_LAYER_LOKI
+
 
 END MODULE RADIATION_SCHEME_LAYER_MOD
