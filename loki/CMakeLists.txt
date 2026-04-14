@@ -61,6 +61,14 @@ ecbuild_add_library(
         $<${HAVE_ACC}:ecrad_openacc>
 )
 
+# Override -O3 to -O2 for Release builds: NVHPC -O3 can cause
+# incorrect code generation with OpenACC device code
+if( HAVE_ACC )
+    target_compile_options( ecrad_loki.${PREC} PRIVATE
+        $<$<CONFIG:Release>:-O2>
+    )
+endif()
+
 if( HAVE_BITIDENTITY_TESTING )
     set( LOKI_DEFINITIONS "DEFINITIONS;BITIDENTITY_TESTING" )
 else()
