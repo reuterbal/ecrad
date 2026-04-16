@@ -305,6 +305,9 @@ CALL GAS%ALLOCATE(KLON, KLEV)
 IF (         RAD_CONFIG%I_SOLVER_LW == ISOLVERSPARTACUS &
      &  .OR. RAD_CONFIG%I_SOLVER_SW == ISOLVERSPARTACUS) THEN
   CALL YLCLOUD%ALLOCATE(KLON, KLEV, USE_INHOM_EFFECTIVE_SIZE=.TRUE.)
+  ! param_cloud_effective_separation_eta requires inv_cloud_effective_size
+  ! to be pre-allocated, but allocate_cloud_arrays does not allocate it
+  ALLOCATE(YLCLOUD%INV_CLOUD_EFFECTIVE_SIZE(KLON, KLEV))
 ELSE
   CALL YLCLOUD%ALLOCATE(KLON, KLEV)
 ENDIF
