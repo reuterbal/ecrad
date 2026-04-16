@@ -466,6 +466,27 @@ contains
 
       end if ! Using SPARTACUS solver
 
+    else
+      ! Clouds are off (e.g. Cloudless solver): allocate cloud arrays
+      ! with default zero values so that the IFS driver can safely pass
+      ! them to radiation_scheme (needed for BITIDENTITY_TESTING)
+      allocate(cloud%mixing_ratio(ncol,nlev,2))
+      allocate(cloud%effective_radius(ncol,nlev,2))
+      cloud%mixing_ratio = 0.0_jprb
+      cloud%effective_radius = 0.0_jprb
+      cloud%q_liq  => cloud%mixing_ratio(:,:,1)
+      cloud%q_ice  => cloud%mixing_ratio(:,:,2)
+      cloud%re_liq => cloud%effective_radius(:,:,1)
+      cloud%re_ice => cloud%effective_radius(:,:,2)
+      cloud%ntype = 2
+      allocate(cloud%fraction(ncol,nlev))
+      cloud%fraction = 0.0_jprb
+      allocate(cloud%overlap_param(ncol,nlev-1))
+      cloud%overlap_param = 0.0_jprb
+      allocate(cloud%fractional_std(ncol,nlev))
+      cloud%fractional_std = 0.0_jprb
+      call single_level%init_seed_simple(1,ncol)
+
     end if ! do_cloud
 
     ! --------------------------------------------------------
