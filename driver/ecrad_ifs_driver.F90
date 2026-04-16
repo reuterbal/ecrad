@@ -314,6 +314,42 @@ program ecrad_ifs_driver
   ! setup_radiation
   call flux%allocate(yradiation%rad_config, 1, ncol, nlev)
 
+  ! The IFS driver passes all flux arrays to radiation_scheme
+  ! unconditionally, so we need to ensure they are allocated even when
+  ! do_lw or do_sw is false
+  if (.not. yradiation%rad_config%do_lw) then
+    allocate(flux%lw_up(ncol,nlev+1))
+    allocate(flux%lw_dn(ncol,nlev+1))
+    allocate(flux%lw_up_clear(ncol,nlev+1))
+    allocate(flux%lw_dn_clear(ncol,nlev+1))
+    allocate(flux%lw_derivatives(ncol,nlev+1))
+    allocate(flux%lw_dn_surf_canopy(1,ncol))
+    flux%lw_up = 0._jprb
+    flux%lw_dn = 0._jprb
+    flux%lw_up_clear = 0._jprb
+    flux%lw_dn_clear = 0._jprb
+    flux%lw_derivatives = 0._jprb
+    flux%lw_dn_surf_canopy = 0._jprb
+  end if
+  if (.not. yradiation%rad_config%do_sw) then
+    allocate(flux%sw_up(ncol,nlev+1))
+    allocate(flux%sw_dn(ncol,nlev+1))
+    allocate(flux%sw_dn_direct(ncol,nlev+1))
+    allocate(flux%sw_up_clear(ncol,nlev+1))
+    allocate(flux%sw_dn_clear(ncol,nlev+1))
+    allocate(flux%sw_dn_direct_clear(ncol,nlev+1))
+    allocate(flux%sw_dn_diffuse_surf_canopy(1,ncol))
+    allocate(flux%sw_dn_direct_surf_canopy(1,ncol))
+    flux%sw_up = 0._jprb
+    flux%sw_dn = 0._jprb
+    flux%sw_dn_direct = 0._jprb
+    flux%sw_up_clear = 0._jprb
+    flux%sw_dn_clear = 0._jprb
+    flux%sw_dn_direct_clear = 0._jprb
+    flux%sw_dn_diffuse_surf_canopy = 0._jprb
+    flux%sw_dn_direct_surf_canopy = 0._jprb
+  end if
+
   ! set relevant fluxes to zero
   if (yradiation%rad_config%do_sw) then
     flux%sw_up(:,:) = 0._jprb
