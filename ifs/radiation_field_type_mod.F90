@@ -410,8 +410,10 @@ contains
   !---------------------------------------------------------------------
   ! Initialise single_field_type
   subroutine single_level_field_init(this, nblocks, ncol, nalbedobands, nemisbands, &
-       &                           use_sw_albedo_direct, is_simple_surface, on_gpu)
+       &                           use_sw_albedo_direct, is_simple_surface, on_gpu, &
+       &                           use_mcica, iseed)
 
+    use parkind1, only : jpim
     use yomhook, only : lhook, dr_hook, jphook
 
     class(single_level_field_type), intent(inout) :: this
@@ -419,7 +421,10 @@ contains
     logical,        optional, intent(in)    :: use_sw_albedo_direct
     logical,        optional, intent(in)    :: is_simple_surface
     logical,        optional, intent(in)    :: on_gpu
+    logical,        optional, intent(in)    :: use_mcica
+    integer,        optional, intent(in)    :: iseed(:,:) ! (ncol, nblocks)
 
+    integer(kind=jpim) :: ibl, jcol, iglobal_offset
     real(jphook) :: hook_handle
 
     if (lhook) call dr_hook('radiation_field_type_module:single_level_field_init',0,hook_handle)
@@ -427,6 +432,9 @@ contains
     if (present(is_simple_surface)) this%is_simple_surface = is_simple_surface
 
     if (present(on_gpu)) this%on_gpu = on_gpu
+
+    this%nblocks = nblocks
+    this%ncol = ncol
 
     call field_new(this%f_cos_sza, ubounds=(/ncol, nblocks/), persistent=.true.)
 
@@ -445,7 +453,33 @@ contains
       end if
     end if
 
+    ! Always allocate f_iseed — the ACC runtime requires all device
+    ! pointers in the struct to be valid when copyin(this) is used.
     call field_new(this%f_iseed, ubounds=(/ncol, nblocks/), persistent=.true.)
+
+    ! Populate iseed when McICA solver is active.
+    ! This must happen before get_device_data so host data is ready
+    ! for read-only device offload.
+    if (present(use_mcica)) then
+      if (use_mcica) then
+        if (present(iseed)) then
+          ! Copy caller-provided blocked seeds into host field
+          do ibl = 1, nblocks
+            this%iseed => this%f_iseed%get_view(ibl)
+            this%iseed(:) = iseed(:,ibl)
+          end do
+        else
+          ! Initialize simple deterministic seeds (global column index)
+          do ibl = 1, nblocks
+            this%iseed => this%f_iseed%get_view(ibl)
+            iglobal_offset = (ibl - 1) * ncol
+            do jcol = 1, ncol
+              this%iseed(jcol) = iglobal_offset + jcol
+            end do
+          end do
+        end if
+      end if
+    end if
 
     if (this%on_gpu) call this%get_device_data()
 

@@ -391,14 +391,16 @@ SINGLE_LEVEL%LW_EMISSIVITY(KIDIA:KFDIA,:)  = PSPECTRALEMISS(KIDIA:KFDIA,:)
 
 !$loki remove
 ! Simple initialization of the seeds for the Monte Carlo scheme
+! and optional override from caller-provided values.
+! In the FIELD_API path, seeds are managed by the field wrapper
+! in radiation_scheme_layer_mod before this routine is called.
+#ifndef HAVE_FIELD_API
 call single_level%init_seed_simple(kidia, kfdia)
-!$loki end remove
-
-! Added for bit-identity validation against ecrad standalone:
-! Overwrite seed with user-specified values
 if (present(iseed)) then
    single_level%iseed(kidia:kfdia) = iseed(kidia:kfdia)
 end if
+#endif
+!$loki end remove
 
 ! TODO: Commented this out, doesn't seem to affect any test
 ! Set the solar spectrum scaling, if required
