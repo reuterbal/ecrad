@@ -45,7 +45,7 @@ ecbuild_add_library(
     DEFINITIONS
         $<${HAVE_FIELD_API}:HAVE_FIELD_API>
         $<${HAVE_LOKI}:HAVE_LOKI>
-        HAVE_ACC
+        $<${HAVE_ACC}:HAVE_ACC>
     PRIVATE_INCLUDES
         ${ecrad_loki_SOURCE_DIRS}
     PUBLIC_INCLUDES
@@ -75,6 +75,10 @@ else()
     set( LOKI_DEFINITIONS )
 endif()
 
+if( HAVE_ACC )
+    list( APPEND LOKI_DEFINITIONS "DEFINITIONS;HAVE_ACC=ON" )
+endif()
+
 loki_transform_target(
     TARGET ecrad_loki.${PREC}
     MODE ${LOKI_MODE}
@@ -85,5 +89,4 @@ loki_transform_target(
     NO_PLAN_SOURCEDIR
     DEFINITIONS
         HAVE_FIELD_API=ON
-        HAVE_ACC=ON
 )
