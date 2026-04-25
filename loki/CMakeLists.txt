@@ -75,6 +75,10 @@ else()
     set( LOKI_DEFINITIONS )
 endif()
 
+if( "${PREC}" STREQUAL "sp" )
+    list( APPEND LOKI_DEFINITIONS "DEFINITIONS;PARKIND1_SINGLE" )
+endif()
+
 if( HAVE_ACC )
     list( APPEND LOKI_DEFINITIONS "DEFINITIONS;HAVE_ACC=ON" )
 endif()
