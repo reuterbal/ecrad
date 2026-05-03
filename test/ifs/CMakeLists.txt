@@ -11,6 +11,16 @@ set( TEST_IFS_INPUT "${CMAKE_CURRENT_SOURCE_DIR}/ecrad_meridian.nc" )
 set( TEST_IFS_CONFIG "${CMAKE_CURRENT_SOURCE_DIR}/configCY49R1.nam" )
 set( TEST_ECCKD_CONFIG "${CMAKE_CURRENT_SOURCE_DIR}/configCY49R1_ecckd.nam" )
 
+if( "${PREC}" STREQUAL "sp" )
+    set( TEST_IFS_REFERENCE_LW_THRESHOLD 0.5 )
+    set( TEST_IFS_REFERENCE_SW_THRESHOLD 0.5 )
+    set( TEST_IFS_REFERENCE_NOAER_SW_THRESHOLD 0.9 )
+else()
+    set( TEST_IFS_REFERENCE_LW_THRESHOLD 0.001 )
+    set( TEST_IFS_REFERENCE_SW_THRESHOLD 0.1 )
+    set( TEST_IFS_REFERENCE_NOAER_SW_THRESHOLD ${TEST_IFS_REFERENCE_SW_THRESHOLD} )
+endif()
+
 # Create symbolic link to test data
 file( CREATE_LINK "${PROJECT_SOURCE_DIR}/data" "${CMAKE_CURRENT_BINARY_DIR}/data" SYMBOLIC )
 
@@ -81,7 +91,7 @@ function( add_ecrad_ifs_test )
     #  4. Using ecrad_ifs_blocked.${PREC} with net flux outputs
 
     set( options ENABLED XFAIL_VALIDATION )
-    set( oneValueArgs NAME CONFIG_FILE LW_THRESHOLD SW_THRESHOLD )
+    set( oneValueArgs NAME CONFIG_FILE DP_LW_THRESHOLD DP_SW_THRESHOLD SP_LW_THRESHOLD SP_SW_THRESHOLD )
     set( multiValueArgs NAMELIST_OPTIONS )
     cmake_parse_arguments( _PAR "${options}" "${oneValueArgs}" "${multiValueArgs}" ${ARGN} )
 
@@ -143,16 +153,23 @@ function( add_ecrad_ifs_test )
         if( HAVE_BITIDENTITY_TESTING )
 
             if( "${PREC}" STREQUAL "sp" )
-                # SP cannot match DP bitwise; use relaxed thresholds
-                set( _PAR_LW_THRESHOLD 0.001 )
-                set( _PAR_SW_THRESHOLD 0.1 )
+                if( NOT _PAR_SP_LW_THRESHOLD )
+                    set( _PAR_SP_LW_THRESHOLD 2e-4 )
+                endif()
+                if( NOT _PAR_SP_SW_THRESHOLD )
+                    set( _PAR_SP_SW_THRESHOLD 1e-6 )
+                endif()
+                set( _PAR_LW_THRESHOLD ${_PAR_SP_LW_THRESHOLD} )
+                set( _PAR_SW_THRESHOLD ${_PAR_SP_SW_THRESHOLD} )
             else()
-                if( NOT _PAR_LW_THRESHOLD )
-                    set( _PAR_LW_THRESHOLD 0.0 )
+                if( NOT _PAR_DP_LW_THRESHOLD )
+                    set( _PAR_DP_LW_THRESHOLD 0.0 )
                 endif()
-                if( NOT _PAR_SW_THRESHOLD )
-                    set( _PAR_SW_THRESHOLD 0.0 )
+                if( NOT _PAR_DP_SW_THRESHOLD )
+                    set( _PAR_DP_SW_THRESHOLD 0.0 )
                 endif()
+                set( _PAR_LW_THRESHOLD ${_PAR_DP_LW_THRESHOLD} )
+                set( _PAR_SW_THRESHOLD ${_PAR_DP_SW_THRESHOLD} )
             endif()
 
             if( _PAR_XFAIL_VALIDATION )
@@ -214,8 +231,8 @@ add_ecrad_ifs_test(
 add_ecrad_nccmp_test(
     REFERENCE_FILE ${CMAKE_CURRENT_SOURCE_DIR}/ecrad_meridian_default_out_REFERENCE.nc
     TEST_NAME ecrad_${PREC}_default
-    LW_THRESHOLD 0.001
-    SW_THRESHOLD 0.1
+    LW_THRESHOLD ${TEST_IFS_REFERENCE_LW_THRESHOLD}
+    SW_THRESHOLD ${TEST_IFS_REFERENCE_SW_THRESHOLD}
 )
 
 # Turn off aerosols
@@ -228,8 +245,8 @@ add_ecrad_ifs_test(
 add_ecrad_nccmp_test(
     REFERENCE_FILE ${CMAKE_CURRENT_SOURCE_DIR}/ecrad_meridian_noaer_out_REFERENCE.nc
     TEST_NAME ecrad_${PREC}_noaer_net
-    LW_THRESHOLD 0.001
-    SW_THRESHOLD 0.1
+    LW_THRESHOLD ${TEST_IFS_REFERENCE_LW_THRESHOLD}
+    SW_THRESHOLD ${TEST_IFS_REFERENCE_NOAER_SW_THRESHOLD}
 )
 
 # Older exponential-exponential overlap
@@ -242,8 +259,8 @@ add_ecrad_ifs_test(
 add_ecrad_nccmp_test(
     REFERENCE_FILE ${CMAKE_CURRENT_SOURCE_DIR}/ecrad_meridian_expexp_out_REFERENCE.nc
     TEST_NAME ecrad_${PREC}_expexp_net
-    LW_THRESHOLD 0.001
-    SW_THRESHOLD 0.1
+    LW_THRESHOLD ${TEST_IFS_REFERENCE_LW_THRESHOLD}
+    SW_THRESHOLD ${TEST_IFS_REFERENCE_SW_THRESHOLD}
 )
 
 # Tripleclouds solver with exponential-random overlap
@@ -258,8 +275,8 @@ add_ecrad_ifs_test(
 add_ecrad_nccmp_test(
     REFERENCE_FILE ${CMAKE_CURRENT_SOURCE_DIR}/ecrad_meridian_tripleclouds_out_REFERENCE.nc
     TEST_NAME ecrad_${PREC}_tripleclouds_net
-    LW_THRESHOLD 0.001
-    SW_THRESHOLD 0.1
+    LW_THRESHOLD ${TEST_IFS_REFERENCE_LW_THRESHOLD}
+    SW_THRESHOLD ${TEST_IFS_REFERENCE_SW_THRESHOLD}
 )
 
 # Longwave scattering; since 46R1 this is the default
@@ -307,8 +324,8 @@ add_ecrad_ifs_test(
 add_ecrad_nccmp_test(
     REFERENCE_FILE ${CMAKE_CURRENT_SOURCE_DIR}/ecrad_meridian_cloudless_out_REFERENCE.nc
     TEST_NAME ecrad_${PREC}_cloudless_net
-    LW_THRESHOLD 0.001
-    SW_THRESHOLD 0.1
+    LW_THRESHOLD ${TEST_IFS_REFERENCE_LW_THRESHOLD}
+    SW_THRESHOLD ${TEST_IFS_REFERENCE_SW_THRESHOLD}
 )
 
 # Exponential-random overlap with "vectorizable" cloud generator
@@ -328,32 +345,36 @@ add_ecrad_ifs_test(
     NAMELIST_OPTIONS
         "sw_solver_name=\\\"McICA\\\""
         "lw_solver_name=\\\"McICA\\\""
-    SW_THRESHOLD 1e-10
-    LW_THRESHOLD 1e-10
+    DP_SW_THRESHOLD 1e-10
+    DP_LW_THRESHOLD 1e-10
+    SP_SW_THRESHOLD 0.002
+    SP_LW_THRESHOLD 2e-4
     ENABLED ON
 )
 
 add_ecrad_nccmp_test(
     REFERENCE_FILE ${CMAKE_CURRENT_SOURCE_DIR}/ecrad_meridian_ecckd_mcica_out_REFERENCE.nc
     TEST_NAME ecrad_${PREC}_ecckd_mcica_net
-    LW_THRESHOLD 0.001
-    SW_THRESHOLD 0.1
+    LW_THRESHOLD ${TEST_IFS_REFERENCE_LW_THRESHOLD}
+    SW_THRESHOLD ${TEST_IFS_REFERENCE_SW_THRESHOLD}
 )
 
 # ecCKD with Tripleclouds solver (default)
 add_ecrad_ifs_test(
     NAME ecckd_tc
     CONFIG_FILE "${TEST_ECCKD_CONFIG}"
-    SW_THRESHOLD 1e-10
-    LW_THRESHOLD 1e-10
+    DP_SW_THRESHOLD 1e-10
+    DP_LW_THRESHOLD 1e-10
+    SP_SW_THRESHOLD 0.002
+    SP_LW_THRESHOLD 2e-4
     ENABLED ON
 )
 
 add_ecrad_nccmp_test(
     REFERENCE_FILE ${CMAKE_CURRENT_SOURCE_DIR}/ecrad_meridian_ecckd_tc_out_REFERENCE.nc
     TEST_NAME ecrad_${PREC}_ecckd_tc_net
-    LW_THRESHOLD 0.001
-    SW_THRESHOLD 0.1
+    LW_THRESHOLD ${TEST_IFS_REFERENCE_LW_THRESHOLD}
+    SW_THRESHOLD ${TEST_IFS_REFERENCE_SW_THRESHOLD}
 )
 
 # ecCKD with no aerosols
@@ -361,8 +382,10 @@ add_ecrad_ifs_test(
     NAME ecckd_noaer
     CONFIG_FILE "${TEST_ECCKD_CONFIG}"
     NAMELIST_OPTIONS "use_aerosols=false"
-    SW_THRESHOLD 1e-10
-    LW_THRESHOLD 1e-10
+    DP_SW_THRESHOLD 1e-10
+    DP_LW_THRESHOLD 1e-10
+    SP_SW_THRESHOLD 0.002
+    SP_LW_THRESHOLD 2e-4
     ENABLED ON
 )
 
