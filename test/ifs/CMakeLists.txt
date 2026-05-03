@@ -408,8 +408,8 @@ add_ecrad_ifs_test(
     NAMELIST_OPTIONS
         "do_lw=false"
         "use_aerosols=false"
-    SW_THRESHOLD 1e-10
-    LW_THRESHOLD 1e-10
+    DP_SW_THRESHOLD 1e-10
+    DP_LW_THRESHOLD 1e-10
     ENABLED ON
 )
 
@@ -419,7 +419,7 @@ add_ecrad_ifs_test(
     NAMELIST_OPTIONS
         "do_sw=false"
         "use_aerosols=false"
-    SW_THRESHOLD 1e-10
-    LW_THRESHOLD 1e-10
+    DP_SW_THRESHOLD 1e-10
+    DP_LW_THRESHOLD 1e-10
     ENABLED ON
 )
