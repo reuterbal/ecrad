@@ -224,6 +224,39 @@ cd <build-dir>
 ctest
 ```
 
+### Build using ecrad-bundle
+
+Another way to build ecRad is to use the bundle definition included in
+`package/bundle`:
+
+```sh
+./package/bundle/ecrad-bundle create --bundle package/bundle/bundle.yml
+./package/bundle/ecrad-bundle build [--build-type=<build-type>] [--arch=<path-to-arch>] [--option]
+```
+
+The bundle bootstraps `ecbundle` if needed, checks out the required dependency
+packages, and builds against the local `ecrad` source tree.
+
+The bundle build step also supports architecture-specific environment and
+toolchain settings via the arch files under `package/bundle/arch`. For example,
+on ECMWF HPC2020:
+
+- Intel: `--arch=package/bundle/arch/ecmwf/hpc2020/intel/2021.4.0/intel-mpi/2021.4.0`
+- NVHPC: `--arch=package/bundle/arch/ecmwf/hpc2020/nvhpc/24.5/hpcx-openmpi/2.17.1`
+
+Useful bundle options include:
+
+- `--without-omp` to disable OpenMP
+- `--without-field-api` to disable Field API support
+- `--with-loki` to enable Loki source transformations
+- `--with-acc` to enable OpenACC offload
+- `--with-cuda` to enable the Field API CUDA backend
+- `--loki-mode=<mode>` to select the Loki transformation mode
+
+In the tested configurations here, Intel builds with Loki used
+`--with-loki --loki-mode=idem`, while NVHPC GPU builds used
+`--with-loki --with-acc`.
+
 
 ## Licence
 
@@ -289,4 +322,3 @@ The ecCKD gas optics scheme is described here:
  - Hogan, R. J., and M. Matricardi, 2022: a tool for generating fast
 k-distribution gas-optics models for weather and climate
 applications. J. Adv. Modeling Earth Sys., in review.
-
