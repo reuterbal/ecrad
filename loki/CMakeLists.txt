@@ -61,11 +61,14 @@ ecbuild_add_library(
         $<${HAVE_ACC}:ecrad_openacc>
 )
 
-# Override -O3 to -O2 for Release builds: NVHPC -O3 can cause
-# incorrect code generation with OpenACC device code
-if( HAVE_ACC )
-    target_compile_options( ecrad_loki.${PREC} PRIVATE
-        $<$<CONFIG:Release>:-O2>
+if( HAVE_ACC AND CMAKE_Fortran_COMPILER_ID MATCHES "PGI|NVHPC" AND CMAKE_BUILD_TYPE STREQUAL "Release" )
+    # Lower optimisation level to O2 for Tripleclouds OpenACC kernels, when compilng
+    # with NVHPC, to work around compiler bug in O3 builds.
+    set_source_files_properties(
+        "${PROJECT_SOURCE_DIR}/radiation/radiation_tripleclouds_lw.F90"
+        "${PROJECT_SOURCE_DIR}/radiation/radiation_tripleclouds_sw.F90"
+        PROPERTIES
+            COMPILE_FLAGS "-O2"
     )
 endif()
 
