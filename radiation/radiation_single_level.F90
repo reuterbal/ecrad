@@ -349,21 +349,21 @@ contains
         end if      
         !$loki end remove
           do jcol = istartcol,iendcol
-            do jband=1,ubound(this%sw_albedo,2)
+            do jband=1,config%n_g_sw
               sw_albedo_diffuse(jband,jcol) = this%sw_albedo(jcol, &
                    &  config%i_albedo_from_band_sw(config%i_band_from_reordered_g_sw(jband)))
             end do
           end do
         if (associated(this%sw_albedo_direct)) then
           do jcol = istartcol,iendcol
-            do jband=1,ubound(this%sw_albedo_direct,2)
+            do jband=1,config%n_g_sw
               sw_albedo_direct(jband,jcol) = this%sw_albedo_direct(jcol, &
                    &  config%i_albedo_from_band_sw(config%i_band_from_reordered_g_sw(jband)))
             end do
           end do
         else
           do jcol = istartcol,iendcol
-            do jband=1,ubound(this%sw_albedo,2)
+            do jband=1,config%n_g_sw
               sw_albedo_direct(jband,jcol) = sw_albedo_diffuse(jband, jcol)
             end do
           end do
