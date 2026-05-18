@@ -514,6 +514,10 @@ CONTAINS
       CALL RAD_CONFIG%READ(FILE_NAME=FILE_NAME)
     ENDIF
 
+    ! Keep IFS-style output flags consistent with the final ecRad configuration.
+    YDERAD%LAPPROXLWUPDATE = RAD_CONFIG%DO_LW_DERIVATIVES
+    YDERAD%LAPPROXSWUPDATE = RAD_CONFIG%DO_CANOPY_FLUXES_SW
+
     ! Print configuration
     IF (IVERBOSESETUP > 1) THEN
       WRITE(NULOUT,'(a)') 'Radiation scheme settings:'

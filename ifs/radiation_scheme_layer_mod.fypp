@@ -24,9 +24,8 @@ ${linebreak.join(','.join(iterable[i:i+5]) for i in range(0, len(iterable), 5))}
 #:enddef chunked_join
 #! Conditions that are compile-time or always-true and should not generate runtime IF guards
 #:set unconditional = {'.true.', 'ldebug', 'lbitidentity', '.not.lrayfm.and.lepo3ra'}
-#! Remap condition: lapproxswupdate -> lapproxlwupdate (both controlled together)
 #:def guard(v)
-$:v.condition if variable_cnt[v.name] > 1 else ('lapproxlwupdate' if v.condition == 'lapproxswupdate' else v.condition)
+$:v.condition
 #:enddef
 #:endmute
 
